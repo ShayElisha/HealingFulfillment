@@ -96,7 +96,7 @@ const generalLimiter = rateLimit({
   // Custom key generator for serverless
   keyGenerator: (req) => {
     // Use IP if available, otherwise use a combination of headers
-    if (req.ip) {
+    if (req.ip && req.ip !== 'undefined') {
       return req.ip
     }
     // Fallback for serverless environments
@@ -104,7 +104,17 @@ const generalLimiter = rateLimit({
     if (forwarded) {
       return forwarded.split(',')[0].trim()
     }
-    return req.headers['x-vercel-ip'] || 'unknown'
+    const vercelIp = req.headers['x-vercel-ip']
+    if (vercelIp) {
+      return vercelIp
+    }
+    // Last resort: use a session-based key
+    return req.headers['x-vercel-id'] || 'unknown'
+  },
+  // Disable validation warnings in serverless
+  validate: {
+    trustProxy: false, // Disable trust proxy validation
+    ip: false // Disable IP validation
   }
 })
 
@@ -118,14 +128,22 @@ const adminLimiter = rateLimit({
     return !req.ip && (process.env.VERCEL === '1' || process.env.VERCEL_ENV)
   },
   keyGenerator: (req) => {
-    if (req.ip) {
+    if (req.ip && req.ip !== 'undefined') {
       return req.ip
     }
     const forwarded = req.headers['x-forwarded-for']
     if (forwarded) {
       return forwarded.split(',')[0].trim()
     }
-    return req.headers['x-vercel-ip'] || 'unknown'
+    const vercelIp = req.headers['x-vercel-ip']
+    if (vercelIp) {
+      return vercelIp
+    }
+    return req.headers['x-vercel-id'] || 'unknown'
+  },
+  validate: {
+    trustProxy: false,
+    ip: false
   }
 })
 
