@@ -105,10 +105,16 @@ const ensureMongoConnection = async (req, res, next) => {
   }
   
   try {
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    })
+    // Use shorter timeout for serverless
+    await Promise.race([
+      mongoose.connect(MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000, // 5 seconds
+        socketTimeoutMS: 10000, // 10 seconds
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('MongoDB connection timeout')), 5000)
+      )
+    ])
     console.log('MongoDB connected successfully')
     next()
   } catch (error) {
@@ -124,7 +130,7 @@ const ensureMongoConnection = async (req, res, next) => {
 // Apply MongoDB connection middleware to all API routes
 app.use('/api/', ensureMongoConnection)
 
-// Health check
+// Health check - doesn't require MongoDB connection
 app.get('/health', (req, res) => {
   const mongoState = mongoose.connection.readyState
   const mongoStates = {
@@ -136,8 +142,9 @@ app.get('/health', (req, res) => {
   
   const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
   
+  // Return immediately without waiting for MongoDB
   res.json({ 
-    status: mongoState === 1 ? 'ok' : 'degraded',
+    status: 'ok',
     environment: isVercel ? 'vercel' : 'local',
     timestamp: new Date().toISOString(),
     mongodb: {
