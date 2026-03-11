@@ -49,6 +49,11 @@ async function getHandler() {
 export default async (req, res) => {
   const start = Date.now()
   
+  // Log original request details
+  console.log(`[Vercel] Original: ${req.method} ${req.url}`)
+  console.log(`[Vercel] Query:`, JSON.stringify(req.query))
+  console.log(`[Vercel] Path:`, req.path)
+  
   // Fix path from Vercel [...path] routing
   if (req.query?.['...path']) {
     const pathParam = req.query['...path']
@@ -56,9 +61,19 @@ export default async (req, res) => {
     const query = new URLSearchParams(req.query).toString()
     req.url = `/api/${pathParam}${query ? '?' + query : ''}`
     req.originalUrl = req.url
+    req.path = `/api/${pathParam}`
+    console.log(`[Vercel] Fixed path to: ${req.url}`)
+  } else {
+    // If no ...path query param, check if URL already has /api/
+    if (!req.url.startsWith('/api/')) {
+      req.url = `/api${req.url}`
+      req.originalUrl = req.url
+      req.path = `/api${req.path}`
+      console.log(`[Vercel] Added /api prefix: ${req.url}`)
+    }
   }
   
-  console.log(`[Vercel] ${req.method} ${req.url}`)
+  console.log(`[Vercel] Final: ${req.method} ${req.url}, path: ${req.path}`)
   
   try {
     // Get handler with timeout
