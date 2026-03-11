@@ -16,6 +16,9 @@
   "keywords": ["therapy", "healing", "anxiety", "trauma"],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "serverless-http": "^4.0.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
