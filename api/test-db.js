@@ -88,11 +88,24 @@ export default async function handler(req, res) {
       }
     })
   } catch (error) {
+    // Log detailed error info
+    console.error('[Test-DB] Error:', error.message)
+    console.error('[Test-DB] Error name:', error.name)
+    console.error('[Test-DB] MONGODB_URI value:', process.env.MONGODB_URI ? `"${process.env.MONGODB_URI}"` : 'undefined')
+    console.error('[Test-DB] MONGODB_URI length:', process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0)
+    console.error('[Test-DB] First 50 chars:', process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) : 'N/A')
+    
     res.status(500).json({
       status: 'error',
       message: error.message,
       error: error.name,
-      time: Date.now() - start
+      time: Date.now() - start,
+      debug: {
+        uriExists: !!process.env.MONGODB_URI,
+        uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+        uriPreview: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) : 'not set',
+        uriStartsWithMongo: process.env.MONGODB_URI ? (process.env.MONGODB_URI.startsWith('mongodb://') || process.env.MONGODB_URI.startsWith('mongodb+srv://')) : false
+      }
     })
   }
 }
