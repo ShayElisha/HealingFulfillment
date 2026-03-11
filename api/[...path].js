@@ -8,39 +8,18 @@ const handler = serverless(app, {
 })
 
 export default async (req, res) => {
-  // Set Vercel environment variable for path handling
   if (!process.env.VERCEL) {
     process.env.VERCEL = '1'
   }
   
-  // Log incoming request details
-  console.log('='.repeat(50))
-  console.log('[Vercel Function] Incoming request:')
-  console.log('  Method:', req.method)
-  console.log('  URL:', req.url)
-  console.log('  Path:', req.path || 'undefined')
-  console.log('  Original URL:', req.originalUrl || 'undefined')
-  console.log('  Query:', JSON.stringify(req.query || {}))
-  console.log('  Headers:', JSON.stringify(req.headers || {}))
-  console.log('='.repeat(50))
-  
   try {
-    const result = await handler(req, res)
-    console.log('[Vercel Function] Request completed successfully')
-    return result
+    return await handler(req, res)
   } catch (error) {
-    console.error('[Vercel Function] Error:', error)
-    console.error('[Vercel Function] Error name:', error.name)
-    console.error('[Vercel Function] Error message:', error.message)
-    console.error('[Vercel Function] Error stack:', error.stack)
-    
-    // Only send error response if not already sent
+    console.error('Error:', error.message)
     if (!res.headersSent) {
       return res.status(500).json({ 
         message: 'Internal server error',
-        error: error.message,
-        errorName: error.name,
-        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        error: error.message
       })
     }
   }

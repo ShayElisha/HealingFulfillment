@@ -63,62 +63,22 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Fix URL path for Vercel serverless functions
-// In Vercel, requests to /api/contact come to the function as /contact (via [...path])
-// But our routes expect /api/contact, so we need to add /api prefix
-// Check if running in Vercel
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
-console.log('[Server] Environment check:', {
-  VERCEL: process.env.VERCEL,
-  VERCEL_ENV: process.env.VERCEL_ENV,
-  VERCEL_URL: process.env.VERCEL_URL,
-  isVercel: isVercel
-})
-
-// Middleware to fix paths for Vercel
 app.use((req, res, next) => {
   const currentPath = req.path || ''
   const originalUrl = req.originalUrl || req.url || ''
   
-  console.log('[Middleware] Before path fix:', {
-    method: req.method,
-    currentPath,
-    originalUrl,
-    url: req.url,
-    isVercel
-  })
-  
-  // Skip health check
   if (currentPath === '/health' || originalUrl === '/health') {
-    console.log('[Middleware] Skipping health check')
     return next()
   }
   
-  // In Vercel, paths come without /api prefix, so we need to add it
-  // In local dev, paths already have /api prefix
   if (isVercel && !currentPath.startsWith('/api')) {
-    // Add /api prefix
     const newPath = '/api' + (currentPath.startsWith('/') ? currentPath : '/' + currentPath)
     const newUrl = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
-    
     req.url = newUrl
     req.originalUrl = newUrl
     req.path = newPath
-    
-    console.log('[Middleware] Fixed path:', {
-      method: req.method,
-      oldPath: currentPath,
-      newPath,
-      oldUrl: originalUrl,
-      newUrl
-    })
-  } else {
-    console.log('[Middleware] Path already correct or not Vercel:', {
-      method: req.method,
-      path: currentPath,
-      isVercel,
-      startsWithApi: currentPath.startsWith('/api')
-    })
   }
   
   next()
@@ -146,37 +106,18 @@ app.use('/api/admin', adminLimiter)
 
 // MongoDB connection middleware for serverless functions
 const ensureMongoConnection = async (req, res, next) => {
+  if (mongoose.connection.readyState === 1) {
+    return next()
+  }
+  
   try {
-    if (mongoose.connection.readyState === 0) {
-      console.log('[MongoDB] Connecting to MongoDB...')
-      await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 10000, // 10 seconds
-        socketTimeoutMS: 45000, // 45 seconds
-      })
-      console.log('[MongoDB] Connected successfully')
-    } else if (mongoose.connection.readyState === 1) {
-      console.log('[MongoDB] Already connected')
-    } else {
-      console.log('[MongoDB] Connection state:', mongoose.connection.readyState)
-      // Try to reconnect if disconnected
-      if (mongoose.connection.readyState === 2 || mongoose.connection.readyState === 3) {
-        console.log('[MongoDB] Attempting to reconnect...')
-        await mongoose.connect(MONGODB_URI, {
-          serverSelectionTimeoutMS: 10000,
-          socketTimeoutMS: 45000,
-        })
-        console.log('[MongoDB] Reconnected successfully')
-      }
-    }
+    await mongoose.connect(MONGODB_URI)
     next()
   } catch (error) {
-    console.error('[MongoDB] Connection error:', error)
-    console.error('[MongoDB] Error name:', error.name)
-    console.error('[MongoDB] Error message:', error.message)
+    console.error('MongoDB connection error:', error.message)
     return res.status(500).json({ 
       message: 'Database connection failed',
-      error: error.message,
-      errorName: error.name
+      error: error.message
     })
   }
 }
@@ -186,79 +127,23 @@ app.use('/api/', ensureMongoConnection)
 
 // Health check
 app.get('/health', (req, res) => {
-  const mongoState = mongoose.connection.readyState
-  const mongoStates = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting'
-  }
-  
   res.json({ 
-    status: mongoState === 1 ? 'ok' : 'degraded',
-    timestamp: new Date().toISOString(),
-    mongodb: {
-      state: mongoState,
-      stateName: mongoStates[mongoState] || 'unknown',
-      connected: mongoState === 1
-    }
+    status: 'ok',
+    timestamp: new Date().toISOString()
   })
 })
 
-// Routes with logging
-console.log('[Server] Registering routes...')
-
-app.use('/api/contact', (req, res, next) => {
-  console.log('[Route] /api/contact:', req.method, req.path)
-  next()
-}, contactRoutes)
-
-app.use('/api/booking', (req, res, next) => {
-  console.log('[Route] /api/booking:', req.method, req.path)
-  next()
-}, bookingRoutes)
-
-app.use('/api/blog', (req, res, next) => {
-  console.log('[Route] /api/blog:', req.method, req.path)
-  next()
-}, blogRoutes)
-
-app.use('/api/admin', (req, res, next) => {
-  console.log('[Route] /api/admin:', req.method, req.path)
-  next()
-}, adminRoutes)
-
-app.use('/api/courses', (req, res, next) => {
-  console.log('[Route] /api/courses:', req.method, req.path)
-  next()
-}, coursesRoutes)
-
-app.use('/api/categories', (req, res, next) => {
-  console.log('[Route] /api/categories:', req.method, req.path)
-  next()
-}, categoriesRoutes)
-
-app.use('/api/purchases', (req, res, next) => {
-  console.log('[Route] /api/purchases:', req.method, req.path)
-  next()
-}, purchasesRoutes)
-
-app.use('/api/upload', (req, res, next) => {
-  console.log('[Route] /api/upload:', req.method, req.path)
-  next()
-}, uploadRoutes)
-
-app.use('/api', (req, res, next) => {
-  console.log('[Route] /api (customers):', req.method, req.path)
-  next()
-}, customersRoutes)
-
-app.use('/api/auth', (req, res, next) => {
-  console.log('[Route] /api/auth:', req.method, req.path, 'Full URL:', req.originalUrl)
-  next()
-}, authRoutes)
-
-console.log('[Server] All routes registered')
+// Routes
+app.use('/api/contact', contactRoutes)
+app.use('/api/booking', bookingRoutes)
+app.use('/api/blog', blogRoutes)
+app.use('/api/admin', adminRoutes)
+app.use('/api/courses', coursesRoutes)
+app.use('/api/categories', categoriesRoutes)
+app.use('/api/purchases', purchasesRoutes)
+app.use('/api/upload', uploadRoutes)
+app.use('/api', customersRoutes)
+app.use('/api/auth', authRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -271,18 +156,8 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  console.log('[404 Handler] Route not found:', {
-    method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    url: req.url,
-    headers: req.headers
-  })
   res.status(404).json({ 
-    message: 'Route not found',
-    method: req.method,
-    path: req.path,
-    originalUrl: req.originalUrl
+    message: 'Route not found'
   })
 })
 
