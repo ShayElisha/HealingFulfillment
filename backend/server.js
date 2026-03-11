@@ -59,21 +59,39 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Fix URL path for Vercel serverless functions
-// In Vercel, requests to /api/contact come to the function as /contact
+// In Vercel, requests to /api/contact come to the function as /contact (via [...path])
 // But our routes expect /api/contact, so we need to add /api prefix
-if (process.env.VERCEL === '1') {
-  app.use((req, res, next) => {
-    // If the path doesn't start with /api, add it
-    if (!req.path.startsWith('/api') && req.path !== '/health') {
-      const originalUrl = req.originalUrl || req.url
-      req.url = '/api' + originalUrl
-      req.originalUrl = '/api' + originalUrl
-      // Update path for Express routing
-      req.path = '/api' + req.path
-    }
-    next()
-  })
-}
+// Check if running in Vercel (either via env var or by checking if we're in a serverless context)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || 
+                 (typeof process.env.AWS_LAMBDA_FUNCTION_NAME === 'undefined' && 
+                  typeof process.env.VERCEL_URL !== 'undefined')
+
+// Always add middleware, but make it smart about when to modify paths
+app.use((req, res, next) => {
+  // Only modify paths if we're in Vercel or if the path doesn't start with /api
+  // This handles both Vercel (where paths come without /api) and local dev (where they have /api)
+  const currentPath = req.path || ''
+  const originalUrl = req.originalUrl || req.url || ''
+  
+  // If we're in Vercel or the path doesn't start with /api (and it's not /health), add /api prefix
+  if ((isVercel || !currentPath.startsWith('/api')) && currentPath !== '/health' && !originalUrl.startsWith('/api')) {
+    // Add /api prefix to all paths
+    const newPath = currentPath.startsWith('/') ? '/api' + currentPath : '/api/' + currentPath
+    const newUrl = originalUrl.startsWith('/') ? '/api' + originalUrl : '/api/' + originalUrl
+    
+    req.url = newUrl
+    req.originalUrl = newUrl
+    req.path = newPath
+  } else if (originalUrl.startsWith('/api') && !currentPath.startsWith('/api')) {
+    // If originalUrl has /api but path doesn't, sync them
+    req.path = originalUrl.split('?')[0] // Remove query string
+  }
+  
+  if (isVercel) {
+    console.log(`[Vercel] Request: ${req.method} ${req.path} (original: ${originalUrl})`)
+  }
+  next()
+})
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))

@@ -1,8 +1,8 @@
 import serverless from 'serverless-http'
 import app from '../backend/server.js'
 
-// Vercel serverless function handler for /api route
-// Wrap Express app with serverless-http for proper Vercel compatibility
+// Vercel serverless function handler - catch-all route
+// This handles all /api/* routes
 const handler = serverless(app, {
   binary: ['image/*', 'video/*', 'application/pdf', 'application/octet-stream']
 })
