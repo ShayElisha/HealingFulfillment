@@ -8,6 +8,7 @@ const handler = serverless(app, {
 })
 
 export default async (req, res) => {
+  // Set Vercel environment variable for path handling
   if (!process.env.VERCEL) {
     process.env.VERCEL = '1'
   }

@@ -63,16 +63,21 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Fix URL path for Vercel serverless functions
+// In Vercel, requests to /api/contact come to the function as /contact (via [...path])
+// But our routes expect /api/contact, so we need to add /api prefix
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
 app.use((req, res, next) => {
   const currentPath = req.path || ''
   const originalUrl = req.originalUrl || req.url || ''
   
+  // Skip health check
   if (currentPath === '/health' || originalUrl === '/health') {
     return next()
   }
   
+  // In Vercel, paths come without /api prefix, so we need to add it
+  // In local dev, paths already have /api prefix
   if (isVercel && !currentPath.startsWith('/api')) {
     const newPath = '/api' + (currentPath.startsWith('/') ? currentPath : '/' + currentPath)
     const newUrl = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
@@ -127,23 +132,88 @@ app.use('/api/', ensureMongoConnection)
 
 // Health check
 app.get('/health', (req, res) => {
+  const mongoState = mongoose.connection.readyState
+  const mongoStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  }
+  
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
+  
   res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString()
+    status: mongoState === 1 ? 'ok' : 'degraded',
+    environment: isVercel ? 'vercel' : 'local',
+    timestamp: new Date().toISOString(),
+    mongodb: {
+      state: mongoState,
+      stateName: mongoStates[mongoState] || 'unknown',
+      connected: mongoState === 1
+    },
+    vercel: {
+      detected: !!isVercel,
+      env: process.env.VERCEL,
+      envName: process.env.VERCEL_ENV,
+      url: process.env.VERCEL_URL
+    }
   })
 })
 
-// Routes
-app.use('/api/contact', contactRoutes)
-app.use('/api/booking', bookingRoutes)
-app.use('/api/blog', blogRoutes)
-app.use('/api/admin', adminRoutes)
-app.use('/api/courses', coursesRoutes)
-app.use('/api/categories', categoriesRoutes)
-app.use('/api/purchases', purchasesRoutes)
-app.use('/api/upload', uploadRoutes)
-app.use('/api', customersRoutes)
-app.use('/api/auth', authRoutes)
+// Routes with logging
+console.log('[Server] Registering routes...')
+
+app.use('/api/contact', (req, res, next) => {
+  console.log('[Route] /api/contact:', req.method, req.path)
+  next()
+}, contactRoutes)
+
+app.use('/api/booking', (req, res, next) => {
+  console.log('[Route] /api/booking:', req.method, req.path)
+  next()
+}, bookingRoutes)
+
+app.use('/api/blog', (req, res, next) => {
+  console.log('[Route] /api/blog:', req.method, req.path)
+  next()
+}, blogRoutes)
+
+app.use('/api/admin', (req, res, next) => {
+  console.log('[Route] /api/admin:', req.method, req.path)
+  next()
+}, adminRoutes)
+
+app.use('/api/courses', (req, res, next) => {
+  console.log('[Route] /api/courses:', req.method, req.path)
+  next()
+}, coursesRoutes)
+
+app.use('/api/categories', (req, res, next) => {
+  console.log('[Route] /api/categories:', req.method, req.path)
+  next()
+}, categoriesRoutes)
+
+app.use('/api/purchases', (req, res, next) => {
+  console.log('[Route] /api/purchases:', req.method, req.path)
+  next()
+}, purchasesRoutes)
+
+app.use('/api/upload', (req, res, next) => {
+  console.log('[Route] /api/upload:', req.method, req.path)
+  next()
+}, uploadRoutes)
+
+app.use('/api', (req, res, next) => {
+  console.log('[Route] /api (customers):', req.method, req.path)
+  next()
+}, customersRoutes)
+
+app.use('/api/auth', (req, res, next) => {
+  console.log('[Route] /api/auth:', req.method, req.path, 'Full URL:', req.originalUrl)
+  next()
+}, authRoutes)
+
+console.log('[Server] All routes registered')
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -156,8 +226,18 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log('[404 Handler] Route not found:', {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    url: req.url,
+    headers: req.headers
+  })
   res.status(404).json({ 
-    message: 'Route not found'
+    message: 'Route not found',
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl
   })
 })
 

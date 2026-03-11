@@ -1,6 +1,5 @@
 import axios from 'axios'
 
-// Use proxy in development, /api in production (Vercel serverless functions)
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 const api = axios.create({
