@@ -360,13 +360,31 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  console.log(`[404 Handler] Route not found: ${req.method} ${req.url}`)
-  console.log(`[404 Handler] Path: ${req.path}, OriginalUrl: ${req.originalUrl}`)
+  console.log(`[404 Handler] ===== ROUTE NOT FOUND =====`)
+  console.log(`[404 Handler] Method: ${req.method}`)
+  console.log(`[404 Handler] URL: ${req.url}`)
+  console.log(`[404 Handler] Path: ${req.path}`)
+  console.log(`[404 Handler] OriginalUrl: ${req.originalUrl}`)
+  console.log(`[404 Handler] Query:`, JSON.stringify(req.query))
+  console.log(`[404 Handler] Registered routes:`)
+  console.log(`[404 Handler] - /api/contact`)
+  console.log(`[404 Handler] - /api/booking`)
+  console.log(`[404 Handler] - /api/blog`)
+  console.log(`[404 Handler] - /api/admin`)
+  console.log(`[404 Handler] - /api/courses`)
+  console.log(`[404 Handler] - /api/categories`)
+  console.log(`[404 Handler] - /api/purchases`)
+  console.log(`[404 Handler] - /api/upload`)
+  console.log(`[404 Handler] - /api/admin/customers`)
+  console.log(`[404 Handler] - /api/auth`)
+  console.log(`[404 Handler] - /api/login`)
+  console.log(`[404 Handler] ==========================`)
   res.status(404).json({ 
     message: 'Route not found',
     method: req.method,
     url: req.url,
-    path: req.path
+    path: req.path,
+    originalUrl: req.originalUrl
   })
 })
 
