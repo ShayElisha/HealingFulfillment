@@ -81,15 +81,52 @@ if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
 }
 
 // Rate limiting - more lenient for admin panel
+// Configure rate limiter to work in serverless environments
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200 // limit each IP to 200 requests per windowMs
+  max: 200, // limit each IP to 200 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting if IP is undefined (serverless edge case)
+  skip: (req) => {
+    // In serverless, if IP is undefined, skip rate limiting
+    // This prevents errors but still allows rate limiting when IP is available
+    return !req.ip && (process.env.VERCEL === '1' || process.env.VERCEL_ENV)
+  },
+  // Custom key generator for serverless
+  keyGenerator: (req) => {
+    // Use IP if available, otherwise use a combination of headers
+    if (req.ip) {
+      return req.ip
+    }
+    // Fallback for serverless environments
+    const forwarded = req.headers['x-forwarded-for']
+    if (forwarded) {
+      return forwarded.split(',')[0].trim()
+    }
+    return req.headers['x-vercel-ip'] || 'unknown'
+  }
 })
 
 // More lenient rate limiting for admin routes
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500 // limit each IP to 500 requests per windowMs for admin
+  max: 500, // limit each IP to 500 requests per windowMs for admin
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    return !req.ip && (process.env.VERCEL === '1' || process.env.VERCEL_ENV)
+  },
+  keyGenerator: (req) => {
+    if (req.ip) {
+      return req.ip
+    }
+    const forwarded = req.headers['x-forwarded-for']
+    if (forwarded) {
+      return forwarded.split(',')[0].trim()
+    }
+    return req.headers['x-vercel-ip'] || 'unknown'
+  }
 })
 
 app.use('/api/', generalLimiter)
