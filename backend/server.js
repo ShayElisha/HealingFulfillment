@@ -91,6 +91,11 @@ app.use('/api/admin', adminLimiter)
 
 // MongoDB connection middleware for serverless functions
 const ensureMongoConnection = async (req, res, next) => {
+  // Skip MongoDB connection for health check
+  if (req.path === '/health' || req.url === '/health' || req.url.startsWith('/health')) {
+    return next()
+  }
+  
   if (mongoose.connection.readyState === 1) {
     return next()
   }
