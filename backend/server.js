@@ -98,6 +98,9 @@ const ensureMongoConnection = async (req, res, next) => {
     return next()
   }
   
+  // Log request details
+  console.log(`[MongoDB Middleware] ${req.method} ${req.url} - Start`)
+  
   const connectionState = mongoose.connection.readyState
   console.log(`[MongoDB Middleware] State: ${connectionState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`)
   
@@ -190,7 +193,9 @@ const ensureMongoConnection = async (req, res, next) => {
       )
     ])
     console.log(`[MongoDB Middleware] Connected in ${Date.now() - connectStart}ms (total: ${Date.now() - middlewareStart}ms)`)
+    console.log(`[MongoDB Middleware] ${req.method} ${req.url} - Calling next()`)
     next()
+    console.log(`[MongoDB Middleware] ${req.method} ${req.url} - After next()`)
   } catch (error) {
     console.error(`[MongoDB Middleware] Connection error after ${Date.now() - connectStart}ms:`, error.message)
     return res.status(500).json({ 

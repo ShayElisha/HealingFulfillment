@@ -71,15 +71,31 @@ export default async (req, res) => {
     
     console.log(`[Vercel] Handler ready (${Date.now() - start}ms)`)
     
+    // Track if response was sent
+    let responseSent = false
+    const originalEnd = res.end.bind(res)
+    res.end = function(...args) {
+      responseSent = true
+      console.log(`[Vercel] Response sent (${Date.now() - start}ms)`)
+      return originalEnd(...args)
+    }
+    
     // Process request with timeout
+    const handlerPromise = handlerInstance(req, res)
+    
     await Promise.race([
-      handlerInstance(req, res),
+      handlerPromise,
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 25000)
+        setTimeout(() => {
+          if (!responseSent) {
+            console.error(`[Vercel] Request timeout after ${Date.now() - start}ms, responseSent: ${responseSent}`)
+            reject(new Error('Request timeout'))
+          }
+        }, 25000)
       )
     ])
     
-    console.log(`[Vercel] Done (${Date.now() - start}ms)`)
+    console.log(`[Vercel] Done (${Date.now() - start}ms), responseSent: ${responseSent}`)
   } catch (error) {
     console.error(`[Vercel] Error (${Date.now() - start}ms):`, error.message)
     
