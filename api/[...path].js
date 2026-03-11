@@ -107,57 +107,46 @@ export default async (req, res) => {
       return originalWriteHead(...args)
     }
     
-    // Process request with proper promise handling
+    // Process request
     try {
-      // Wrap handler call in Promise to ensure it completes
-      const handlerResult = await new Promise((resolve, reject) => {
-        // Set timeout
-        const timeout = setTimeout(() => {
-          if (!responseSent && !res.headersSent) {
-            console.error(`[Vercel] Handler timeout after ${Date.now() - start}ms`)
-            reject(new Error('Handler timeout'))
-          }
-        }, 25000)
-        
-        // Call handler
-        const handlerPromise = handlerInstance(req, res)
-        
-        // Handle handler promise
-        handlerPromise
-          .then((result) => {
-            clearTimeout(timeout)
-            console.log(`[Vercel] Handler promise resolved (${Date.now() - start}ms), responseSent: ${responseSent}`)
-            resolve(result)
-          })
-          .catch((error) => {
-            clearTimeout(timeout)
-            console.error(`[Vercel] Handler promise rejected (${Date.now() - start}ms):`, error.message)
-            reject(error)
-          })
-        
-        // Also check if response was sent (in case handler doesn't return promise properly)
-        const checkInterval = setInterval(() => {
-          if (responseSent || res.headersSent) {
-            clearTimeout(timeout)
-            clearInterval(checkInterval)
-            console.log(`[Vercel] Response detected via polling (${Date.now() - start}ms)`)
-            resolve(null)
-          }
-        }, 100)
-        
-        // Clear interval after timeout
-        setTimeout(() => clearInterval(checkInterval), 25000)
-      })
+      const handlerResult = await handlerInstance(req, res)
+      console.log(`[Vercel] Handler returned (${Date.now() - start}ms), responseSent: ${responseSent}`)
       
-      console.log(`[Vercel] Handler completed (${Date.now() - start}ms), responseSent: ${responseSent}`)
-      
-      // If response wasn't sent, send error
-      if (!responseSent && !res.headersSent) {
-        console.error(`[Vercel] Response not sent, sending error`)
-        res.status(500).json({ 
-          message: 'No response from server',
-          error: 'Handler completed but no response was sent'
+      // serverless-http returns Lambda-formatted response
+      // If we got a result and response wasn't sent via res object, send it manually
+      if (handlerResult && !responseSent && !res.headersSent) {
+        console.log(`[Vercel] Sending Lambda-formatted response`)
+        
+        // Extract response from Lambda format
+        const statusCode = handlerResult.statusCode || 200
+        const headers = handlerResult.headers || {}
+        const body = handlerResult.body || ''
+        
+        // Set status code
+        res.status(statusCode)
+        
+        // Set headers
+        Object.keys(headers).forEach(key => {
+          res.setHeader(key, headers[key])
         })
+        
+        // Send body
+        if (typeof body === 'string') {
+          try {
+            // Try to parse as JSON if content-type is json
+            if (headers['content-type'] && headers['content-type'].includes('application/json')) {
+              res.json(JSON.parse(body))
+            } else {
+              res.send(body)
+            }
+          } catch (e) {
+            res.send(body)
+          }
+        } else {
+          res.json(body)
+        }
+        
+        console.log(`[Vercel] Response sent manually (${Date.now() - start}ms)`)
       }
     } catch (error) {
       console.error(`[Vercel] Handler error (${Date.now() - start}ms):`, error.message)
