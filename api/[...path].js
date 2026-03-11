@@ -97,9 +97,17 @@ export default async (req, res) => {
   
   if (req.query && req.query['...path']) {
     // Path is in query parameter (catch-all route)
-    const pathParam = Array.isArray(req.query['...path']) 
-      ? req.query['...path'].join('/')
-      : req.query['...path']
+    // Vercel passes nested paths like "auth/login" as array or string
+    let pathParam = null
+    if (Array.isArray(req.query['...path'])) {
+      // If it's an array, join with '/'
+      pathParam = req.query['...path'].join('/')
+    } else {
+      // If it's a string, use as is
+      pathParam = req.query['...path']
+    }
+    
+    console.log(`[Vercel] Path param from query:`, pathParam, `(type: ${typeof pathParam}, isArray: ${Array.isArray(req.query['...path'])})`)
     
     delete req.query['...path']
     
@@ -108,7 +116,17 @@ export default async (req, res) => {
       ? '?' + new URLSearchParams(req.query).toString()
       : ''
     
-    finalPath = `/api/${pathParam}${remainingQuery}`
+    // Ensure path starts with /api/
+    if (pathParam && pathParam.startsWith('api/')) {
+      // Already has api/, just add leading /
+      finalPath = `/${pathParam}${remainingQuery}`
+    } else if (pathParam) {
+      // Add /api/ prefix
+      finalPath = `/api/${pathParam}${remainingQuery}`
+    } else {
+      finalPath = `/api${remainingQuery}`
+    }
+    
     console.log(`[Vercel] Path from query param: ${finalPath}`)
   } else {
     // Path is in the URL itself
