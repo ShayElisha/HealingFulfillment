@@ -93,10 +93,13 @@ app.use((req, res, next) => {
   next()
 })
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
-app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')))
-app.use('/uploads/customers', express.static(path.join(__dirname, 'uploads/customers')))
+// Serve uploaded files (only in non-serverless environments)
+// In Vercel/serverless, files should be served from external storage (S3, Cloudinary, etc.)
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+  app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')))
+  app.use('/uploads/customers', express.static(path.join(__dirname, 'uploads/customers')))
+}
 
 // Rate limiting - more lenient for admin panel
 const generalLimiter = rateLimit({

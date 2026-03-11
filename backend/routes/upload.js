@@ -9,32 +9,45 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
-// Ensure upload directories exist
-const uploadsDir = path.join(__dirname, '../uploads')
-const videosDir = path.join(uploadsDir, 'videos')
+// Check if running in Vercel (serverless environment)
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-}
-if (!fs.existsSync(videosDir)) {
-  fs.mkdirSync(videosDir, { recursive: true })
+// Ensure upload directories exist (only in non-serverless environments)
+// In Vercel/serverless, file uploads should use external storage (S3, Cloudinary, etc.)
+if (!isVercel) {
+  const uploadsDir = path.join(__dirname, '../uploads')
+  const videosDir = path.join(uploadsDir, 'videos')
+
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true })
+    }
+    if (!fs.existsSync(videosDir)) {
+      fs.mkdirSync(videosDir, { recursive: true })
+    }
+  } catch (error) {
+    console.warn('Failed to create upload directories:', error.message)
+  }
 }
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Only videos allowed
-    if (file.mimetype.startsWith('video/')) {
-      cb(null, path.join(__dirname, '../uploads/videos'))
-    } else {
-      cb(new Error('Only video files are allowed'))
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
-  }
-})
+// In Vercel/serverless, use memory storage instead of disk storage
+const storage = isVercel
+  ? multer.memoryStorage() // Use memory storage in serverless
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        // Only videos allowed
+        if (file.mimetype.startsWith('video/')) {
+          cb(null, path.join(__dirname, '../uploads/videos'))
+        } else {
+          cb(new Error('Only video files are allowed'))
+        }
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
+      }
+    })
 
 const upload = multer({
   storage: storage,
@@ -58,8 +71,16 @@ router.post('/', upload.single('file'), (req, res, next) => {
       return res.status(400).json({ message: 'No file uploaded' })
     }
 
-    const fileType = 'video' // Only videos allowed
+    // In Vercel/serverless, file uploads to filesystem are not supported
+    // Files should be uploaded to external storage (S3, Cloudinary, etc.)
+    if (isVercel) {
+      return res.status(501).json({ 
+        message: 'File uploads are not supported in serverless environment',
+        error: 'Please use external storage service (S3, Cloudinary, etc.) for file uploads'
+      })
+    }
 
+    const fileType = 'video' // Only videos allowed
     const fileUrl = `/uploads/videos/${req.file.filename}`
 
     res.json({
