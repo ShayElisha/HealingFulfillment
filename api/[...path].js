@@ -30,11 +30,24 @@ async function getHandler() {
       console.log('[Vercel] server.js imported')
       
       // Create handler with proper configuration for Vercel
-      // In Vercel, serverless-http needs explicit configuration for body parsing
+      // CRITICAL: We need to preserve the HTTP method explicitly
+      // In Vercel, the method comes in the event object, not in req.method initially
       handler = serverless(app, {
         binary: ['image/*', 'video/*', 'application/pdf'],
-        // Don't provide request/response transformers - let serverless-http handle it
-        // The default behavior should work, but we need to ensure body is available
+        request: (req, event, context) => {
+          // CRITICAL: Preserve the HTTP method from the event
+          // Vercel passes the method in event.httpMethod
+          if (event && event.httpMethod) {
+            req.method = event.httpMethod
+            console.log(`[serverless-http] Setting method from event: ${event.httpMethod}`)
+          }
+          // Also check if method was already set and preserve it
+          if (req.method && req.method !== event?.httpMethod && event?.httpMethod) {
+            console.log(`[serverless-http] Method mismatch: req.method=${req.method}, event.httpMethod=${event.httpMethod}, using event`)
+            req.method = event.httpMethod
+          }
+          return req
+        }
       })
       console.log('[Vercel] Handler created')
       
