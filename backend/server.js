@@ -206,6 +206,13 @@ const ensureMongoConnection = async (req, res, next) => {
   }
 }
 
+// Debug middleware to log all requests
+app.use('/api/', (req, res, next) => {
+  console.log(`[Express] ${req.method} ${req.url} - Request received`)
+  console.log(`[Express] Path: ${req.path}, OriginalUrl: ${req.originalUrl}`)
+  next()
+})
+
 // Apply MongoDB connection middleware to all API routes
 app.use('/api/', ensureMongoConnection)
 
