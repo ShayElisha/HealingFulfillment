@@ -320,19 +320,11 @@ app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api', customersRoutes)
+app.use('/api/auth', authRoutes)
 
 // Alias for /api/login -> /api/auth/login
-// Handle /api/login requests and forward to auth routes
-app.all('/api/login', (req, res, next) => {
-  // Change the URL to match auth routes
-  // Note: req.path is read-only in serverless-http, so we only change req.url and req.originalUrl
-  req.url = '/api/auth/login'
-  req.originalUrl = '/api/auth/login'
-  console.log(`[Login Alias] Redirecting ${req.method} /api/login to /api/auth/login`)
-  next()
-})
-
-app.use('/api/auth', authRoutes)
+// Simply use the auth routes with a different base path
+app.use('/api/login', authRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
