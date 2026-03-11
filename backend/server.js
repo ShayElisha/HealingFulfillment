@@ -38,18 +38,23 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginEmbedderPolicy: false
 }))
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3001', // Admin frontend
-    'http://localhost:3000', // Main frontend
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ],
+// CORS configuration - allow all origins in production (Vercel handles this)
+const corsOptions = {
+  origin: process.env.VERCEL === '1' 
+    ? true // Allow all origins in Vercel (it handles CORS)
+    : [
+        process.env.FRONTEND_URL || 'http://localhost:3000',
+        'http://localhost:3001', // Admin frontend
+        'http://localhost:3000', // Main frontend
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001'
+      ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}))
+}
+
+app.use(cors(corsOptions))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -108,13 +113,18 @@ app.use((req, res) => {
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB')
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`)
-    })
+    // Only start listening if not in serverless environment (Vercel)
+    if (process.env.VERCEL !== '1') {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`)
+      })
+    }
   })
   .catch((error) => {
     console.error('MongoDB connection error:', error)
-    process.exit(1)
+    if (process.env.VERCEL !== '1') {
+      process.exit(1)
+    }
   })
 
 export default app

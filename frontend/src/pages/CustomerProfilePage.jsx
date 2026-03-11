@@ -540,7 +540,7 @@ function CustomerProfilePage() {
                       <p className="text-sm text-neutral-600 mb-2">{file.description}</p>
                     )}
                     <a
-                      href={`${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000'}${file.url}`}
+                      href={file.url.startsWith('http') ? file.url : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + file.url : file.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:underline text-sm"
