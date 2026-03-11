@@ -29,15 +29,39 @@ async function getHandler() {
       const { default: app } = await import('../backend/server.js')
       console.log('[Vercel] server.js imported')
       
-      // Create handler with request transformation
+      // Create handler with proper configuration for Vercel
       handler = serverless(app, {
         binary: ['image/*', 'video/*', 'application/pdf'],
+        // Ensure body parsing works correctly
         request: (req, event, context) => {
           // Preserve the original method
           if (event.httpMethod) {
             req.method = event.httpMethod
           }
+          // Ensure body is available if it exists in the event
+          if (event.body && !req.body) {
+            // If body is a string, try to parse it
+            if (typeof event.body === 'string') {
+              try {
+                const contentType = req.headers['content-type'] || ''
+                if (contentType.includes('application/json')) {
+                  req.body = JSON.parse(event.body)
+                } else {
+                  req.body = event.body
+                }
+              } catch (e) {
+                // If parsing fails, use raw body
+                req.body = event.body
+              }
+            } else {
+              req.body = event.body
+            }
+          }
           return req
+        },
+        // Ensure response is handled correctly
+        response: (res) => {
+          return res
         }
       })
       console.log('[Vercel] Handler created')
@@ -221,20 +245,32 @@ export default async (req, res) => {
       return originalSend.apply(this, args)
     }
     
-    // Process request
-    try {
-      // Ensure method is set correctly before calling handler
-      req.method = originalMethod
-      console.log(`[Vercel] Calling handler with method: ${req.method}`)
-      
-      // Log body for POST requests
-      if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-        console.log(`[Vercel] Request body type:`, typeof req.body)
-        console.log(`[Vercel] Request body:`, req.body ? JSON.stringify(req.body).substring(0, 200) : 'empty')
-        console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
-      }
-      
-      const handlerResult = await handlerInstance(req, res)
+      // Process request
+      try {
+        // Ensure method is set correctly before calling handler
+        req.method = originalMethod
+        console.log(`[Vercel] Calling handler with method: ${req.method}`)
+        
+        // Log body for POST/PUT/PATCH requests BEFORE handler
+        if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+          console.log(`[Vercel] Request body type:`, typeof req.body)
+          console.log(`[Vercel] Request body before handler:`, req.body ? JSON.stringify(req.body).substring(0, 500) : 'empty')
+          console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
+          console.log(`[Vercel] Content-Length:`, req.headers['content-length'])
+          
+          // If body is not parsed and Content-Type is JSON, try to parse it manually
+          if (!req.body && req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
+            // Body might be in raw format - serverless-http should handle this, but let's log it
+            console.log(`[Vercel] Body is empty but Content-Type is JSON - serverless-http should parse it`)
+          }
+        }
+        
+        const handlerResult = await handlerInstance(req, res)
+        
+        // Log body AFTER handler (to see if Express parsed it)
+        if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+          console.log(`[Vercel] Request body after handler:`, req.body ? JSON.stringify(req.body).substring(0, 500) : 'empty')
+        }
       console.log(`[Vercel] Handler returned (${Date.now() - start}ms)`)
       console.log(`[Vercel] Handler result:`, handlerResult ? JSON.stringify(handlerResult).substring(0, 200) : 'null/undefined')
       console.log(`[Vercel] Response sent: ${responseSent}, headersSent: ${res.headersSent}`)
