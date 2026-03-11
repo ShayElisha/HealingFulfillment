@@ -60,8 +60,20 @@ api.interceptors.response.use(
 
 export const contactService = {
   submit: async (data) => {
-    const response = await api.post('/contact', data)
-    return response.data
+    const baseURL = import.meta.env.VITE_API_URL || '/api'
+    const url = '/contact'
+    const fullURL = `${baseURL}${url}`
+    console.log(`[ContactService] Submitting to: ${fullURL}`)
+    console.log(`[ContactService] Data:`, JSON.stringify(data))
+    try {
+      const response = await api.post('/contact', data)
+      console.log(`[ContactService] Response:`, response.status, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`[ContactService] Error:`, error)
+      console.error(`[ContactService] Error response:`, error.response)
+      throw error
+    }
   },
 }
 

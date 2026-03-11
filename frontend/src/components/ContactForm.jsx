@@ -25,13 +25,44 @@ function ContactForm() {
     setSubmitStatus(null)
 
     try {
-      await contactService.submit(formData)
+      console.log('[ContactForm] Submitting form data:', formData)
+      const result = await contactService.submit(formData)
+      console.log('[ContactForm] Submit successful:', result)
       setSubmitStatus({ type: 'success', message: 'ההודעה נשלחה בהצלחה! ניצור איתך קשר בקרוב.' })
       setFormData({ name: '', phone: '', email: '', message: '' })
     } catch (error) {
+      console.error('[ContactForm] Submit error:', error)
+      console.error('[ContactForm] Error response:', error.response)
+      console.error('[ContactForm] Error message:', error.message)
+      console.error('[ContactForm] Error code:', error.code)
+      
+      // Show more detailed error message
+      let errorMessage = 'אירעה שגיאה בשליחת ההודעה. אנא נסה שוב או צור קשר ישירות.'
+      
+      if (error.response) {
+        // Server responded with error
+        const status = error.response.status
+        const data = error.response.data
+        
+        if (status === 400 && data?.errors) {
+          // Validation errors
+          errorMessage = 'אנא מלא את כל השדות הנדרשים'
+        } else if (data?.message) {
+          errorMessage = data.message
+        } else if (status === 500) {
+          errorMessage = 'שגיאת שרת. אנא נסה שוב מאוחר יותר.'
+        } else if (status === 404) {
+          errorMessage = 'שירות לא זמין כרגע. אנא נסה שוב מאוחר יותר.'
+        }
+      } else if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
+        errorMessage = 'לא ניתן להתחבר לשרת. אנא בדוק את החיבור לאינטרנט.'
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage = 'בעיית רשת. אנא נסה שוב.'
+      }
+      
       setSubmitStatus({
         type: 'error',
-        message: 'אירעה שגיאה בשליחת ההודעה. אנא נסה שוב או צור קשר ישירות.',
+        message: errorMessage,
       })
     } finally {
       setIsSubmitting(false)
