@@ -96,18 +96,25 @@ const ensureMongoConnection = async (req, res, next) => {
     return next()
   }
   
-  if (mongoose.connection.readyState === 1) {
+  const connectionState = mongoose.connection.readyState
+  console.log(`[MongoDB] Connection state: ${connectionState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`)
+  
+  if (connectionState === 1) {
+    console.log('[MongoDB] Already connected')
     return next()
   }
   
   // Check if MONGODB_URI is set
   if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/healing-fulfillment') {
-    console.error('MongoDB URI not configured')
+    console.error('[MongoDB] URI not configured')
     return res.status(500).json({ 
       message: 'Database connection failed',
       error: 'MONGODB_URI environment variable is not set'
     })
   }
+  
+  console.log('[MongoDB] Attempting to connect...')
+  const connectStart = Date.now()
   
   try {
     // Use shorter timeout for serverless
@@ -120,11 +127,10 @@ const ensureMongoConnection = async (req, res, next) => {
         setTimeout(() => reject(new Error('MongoDB connection timeout')), 5000)
       )
     ])
-    console.log('MongoDB connected successfully')
+    console.log(`[MongoDB] Connected successfully in ${Date.now() - connectStart}ms`)
     next()
   } catch (error) {
-    console.error('MongoDB connection error:', error.message)
-    console.error('MongoDB connection error stack:', error.stack)
+    console.error(`[MongoDB] Connection error after ${Date.now() - connectStart}ms:`, error.message)
     return res.status(500).json({ 
       message: 'Database connection failed',
       error: error.message
