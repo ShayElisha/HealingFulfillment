@@ -30,36 +30,18 @@ async function getHandler() {
       console.log('[Vercel] server.js imported')
       
       // Create handler with proper configuration for Vercel
+      // serverless-http automatically handles body parsing for Express middleware
       handler = serverless(app, {
         binary: ['image/*', 'video/*', 'application/pdf'],
-        // Ensure body parsing works correctly
         request: (req, event, context) => {
           // Preserve the original method
           if (event.httpMethod) {
             req.method = event.httpMethod
           }
-          // Ensure body is available if it exists in the event
-          if (event.body && !req.body) {
-            // If body is a string, try to parse it
-            if (typeof event.body === 'string') {
-              try {
-                const contentType = req.headers['content-type'] || ''
-                if (contentType.includes('application/json')) {
-                  req.body = JSON.parse(event.body)
-                } else {
-                  req.body = event.body
-                }
-              } catch (e) {
-                // If parsing fails, use raw body
-                req.body = event.body
-              }
-            } else {
-              req.body = event.body
-            }
-          }
+          // Let serverless-http and Express handle body parsing automatically
+          // Don't interfere with the body parsing process
           return req
         },
-        // Ensure response is handled correctly
         response: (res) => {
           return res
         }
