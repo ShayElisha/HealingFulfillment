@@ -228,9 +228,16 @@ export default async (req, res) => {
     
       // Process request
       try {
-        // Ensure method is set correctly before calling handler
+        // CRITICAL: Ensure method is set correctly and preserved
+        // serverless-http might change the method, so we need to force it
         req.method = originalMethod
-        console.log(`[Vercel] Calling handler with method: ${req.method}`)
+        
+        // Also set it on the request object properties that serverless-http might check
+        if (req._method) {
+          req._method = originalMethod
+        }
+        
+        console.log(`[Vercel] Calling handler with method: ${req.method} (original: ${originalMethod})`)
         
         // Log body for POST/PUT/PATCH requests BEFORE handler
         if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
@@ -238,15 +245,15 @@ export default async (req, res) => {
           console.log(`[Vercel] Request body before handler:`, req.body ? JSON.stringify(req.body).substring(0, 500) : 'empty')
           console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
           console.log(`[Vercel] Content-Length:`, req.headers['content-length'])
-          
-          // If body is not parsed and Content-Type is JSON, try to parse it manually
-          if (!req.body && req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
-            // Body might be in raw format - serverless-http should handle this, but let's log it
-            console.log(`[Vercel] Body is empty but Content-Type is JSON - serverless-http should parse it`)
-          }
         }
         
+        // Wrap the handler call to ensure method is preserved
         const handlerResult = await handlerInstance(req, res)
+        
+        // Log method after handler to see if it changed
+        if (req.method !== originalMethod) {
+          console.error(`[Vercel] WARNING: Method changed from ${originalMethod} to ${req.method} after handler!`)
+        }
         
         // Log body AFTER handler (to see if Express parsed it)
         if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
