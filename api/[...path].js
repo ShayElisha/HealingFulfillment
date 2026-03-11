@@ -76,23 +76,43 @@ export default async (req, res) => {
     console.log(`[Vercel] Path from query param: ${finalPath}`)
   } else {
     // Path is in the URL itself
-    // For Vercel [...path] routes, the path might be in req.url
-    if (req.url) {
+    // For Vercel [...path] routes, check multiple sources
+    let urlToUse = null
+    
+    // Try req.url first
+    if (req.url && req.url !== '/') {
+      urlToUse = req.url
+    }
+    // Try req.path
+    else if (req.path && req.path !== '/') {
+      urlToUse = req.path
+    }
+    // Try req.originalUrl
+    else if (req.originalUrl && req.originalUrl !== '/') {
+      urlToUse = req.originalUrl
+    }
+    
+    if (urlToUse) {
       // Remove query string to get clean path
-      const urlPath = req.url.split('?')[0]
+      const urlPath = urlToUse.split('?')[0]
       
       if (urlPath.startsWith('/api/')) {
-        finalPath = req.url // Keep query string if exists
+        // Already has /api/, use as is
+        finalPath = urlToUse // Keep query string if exists
         console.log(`[Vercel] Path from URL (has /api/): ${finalPath}`)
+      } else if (urlPath === '/api' || urlPath === '/api/') {
+        // Just /api, this is wrong - should not happen
+        console.error(`[Vercel] Invalid path: ${urlToUse}`)
+        finalPath = null
       } else {
         // Add /api prefix
-        finalPath = `/api${req.url}`
+        finalPath = `/api${urlToUse}`
         console.log(`[Vercel] Path from URL (added /api/): ${finalPath}`)
       }
     } else {
-      // Fallback: use path
-      finalPath = req.path.startsWith('/api/') ? req.path : `/api${req.path}`
-      console.log(`[Vercel] Path from req.path: ${finalPath}`)
+      // No path found - this shouldn't happen
+      console.error(`[Vercel] No path found in req.url, req.path, or req.originalUrl`)
+      finalPath = null
     }
   }
   
