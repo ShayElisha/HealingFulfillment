@@ -270,8 +270,13 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
+  console.log(`[404 Handler] Route not found: ${req.method} ${req.url}`)
+  console.log(`[404 Handler] Path: ${req.path}, OriginalUrl: ${req.originalUrl}`)
   res.status(404).json({ 
-    message: 'Route not found'
+    message: 'Route not found',
+    method: req.method,
+    url: req.url,
+    path: req.path
   })
 })
 

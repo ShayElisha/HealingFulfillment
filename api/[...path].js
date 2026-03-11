@@ -55,25 +55,44 @@ export default async (req, res) => {
   console.log(`[Vercel] Path:`, req.path)
   
   // Fix path from Vercel [...path] routing
-  if (req.query?.['...path']) {
+  // Vercel passes the path via query parameter '...path'
+  if (req.query && req.query['...path']) {
     const pathParam = req.query['...path']
     delete req.query['...path']
-    const query = new URLSearchParams(req.query).toString()
-    req.url = `/api/${pathParam}${query ? '?' + query : ''}`
+    
+    // Rebuild query string without ...path
+    const remainingQuery = Object.keys(req.query).length > 0
+      ? '?' + new URLSearchParams(req.query).toString()
+      : ''
+    
+    // Set the correct path
+    req.url = `/api/${pathParam}${remainingQuery}`
     req.originalUrl = req.url
     req.path = `/api/${pathParam}`
-    console.log(`[Vercel] Fixed path to: ${req.url}`)
+    console.log(`[Vercel] Fixed path from query param: ${req.url}`)
   } else {
-    // If no ...path query param, check if URL already has /api/
-    if (!req.url.startsWith('/api/')) {
+    // If no ...path query param, use the URL directly
+    // Vercel might pass the path in the URL itself
+    if (req.url && !req.url.startsWith('/api/')) {
+      // If URL doesn't start with /api/, add it
       req.url = `/api${req.url}`
       req.originalUrl = req.url
-      req.path = `/api${req.path}`
+      // Update path to match
+      if (req.path && !req.path.startsWith('/api/')) {
+        req.path = `/api${req.path}`
+      }
       console.log(`[Vercel] Added /api prefix: ${req.url}`)
+    } else if (req.url && req.url.startsWith('/api/')) {
+      // URL already has /api/, just ensure path matches
+      req.originalUrl = req.url
+      if (req.path !== req.url.split('?')[0]) {
+        req.path = req.url.split('?')[0]
+      }
+      console.log(`[Vercel] URL already has /api/: ${req.url}`)
     }
   }
   
-  console.log(`[Vercel] Final: ${req.method} ${req.url}, path: ${req.path}`)
+  console.log(`[Vercel] Final: ${req.method} ${req.url}, path: ${req.path}, originalUrl: ${req.originalUrl}`)
   
   try {
     // Get handler with timeout
