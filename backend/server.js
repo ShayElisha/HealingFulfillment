@@ -210,6 +210,8 @@ const ensureMongoConnection = async (req, res, next) => {
 app.use('/api/', (req, res, next) => {
   console.log(`[Express] ${req.method} ${req.url} - Request received`)
   console.log(`[Express] Path: ${req.path}, OriginalUrl: ${req.originalUrl}`)
+  console.log(`[Express] Body:`, req.body ? JSON.stringify(req.body).substring(0, 200) : 'empty')
+  console.log(`[Express] Headers:`, JSON.stringify(req.headers).substring(0, 300))
   next()
 })
 
