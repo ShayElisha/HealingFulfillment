@@ -58,6 +58,23 @@ app.use(cors(corsOptions))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Fix URL path for Vercel serverless functions
+// In Vercel, requests to /api/contact come to the function as /contact
+// But our routes expect /api/contact, so we need to add /api prefix
+if (process.env.VERCEL === '1') {
+  app.use((req, res, next) => {
+    // If the path doesn't start with /api, add it
+    if (!req.path.startsWith('/api') && req.path !== '/health') {
+      const originalUrl = req.originalUrl || req.url
+      req.url = '/api' + originalUrl
+      req.originalUrl = '/api' + originalUrl
+      // Update path for Express routing
+      req.path = '/api' + req.path
+    }
+    next()
+  })
+}
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')))
