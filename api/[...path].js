@@ -110,11 +110,19 @@ export default async (req, res) => {
     // Process request
     try {
       const handlerResult = await handlerInstance(req, res)
-      console.log(`[Vercel] Handler returned (${Date.now() - start}ms), responseSent: ${responseSent}`)
+      console.log(`[Vercel] Handler returned (${Date.now() - start}ms)`)
+      console.log(`[Vercel] Handler result:`, handlerResult ? JSON.stringify(handlerResult).substring(0, 200) : 'null/undefined')
+      console.log(`[Vercel] Response sent: ${responseSent}, headersSent: ${res.headersSent}`)
       
       // serverless-http returns Lambda-formatted response
-      // If we got a result and response wasn't sent via res object, send it manually
-      if (handlerResult && !responseSent && !res.headersSent) {
+      // Check if response was already sent via res object
+      if (responseSent || res.headersSent) {
+        console.log(`[Vercel] Response already sent via res object`)
+        return // Response already sent, we're done
+      }
+      
+      // If we got a Lambda-formatted result, send it
+      if (handlerResult && handlerResult.statusCode) {
         console.log(`[Vercel] Sending Lambda-formatted response`)
         
         // Extract response from Lambda format
@@ -125,9 +133,12 @@ export default async (req, res) => {
         // Set status code
         res.status(statusCode)
         
-        // Set headers
+        // Set headers (skip some that Vercel handles)
+        const skipHeaders = ['date', 'etag', 'connection']
         Object.keys(headers).forEach(key => {
-          res.setHeader(key, headers[key])
+          if (!skipHeaders.includes(key.toLowerCase())) {
+            res.setHeader(key, headers[key])
+          }
         })
         
         // Send body
@@ -135,7 +146,8 @@ export default async (req, res) => {
           try {
             // Try to parse as JSON if content-type is json
             if (headers['content-type'] && headers['content-type'].includes('application/json')) {
-              res.json(JSON.parse(body))
+              const parsedBody = JSON.parse(body)
+              res.json(parsedBody)
             } else {
               res.send(body)
             }
@@ -147,9 +159,21 @@ export default async (req, res) => {
         }
         
         console.log(`[Vercel] Response sent manually (${Date.now() - start}ms)`)
+        return
+      }
+      
+      // If no response was sent and no handler result, send error
+      if (!responseSent && !res.headersSent) {
+        console.error(`[Vercel] No response sent, sending error`)
+        res.status(500).json({ 
+          message: 'No response from server',
+          error: 'Handler completed but no response was sent',
+          handlerResult: handlerResult ? 'exists' : 'null/undefined'
+        })
       }
     } catch (error) {
       console.error(`[Vercel] Handler error (${Date.now() - start}ms):`, error.message)
+      console.error(`[Vercel] Error stack:`, error.stack)
       if (!res.headersSent) {
         res.status(500).json({ 
           message: 'Server error',
