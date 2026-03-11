@@ -74,26 +74,56 @@ export default async (req, res) => {
     // Track if response was sent
     let responseSent = false
     const originalEnd = res.end.bind(res)
+    const originalWriteHead = res.writeHead.bind(res)
+    
     res.end = function(...args) {
-      responseSent = true
-      console.log(`[Vercel] Response sent (${Date.now() - start}ms)`)
+      if (!responseSent) {
+        responseSent = true
+        console.log(`[Vercel] Response end called (${Date.now() - start}ms)`)
+      }
       return originalEnd(...args)
     }
     
-    // Process request with timeout
-    const handlerPromise = handlerInstance(req, res)
+    res.writeHead = function(...args) {
+      if (!responseSent) {
+        responseSent = true
+        console.log(`[Vercel] Response writeHead called (${Date.now() - start}ms)`)
+      }
+      return originalWriteHead(...args)
+    }
     
-    await Promise.race([
-      handlerPromise,
-      new Promise((_, reject) => 
-        setTimeout(() => {
-          if (!responseSent) {
-            console.error(`[Vercel] Request timeout after ${Date.now() - start}ms, responseSent: ${responseSent}`)
-            reject(new Error('Request timeout'))
+    // Process request
+    try {
+      const result = await handlerInstance(req, res)
+      console.log(`[Vercel] Handler returned (${Date.now() - start}ms), responseSent: ${responseSent}`)
+      
+      // If handler returned a result but response wasn't sent, send it
+      if (result && !responseSent && !res.headersSent) {
+        console.log(`[Vercel] Sending handler result as response`)
+        res.json(result)
+      }
+      
+      // Set timeout to ensure response is sent
+      setTimeout(() => {
+        if (!responseSent && !res.headersSent) {
+          console.error(`[Vercel] Timeout: response not sent after ${Date.now() - start}ms`)
+          if (!res.headersSent) {
+            res.status(500).json({ 
+              message: 'Request timeout',
+              error: 'Response was not sent in time'
+            })
           }
-        }, 25000)
-      )
-    ])
+        }
+      }, 25000)
+    } catch (error) {
+      console.error(`[Vercel] Handler error (${Date.now() - start}ms):`, error.message)
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          message: 'Server error',
+          error: error.message
+        })
+      }
+    }
     
     console.log(`[Vercel] Done (${Date.now() - start}ms), responseSent: ${responseSent}`)
   } catch (error) {
