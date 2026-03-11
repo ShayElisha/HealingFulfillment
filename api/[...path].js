@@ -104,7 +104,27 @@ export default async (req, res) => {
         responseSent = true
         console.log(`[Vercel] Response writeHead called (${Date.now() - start}ms)`)
       }
-      return originalWriteHead(...args)
+      return originalWriteHead.apply(this, args)
+    }
+    
+    // Also track json() and send() calls
+    const originalJson = res.json.bind(res)
+    const originalSend = res.send.bind(res)
+    
+    res.json = function(...args) {
+      if (!responseSent) {
+        responseSent = true
+        console.log(`[Vercel] Response json() called (${Date.now() - start}ms)`)
+      }
+      return originalJson.apply(this, args)
+    }
+    
+    res.send = function(...args) {
+      if (!responseSent) {
+        responseSent = true
+        console.log(`[Vercel] Response send() called (${Date.now() - start}ms)`)
+      }
+      return originalSend.apply(this, args)
     }
     
     // Process request
