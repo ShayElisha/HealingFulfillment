@@ -320,22 +320,39 @@ app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api', customersRoutes)
+app.use('/api/auth', authRoutes)
 
 // Alias for /api/login -> /api/auth/login
-// Create a router that handles /login and forwards to auth routes
-const loginAliasRouter = express.Router()
-// When Express receives /api/login, it strips /api/login and passes / to the router
-// So we need to handle / and forward it to /login in auth routes
-loginAliasRouter.all('/', (req, res, next) => {
-  // Change the path to /login so auth routes can handle it
+// Import login handler directly and use it
+app.all('/api/login', async (req, res, next) => {
+  // Import auth routes dynamically to access the login handler
+  const authRouter = await import('./routes/auth.js')
+  const authRoutesModule = authRouter.default
+  
+  // Change the path so auth router can handle it
+  // When Express receives /api/login, it strips /api/login, so req.path is /
+  // We need to change it to /login for auth router
+  const originalUrl = req.url
+  const originalOriginalUrl = req.originalUrl
+  
+  // Set URL to /api/auth/login so auth routes can handle it
   req.url = '/api/auth/login'
   req.originalUrl = '/api/auth/login'
+  
   console.log(`[Login Alias] Forwarding ${req.method} /api/login to /api/auth/login`)
-  next()
+  
+  // Call auth routes
+  authRoutesModule(req, res, (err) => {
+    // Restore original URLs
+    req.url = originalUrl
+    req.originalUrl = originalOriginalUrl
+    if (err) {
+      next(err)
+    } else if (!res.headersSent) {
+      res.status(404).json({ message: 'Route not found' })
+    }
+  })
 })
-app.use('/api/login', loginAliasRouter)
-
-app.use('/api/auth', authRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
