@@ -216,6 +216,17 @@ export default async (req, res) => {
     
     // Process request
     try {
+      // Ensure method is set correctly before calling handler
+      req.method = originalMethod
+      console.log(`[Vercel] Calling handler with method: ${req.method}`)
+      
+      // Log body for POST requests
+      if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+        console.log(`[Vercel] Request body type:`, typeof req.body)
+        console.log(`[Vercel] Request body:`, req.body ? JSON.stringify(req.body).substring(0, 200) : 'empty')
+        console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
+      }
+      
       const handlerResult = await handlerInstance(req, res)
       console.log(`[Vercel] Handler returned (${Date.now() - start}ms)`)
       console.log(`[Vercel] Handler result:`, handlerResult ? JSON.stringify(handlerResult).substring(0, 200) : 'null/undefined')
