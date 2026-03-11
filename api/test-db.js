@@ -7,13 +7,33 @@ export default async function handler(req, res) {
     const mongoose = (await import('mongoose')).default
     
     // Get URI from environment
-    const MONGODB_URI = process.env.MONGODB_URI
+    let MONGODB_URI = process.env.MONGODB_URI
+    
+    // Log raw URI for debugging
+    console.log('[Test-DB] Raw MONGODB_URI:', MONGODB_URI ? `"${MONGODB_URI.substring(0, 50)}..."` : 'not set')
+    console.log('[Test-DB] URI length:', MONGODB_URI ? MONGODB_URI.length : 0)
+    console.log('[Test-DB] URI type:', typeof MONGODB_URI)
     
     if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/healing-fulfillment') {
       return res.status(500).json({
         status: 'error',
         message: 'MONGODB_URI not configured',
-        uriPreview: MONGODB_URI ? MONGODB_URI.substring(0, 30) + '...' : 'not set'
+        uriPreview: MONGODB_URI ? MONGODB_URI.substring(0, 30) + '...' : 'not set',
+        rawUri: MONGODB_URI || 'undefined'
+      })
+    }
+    
+    // Clean URI - remove whitespace and check format
+    MONGODB_URI = MONGODB_URI.trim()
+    
+    // Validate URI format
+    if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Invalid MongoDB URI format',
+        uriPreview: MONGODB_URI.substring(0, 50),
+        expected: 'Should start with mongodb:// or mongodb+srv://',
+        received: MONGODB_URI.substring(0, 20)
       })
     }
     
@@ -21,7 +41,12 @@ export default async function handler(req, res) {
     let finalUri = MONGODB_URI
     if (finalUri.endsWith('/')) {
       finalUri = finalUri + 'healing-fulfillment'
+    } else if (!finalUri.match(/\/[^\/]+$/)) {
+      // If URI doesn't end with database name, add it
+      finalUri = finalUri + '/healing-fulfillment'
     }
+    
+    console.log('[Test-DB] Final URI preview:', finalUri.substring(0, 50) + '...')
     
     const connectionState = mongoose.connection.readyState
     const states = {
