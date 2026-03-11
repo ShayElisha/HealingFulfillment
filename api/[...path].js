@@ -56,8 +56,12 @@ async function getHandler() {
 export default async (req, res) => {
   const start = Date.now()
   
+  // Store original method before any modifications
+  const originalMethod = req.method
+  
   // Log original request details
   console.log(`[Vercel] ${req.method} ${req.url}`)
+  console.log(`[Vercel] Original method: ${originalMethod}`)
   console.log(`[Vercel] Query:`, JSON.stringify(req.query))
   console.log(`[Vercel] Original path:`, req.path)
   console.log(`[Vercel] Original originalUrl:`, req.originalUrl)
