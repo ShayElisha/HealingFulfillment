@@ -232,8 +232,12 @@ export default async (req, res) => {
         req.method = originalMethod
       }
       
-      console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path || 'derived'}`)
+      console.log(`[Vercel] ===== PATH SET =====`)
+      console.log(`[Vercel] Final path: ${req.method} ${req.url}`)
+      console.log(`[Vercel] req.path: ${req.path || 'derived'}`)
+      console.log(`[Vercel] req.originalUrl: ${req.originalUrl}`)
       console.log(`[Vercel] Method preserved: ${req.method}`)
+      console.log(`[Vercel] ====================`)
     } catch (error) {
       console.error(`[Vercel] Error setting path:`, error.message)
       console.error(`[Vercel] originalMethod:`, typeof originalMethod, originalMethod)
