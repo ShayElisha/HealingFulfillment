@@ -56,6 +56,13 @@ async function getHandler() {
 export default async (req, res) => {
   const start = Date.now()
   
+  // Log immediately - this should always appear if the function is called
+  console.log(`[Vercel] ===== FUNCTION CALLED =====`)
+  console.log(`[Vercel] Timestamp: ${new Date().toISOString()}`)
+  console.log(`[Vercel] Method: ${req.method}`)
+  console.log(`[Vercel] URL: ${req.url}`)
+  console.log(`[Vercel] Headers:`, JSON.stringify(req.headers).substring(0, 500))
+  
   // Store original method before any modifications
   const originalMethod = req.method
   
