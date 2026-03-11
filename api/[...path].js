@@ -39,6 +39,16 @@ async function getHandler() {
 }
 
 export default async (req, res) => {
+  // Fix path for Vercel [...path] routing
+  // Vercel passes the path via query parameter '...path'
+  if (req.query && req.query['...path']) {
+    const pathParam = req.query['...path']
+    // Remove the query parameter and set the correct path
+    delete req.query['...path']
+    req.url = `/api/${pathParam}${req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''}`
+    req.originalUrl = req.url
+  }
+  
   // Log request details
   console.log('[Vercel Function] Request received:', {
     method: req.method,
