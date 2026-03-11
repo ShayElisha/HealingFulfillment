@@ -66,32 +66,6 @@ app.options('*', cors(corsOptions))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Fix URL path for Vercel serverless functions
-// In Vercel, requests to /api/contact come to the function as /contact (via [...path])
-// But our routes expect /api/contact, so we need to add /api prefix
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
-
-app.use((req, res, next) => {
-  const originalUrl = req.originalUrl || req.url || ''
-  
-  // Skip health check
-  if (originalUrl === '/health' || originalUrl.startsWith('/health')) {
-    return next()
-  }
-  
-  // In Vercel, paths come without /api prefix, so we need to add it
-  // In local dev, paths already have /api prefix
-  if (isVercel && !originalUrl.startsWith('/api')) {
-    const newUrl = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
-    // Only modify url properties that can be modified
-    req.url = newUrl
-    req.originalUrl = newUrl
-    // Don't try to modify req.path as it's read-only in Vercel
-  }
-  
-  next()
-})
-
 // Serve uploaded files (only in non-serverless environments)
 // In Vercel/serverless, files should be served from external storage (S3, Cloudinary, etc.)
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
