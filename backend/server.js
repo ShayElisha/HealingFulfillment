@@ -55,41 +55,43 @@ const corsOptions = {
 }
 
 app.use(cors(corsOptions))
+
+// Handle OPTIONS requests explicitly for CORS preflight
+app.options('*', cors(corsOptions))
+
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Fix URL path for Vercel serverless functions
 // In Vercel, requests to /api/contact come to the function as /contact (via [...path])
 // But our routes expect /api/contact, so we need to add /api prefix
-// Check if running in Vercel (either via env var or by checking if we're in a serverless context)
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || 
-                 (typeof process.env.AWS_LAMBDA_FUNCTION_NAME === 'undefined' && 
-                  typeof process.env.VERCEL_URL !== 'undefined')
+// Check if running in Vercel
+const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
-// Always add middleware, but make it smart about when to modify paths
+// Middleware to fix paths for Vercel
 app.use((req, res, next) => {
-  // Only modify paths if we're in Vercel or if the path doesn't start with /api
-  // This handles both Vercel (where paths come without /api) and local dev (where they have /api)
   const currentPath = req.path || ''
   const originalUrl = req.originalUrl || req.url || ''
   
-  // If we're in Vercel or the path doesn't start with /api (and it's not /health), add /api prefix
-  if ((isVercel || !currentPath.startsWith('/api')) && currentPath !== '/health' && !originalUrl.startsWith('/api')) {
-    // Add /api prefix to all paths
-    const newPath = currentPath.startsWith('/') ? '/api' + currentPath : '/api/' + currentPath
-    const newUrl = originalUrl.startsWith('/') ? '/api' + originalUrl : '/api/' + originalUrl
+  // Skip health check
+  if (currentPath === '/health' || originalUrl === '/health') {
+    return next()
+  }
+  
+  // In Vercel, paths come without /api prefix, so we need to add it
+  // In local dev, paths already have /api prefix
+  if (isVercel && !currentPath.startsWith('/api')) {
+    // Add /api prefix
+    const newPath = '/api' + (currentPath.startsWith('/') ? currentPath : '/' + currentPath)
+    const newUrl = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
     
     req.url = newUrl
     req.originalUrl = newUrl
     req.path = newPath
-  } else if (originalUrl.startsWith('/api') && !currentPath.startsWith('/api')) {
-    // If originalUrl has /api but path doesn't, sync them
-    req.path = originalUrl.split('?')[0] // Remove query string
+    
+    console.log(`[Vercel] Fixed path: ${req.method} ${req.path} (was: ${originalUrl})`)
   }
   
-  if (isVercel) {
-    console.log(`[Vercel] Request: ${req.method} ${req.path} (original: ${originalUrl})`)
-  }
   next()
 })
 
