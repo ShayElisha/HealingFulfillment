@@ -123,6 +123,17 @@ export default async (req, res) => {
     req.originalUrl = finalPath
     req.path = pathWithoutQuery
     console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
+  } else {
+    // If no path found, return error
+    console.error(`[Vercel] Could not determine path for ${req.method}`)
+    console.error(`[Vercel] req.url: ${req.url}, req.path: ${req.path}, req.originalUrl: ${req.originalUrl}`)
+    return res.status(400).json({
+      message: 'Invalid request path',
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl
+    })
   }
   
   try {
