@@ -72,22 +72,21 @@ app.use(express.urlencoded({ extended: true }))
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
 app.use((req, res, next) => {
-  const currentPath = req.path || ''
   const originalUrl = req.originalUrl || req.url || ''
   
   // Skip health check
-  if (currentPath === '/health' || originalUrl === '/health') {
+  if (originalUrl === '/health' || originalUrl.startsWith('/health')) {
     return next()
   }
   
   // In Vercel, paths come without /api prefix, so we need to add it
   // In local dev, paths already have /api prefix
-  if (isVercel && !currentPath.startsWith('/api')) {
-    const newPath = '/api' + (currentPath.startsWith('/') ? currentPath : '/' + currentPath)
+  if (isVercel && !originalUrl.startsWith('/api')) {
     const newUrl = '/api' + (originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl)
+    // Only modify url properties that can be modified
     req.url = newUrl
     req.originalUrl = newUrl
-    req.path = newPath
+    // Don't try to modify req.path as it's read-only in Vercel
   }
   
   next()
