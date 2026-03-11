@@ -151,15 +151,26 @@ const ensureMongoConnection = async (req, res, next) => {
   const uriPreview = MONGODB_URI.substring(0, 30) + '...'
   console.log(`[MongoDB] URI preview: ${uriPreview}`)
   
+  // Clean and fix URI
+  let finalUri = MONGODB_URI.trim()
+  
+  // Validate URI format
+  if (!finalUri.startsWith('mongodb://') && !finalUri.startsWith('mongodb+srv://')) {
+    console.error('[MongoDB] Invalid URI format:', finalUri.substring(0, 50))
+    return res.status(500).json({ 
+      message: 'Database connection failed',
+      error: 'Invalid MongoDB URI format'
+    })
+  }
+  
   // Fix URI if it doesn't have database name
-  let finalUri = MONGODB_URI
   if (finalUri.endsWith('/')) {
     // Add database name if URI ends with /
     finalUri = finalUri + 'healing-fulfillment'
     console.log('[MongoDB] Added database name to URI')
-  } else if (!finalUri.includes('/') || finalUri.match(/\/$/)) {
+  } else if (!finalUri.match(/\/[^\/]+$/)) {
     // If no database specified, add it
-    finalUri = finalUri.replace(/\/$/, '') + '/healing-fulfillment'
+    finalUri = finalUri + '/healing-fulfillment'
     console.log('[MongoDB] Added database name to URI')
   }
   
