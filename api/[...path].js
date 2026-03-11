@@ -1,85 +1,92 @@
 // Set Vercel environment variable before any imports
 process.env.VERCEL = '1'
 
-// Simple handler that imports server only when needed
-let app = null
+// Cache for handler
 let handler = null
+let initPromise = null
 
-async function initApp() {
-  if (app && handler) {
+async function getHandler() {
+  // Return cached handler if available
+  if (handler) {
     return handler
   }
-
-  try {
-    console.log('[Vercel] Starting initialization...')
-    
-    // Import serverless-http
-    const serverless = (await import('serverless-http')).default
-    console.log('[Vercel] serverless-http loaded')
-    
-    // Import server app
-    const serverModule = await import('../backend/server.js')
-    app = serverModule.default
-    console.log('[Vercel] Server app loaded')
-    
-    // Create handler
-    handler = serverless(app, {
-      binary: ['image/*', 'video/*', 'application/pdf']
-    })
-    console.log('[Vercel] Handler created')
-    
-    return handler
-  } catch (error) {
-    console.error('[Vercel] Initialization error:', error)
-    throw error
+  
+  // Wait for ongoing initialization
+  if (initPromise) {
+    return initPromise
   }
+  
+  // Start initialization
+  initPromise = (async () => {
+    try {
+      console.log('[Vercel] Initializing...')
+      
+      // Import serverless-http
+      const { default: serverless } = await import('serverless-http')
+      console.log('[Vercel] serverless-http imported')
+      
+      // Import server - this might take time
+      const { default: app } = await import('../backend/server.js')
+      console.log('[Vercel] server.js imported')
+      
+      // Create handler
+      handler = serverless(app, {
+        binary: ['image/*', 'video/*', 'application/pdf']
+      })
+      console.log('[Vercel] Handler created')
+      
+      return handler
+    } catch (error) {
+      console.error('[Vercel] Init error:', error)
+      initPromise = null
+      throw error
+    }
+  })()
+  
+  return initPromise
 }
 
 export default async (req, res) => {
-  const startTime = Date.now()
+  const start = Date.now()
   
   // Fix path from Vercel [...path] routing
-  if (req.query && req.query['...path']) {
+  if (req.query?.['...path']) {
     const pathParam = req.query['...path']
     delete req.query['...path']
-    const queryString = Object.keys(req.query).length > 0 
-      ? '?' + new URLSearchParams(req.query).toString() 
-      : ''
-    req.url = `/api/${pathParam}${queryString}`
+    const query = new URLSearchParams(req.query).toString()
+    req.url = `/api/${pathParam}${query ? '?' + query : ''}`
     req.originalUrl = req.url
   }
   
-  console.log(`[Vercel] ${req.method} ${req.url} - Start`)
+  console.log(`[Vercel] ${req.method} ${req.url}`)
   
   try {
-    // Initialize handler with timeout
+    // Get handler with timeout
     const handlerInstance = await Promise.race([
-      initApp(),
+      getHandler(),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Init timeout')), 15000)
+        setTimeout(() => reject(new Error('Handler init timeout')), 20000)
       )
     ])
     
-    console.log(`[Vercel] Handler ready in ${Date.now() - startTime}ms, processing request...`)
+    console.log(`[Vercel] Handler ready (${Date.now() - start}ms)`)
     
     // Process request with timeout
-    const result = await Promise.race([
+    await Promise.race([
       handlerInstance(req, res),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Request timeout')), 25000)
       )
     ])
     
-    console.log(`[Vercel] Request completed in ${Date.now() - startTime}ms`)
-    return result
+    console.log(`[Vercel] Done (${Date.now() - start}ms)`)
   } catch (error) {
-    console.error(`[Vercel] Error after ${Date.now() - startTime}ms:`, error.message)
+    console.error(`[Vercel] Error (${Date.now() - start}ms):`, error.message)
     
     if (!res.headersSent) {
-      return res.status(500).json({ 
+      res.status(500).json({ 
         message: 'Server error',
-        error: error.message,
-        time: Date.now() - startTime
+        error: error.message
       })
     }
   }
