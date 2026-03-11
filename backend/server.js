@@ -69,8 +69,21 @@ app.use(cors(corsOptions))
 // Handle OPTIONS requests explicitly for CORS preflight
 app.options('*', cors(corsOptions))
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Body parsing middleware - must be before routes
+// Increase limit for larger payloads
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+// Log body parsing for POST requests (debugging)
+app.use((req, res, next) => {
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+    console.log(`[Express Body Parser] ${req.method} ${req.url}`)
+    console.log(`[Express Body Parser] Body type:`, typeof req.body)
+    console.log(`[Express Body Parser] Body:`, req.body ? JSON.stringify(req.body).substring(0, 300) : 'empty')
+    console.log(`[Express Body Parser] Content-Type:`, req.headers['content-type'])
+  }
+  next()
+})
 
 // Serve uploaded files (only in non-serverless environments)
 // In Vercel/serverless, files should be served from external storage (S3, Cloudinary, etc.)
