@@ -1,6 +1,7 @@
 {
   "name": "healing-fulfillment",
   "version": "1.0.0",
+  "type": "module",
   "description": "Therapist website - טיפול בחרדות, פוסט טראומה, שחרור חסימות רגשיות",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
