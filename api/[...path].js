@@ -30,11 +30,19 @@ export default async (req, res) => {
     return result
   } catch (error) {
     console.error('[Vercel Function] Error:', error)
+    console.error('[Vercel Function] Error name:', error.name)
+    console.error('[Vercel Function] Error message:', error.message)
     console.error('[Vercel Function] Error stack:', error.stack)
-    return res.status(500).json({ 
-      message: 'Internal server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
+    
+    // Only send error response if not already sent
+    if (!res.headersSent) {
+      return res.status(500).json({ 
+        message: 'Internal server error',
+        error: error.message,
+        errorName: error.name,
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+      })
+    }
   }
 }
 

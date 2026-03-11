@@ -146,16 +146,39 @@ app.use('/api/admin', adminLimiter)
 
 // MongoDB connection middleware for serverless functions
 const ensureMongoConnection = async (req, res, next) => {
-  if (mongoose.connection.readyState === 0) {
-    try {
-      await mongoose.connect(MONGODB_URI)
-      console.log('Connected to MongoDB')
-    } catch (error) {
-      console.error('MongoDB connection error:', error)
-      return res.status(500).json({ message: 'Database connection failed' })
+  try {
+    if (mongoose.connection.readyState === 0) {
+      console.log('[MongoDB] Connecting to MongoDB...')
+      await mongoose.connect(MONGODB_URI, {
+        serverSelectionTimeoutMS: 10000, // 10 seconds
+        socketTimeoutMS: 45000, // 45 seconds
+      })
+      console.log('[MongoDB] Connected successfully')
+    } else if (mongoose.connection.readyState === 1) {
+      console.log('[MongoDB] Already connected')
+    } else {
+      console.log('[MongoDB] Connection state:', mongoose.connection.readyState)
+      // Try to reconnect if disconnected
+      if (mongoose.connection.readyState === 2 || mongoose.connection.readyState === 3) {
+        console.log('[MongoDB] Attempting to reconnect...')
+        await mongoose.connect(MONGODB_URI, {
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+        })
+        console.log('[MongoDB] Reconnected successfully')
+      }
     }
+    next()
+  } catch (error) {
+    console.error('[MongoDB] Connection error:', error)
+    console.error('[MongoDB] Error name:', error.name)
+    console.error('[MongoDB] Error message:', error.message)
+    return res.status(500).json({ 
+      message: 'Database connection failed',
+      error: error.message,
+      errorName: error.name
+    })
   }
-  next()
 }
 
 // Apply MongoDB connection middleware to all API routes
@@ -163,7 +186,23 @@ app.use('/api/', ensureMongoConnection)
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  const mongoState = mongoose.connection.readyState
+  const mongoStates = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  }
+  
+  res.json({ 
+    status: mongoState === 1 ? 'ok' : 'degraded',
+    timestamp: new Date().toISOString(),
+    mongodb: {
+      state: mongoState,
+      stateName: mongoStates[mongoState] || 'unknown',
+      connected: mongoState === 1
+    }
+  })
 })
 
 // Routes with logging
