@@ -6,30 +6,36 @@ let handlerPromise = null
 
 async function getHandler() {
   if (handler) {
+    console.log('[Vercel Function] Using cached handler')
     return handler
   }
   
   if (handlerPromise) {
+    console.log('[Vercel Function] Waiting for handler initialization...')
     return handlerPromise
   }
   
   handlerPromise = (async () => {
+    const startTime = Date.now()
     try {
-      console.log('[Vercel Function] Loading dependencies...')
+      console.log('[Vercel Function] Step 1: Loading serverless-http...')
       const serverless = await import('serverless-http')
-      console.log('[Vercel Function] Loading server...')
-      const serverModule = await import('../backend/server.js')
-      const app = serverModule.default
+      console.log('[Vercel Function] Step 2: serverless-http loaded in', Date.now() - startTime, 'ms')
       
-      console.log('[Vercel Function] Creating handler...')
+      console.log('[Vercel Function] Step 3: Loading backend server...')
+      const serverModule = await import('../backend/server.js')
+      console.log('[Vercel Function] Step 4: Backend server loaded in', Date.now() - startTime, 'ms')
+      
+      const app = serverModule.default
+      console.log('[Vercel Function] Step 5: Creating handler...')
       handler = serverless.default(app, {
         binary: ['image/*', 'video/*', 'application/pdf', 'application/octet-stream']
       })
       
-      console.log('[Vercel Function] Handler ready')
+      console.log('[Vercel Function] Step 6: Handler ready in', Date.now() - startTime, 'ms')
       return handler
     } catch (error) {
-      console.error('[Vercel Function] Failed to create handler:', error)
+      console.error('[Vercel Function] Failed to create handler after', Date.now() - startTime, 'ms:', error)
       handlerPromise = null
       throw error
     }
@@ -69,12 +75,14 @@ export default async (req, res) => {
   }, 25000) // 25 seconds timeout (Vercel max is 30)
   
   try {
+    console.log('[Vercel Function] Getting handler instance...')
     const handlerInstance = await Promise.race([
       getHandler(),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Handler initialization timeout')), 10000)
+        setTimeout(() => reject(new Error('Handler initialization timeout after 20 seconds')), 20000)
       )
     ])
+    console.log('[Vercel Function] Handler instance obtained, calling handler...')
     
     const result = await Promise.race([
       handlerInstance(req, res),
