@@ -29,9 +29,16 @@ async function getHandler() {
       const { default: app } = await import('../backend/server.js')
       console.log('[Vercel] server.js imported')
       
-      // Create handler
+      // Create handler with request transformation
       handler = serverless(app, {
-        binary: ['image/*', 'video/*', 'application/pdf']
+        binary: ['image/*', 'video/*', 'application/pdf'],
+        request: (req, event, context) => {
+          // Preserve the original method
+          if (event.httpMethod) {
+            req.method = event.httpMethod
+          }
+          return req
+        }
       })
       console.log('[Vercel] Handler created')
       
@@ -119,14 +126,13 @@ export default async (req, res) => {
   // Set the correct path on request object
   if (finalPath) {
     const pathWithoutQuery = finalPath.split('?')[0]
-    // Preserve the original method
-    const originalMethod = req.method
     req.url = finalPath
     req.originalUrl = finalPath
     req.path = pathWithoutQuery
-    // Ensure method is preserved
+    // Ensure method is preserved (restore from stored value)
     req.method = originalMethod
     console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
+    console.log(`[Vercel] Method preserved: ${req.method}`)
   } else {
     // If no path found, return error
     console.error(`[Vercel] Could not determine path for ${req.method}`)
