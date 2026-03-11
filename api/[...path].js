@@ -69,35 +69,13 @@ export default async (req, res) => {
   console.log(`[Vercel] URL: ${req.url}`)
   console.log(`[Vercel] Headers:`, JSON.stringify(req.headers).substring(0, 500))
   
-  // For POST/PUT/PATCH requests, ensure body is available
-  // In Vercel, the body might come as a stream or buffer
-  if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') && !req.body) {
-    // Try to read body from request if it's a stream
-    if (req.readable && typeof req.read === 'function') {
-      const chunks = []
-      try {
-        for await (const chunk of req) {
-          chunks.push(chunk)
-        }
-        const bodyBuffer = Buffer.concat(chunks)
-        const contentType = req.headers['content-type'] || ''
-        
-        if (contentType.includes('application/json')) {
-          req.body = JSON.parse(bodyBuffer.toString())
-          console.log(`[Vercel] Parsed body from stream:`, JSON.stringify(req.body).substring(0, 200))
-        } else if (contentType.includes('application/x-www-form-urlencoded')) {
-          // Parse URL-encoded form data
-          const querystring = require('querystring')
-          req.body = querystring.parse(bodyBuffer.toString())
-          console.log(`[Vercel] Parsed body from stream (urlencoded):`, JSON.stringify(req.body).substring(0, 200))
-        } else {
-          req.body = bodyBuffer.toString()
-          console.log(`[Vercel] Body from stream (raw):`, req.body.substring(0, 200))
-        }
-      } catch (error) {
-        console.error(`[Vercel] Error reading body from stream:`, error.message)
-      }
-    }
+  // For POST/PUT/PATCH requests, log body state
+  // Don't read the body here - let Express middleware handle it
+  // Reading the stream here would consume it and prevent Express from parsing it
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+    console.log(`[Vercel] Body state before handler:`, typeof req.body, req.body ? 'exists' : 'empty')
+    console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
+    console.log(`[Vercel] Content-Length:`, req.headers['content-length'])
   }
   
   // Store original method before any modifications
