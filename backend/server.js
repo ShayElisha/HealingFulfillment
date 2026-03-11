@@ -147,6 +147,22 @@ const ensureMongoConnection = async (req, res, next) => {
     })
   }
   
+  // Log URI without password for debugging (show first 30 chars)
+  const uriPreview = MONGODB_URI.substring(0, 30) + '...'
+  console.log(`[MongoDB] URI preview: ${uriPreview}`)
+  
+  // Fix URI if it doesn't have database name
+  let finalUri = MONGODB_URI
+  if (finalUri.endsWith('/')) {
+    // Add database name if URI ends with /
+    finalUri = finalUri + 'healing-fulfillment'
+    console.log('[MongoDB] Added database name to URI')
+  } else if (!finalUri.includes('/') || finalUri.match(/\/$/)) {
+    // If no database specified, add it
+    finalUri = finalUri.replace(/\/$/, '') + '/healing-fulfillment'
+    console.log('[MongoDB] Added database name to URI')
+  }
+  
   console.log('[MongoDB] Attempting to connect...')
   const connectStart = Date.now()
   
@@ -158,7 +174,7 @@ const ensureMongoConnection = async (req, res, next) => {
     
     // Use shorter timeout for serverless - very aggressive
     await Promise.race([
-      mongoose.connect(MONGODB_URI, {
+      mongoose.connect(finalUri, {
         serverSelectionTimeoutMS: 3000, // 3 seconds - very short
         socketTimeoutMS: 5000, // 5 seconds
         connectTimeoutMS: 3000, // 3 seconds
