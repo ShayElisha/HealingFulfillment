@@ -119,9 +119,13 @@ export default async (req, res) => {
   // Set the correct path on request object
   if (finalPath) {
     const pathWithoutQuery = finalPath.split('?')[0]
+    // Preserve the original method
+    const originalMethod = req.method
     req.url = finalPath
     req.originalUrl = finalPath
     req.path = pathWithoutQuery
+    // Ensure method is preserved
+    req.method = originalMethod
     console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
   } else {
     // If no path found, return error

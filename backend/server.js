@@ -37,6 +37,12 @@ const app = express()
 const PORT = process.env.PORT || 5000
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/healing-fulfillment'
 
+// Trust proxy in Vercel/serverless environments
+// This is required for express-rate-limit to work correctly
+if (process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
+  app.set('trust proxy', true)
+}
+
 // Middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -44,7 +50,7 @@ app.use(helmet({
 }))
 // CORS configuration - allow all origins in production (Vercel handles this)
 const corsOptions = {
-  origin: process.env.VERCEL === '1' 
+  origin: process.env.VERCEL === '1'
     ? true // Allow all origins in Vercel (it handles CORS)
     : [
         process.env.FRONTEND_URL || 'http://localhost:3000',
