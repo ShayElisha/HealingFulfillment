@@ -91,72 +91,71 @@ app.use('/api/admin', adminLimiter)
 
 // MongoDB connection middleware for serverless functions
 const ensureMongoConnection = async (req, res, next) => {
+  const middlewareStart = Date.now()
+  
   // Skip MongoDB connection for health check
   if (req.path === '/health' || req.url === '/health' || req.url.startsWith('/health')) {
     return next()
   }
   
   const connectionState = mongoose.connection.readyState
-  console.log(`[MongoDB] Connection state: ${connectionState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`)
+  console.log(`[MongoDB Middleware] State: ${connectionState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`)
   
-  // Already connected - proceed
+  // Already connected - proceed immediately
   if (connectionState === 1) {
-    console.log('[MongoDB] Already connected')
+    console.log(`[MongoDB Middleware] Already connected, proceeding (${Date.now() - middlewareStart}ms)`)
     return next()
   }
   
-  // Currently connecting - wait for it (with timeout)
+  // Currently connecting - wait briefly (max 2 seconds)
   if (connectionState === 2) {
-    console.log('[MongoDB] Connection in progress, waiting...')
+    console.log('[MongoDB Middleware] Connection in progress, waiting...')
     const waitStart = Date.now()
     try {
       await Promise.race([
         new Promise((resolve) => {
           const checkConnection = () => {
-            if (mongoose.connection.readyState === 1) {
+            const state = mongoose.connection.readyState
+            if (state === 1) {
               resolve()
-            } else if (mongoose.connection.readyState === 0) {
-              // Connection failed, will try to reconnect below
+            } else if (state === 0 || state === 3) {
+              // Connection failed or disconnecting, will try to reconnect below
               resolve()
             } else {
-              setTimeout(checkConnection, 100)
+              setTimeout(checkConnection, 50) // Check every 50ms
             }
           }
           checkConnection()
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('MongoDB connection wait timeout')), 3000)
+          setTimeout(() => reject(new Error('MongoDB connection wait timeout')), 2000) // Max 2 seconds
         )
       ])
       if (mongoose.connection.readyState === 1) {
-        console.log(`[MongoDB] Connection completed in ${Date.now() - waitStart}ms`)
+        console.log(`[MongoDB Middleware] Connection completed in ${Date.now() - waitStart}ms`)
         return next()
       }
     } catch (error) {
-      console.error(`[MongoDB] Wait timeout after ${Date.now() - waitStart}ms`)
+      console.error(`[MongoDB Middleware] Wait timeout after ${Date.now() - waitStart}ms`)
       // Continue to try connecting below
     }
   }
   
   // Check if MONGODB_URI is set
   if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/healing-fulfillment') {
-    console.error('[MongoDB] URI not configured')
+    console.error('[MongoDB Middleware] URI not configured')
     return res.status(500).json({ 
       message: 'Database connection failed',
       error: 'MONGODB_URI environment variable is not set'
     })
   }
   
-  // Log URI without password for debugging (show first 30 chars)
-  const uriPreview = MONGODB_URI.substring(0, 30) + '...'
-  console.log(`[MongoDB] URI preview: ${uriPreview}`)
-  
   // Clean and fix URI
   let finalUri = MONGODB_URI.trim()
   
   // Validate URI format
   if (!finalUri.startsWith('mongodb://') && !finalUri.startsWith('mongodb+srv://')) {
-    console.error('[MongoDB] Invalid URI format:', finalUri.substring(0, 50))
+    console.error('[MongoDB Middleware] Invalid URI format')
     return res.status(500).json({ 
       message: 'Database connection failed',
       error: 'Invalid MongoDB URI format'
@@ -165,16 +164,12 @@ const ensureMongoConnection = async (req, res, next) => {
   
   // Fix URI if it doesn't have database name
   if (finalUri.endsWith('/')) {
-    // Add database name if URI ends with /
     finalUri = finalUri + 'healing-fulfillment'
-    console.log('[MongoDB] Added database name to URI')
   } else if (!finalUri.match(/\/[^\/]+$/)) {
-    // If no database specified, add it
     finalUri = finalUri + '/healing-fulfillment'
-    console.log('[MongoDB] Added database name to URI')
   }
   
-  console.log('[MongoDB] Attempting to connect...')
+  console.log('[MongoDB Middleware] Attempting to connect...')
   const connectStart = Date.now()
   
   try {
@@ -183,24 +178,25 @@ const ensureMongoConnection = async (req, res, next) => {
       await mongoose.disconnect()
     }
     
-    // Use shorter timeout for serverless - very aggressive
+    // Use very short timeout for serverless
     await Promise.race([
       mongoose.connect(finalUri, {
-        serverSelectionTimeoutMS: 3000, // 3 seconds - very short
-        socketTimeoutMS: 5000, // 5 seconds
-        connectTimeoutMS: 3000, // 3 seconds
+        serverSelectionTimeoutMS: 2000, // 2 seconds
+        socketTimeoutMS: 4000, // 4 seconds
+        connectTimeoutMS: 2000, // 2 seconds
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('MongoDB connection timeout')), 3000)
+        setTimeout(() => reject(new Error('MongoDB connection timeout')), 2000)
       )
     ])
-    console.log(`[MongoDB] Connected successfully in ${Date.now() - connectStart}ms`)
+    console.log(`[MongoDB Middleware] Connected in ${Date.now() - connectStart}ms (total: ${Date.now() - middlewareStart}ms)`)
     next()
   } catch (error) {
-    console.error(`[MongoDB] Connection error after ${Date.now() - connectStart}ms:`, error.message)
+    console.error(`[MongoDB Middleware] Connection error after ${Date.now() - connectStart}ms:`, error.message)
     return res.status(500).json({ 
       message: 'Database connection failed',
-      error: error.message
+      error: error.message,
+      time: Date.now() - middlewareStart
     })
   }
 }
