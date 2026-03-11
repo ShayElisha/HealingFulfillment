@@ -78,6 +78,23 @@ const adminLimiter = rateLimit({
 app.use('/api/', generalLimiter)
 app.use('/api/admin', adminLimiter)
 
+// MongoDB connection middleware for serverless functions
+const ensureMongoConnection = async (req, res, next) => {
+  if (mongoose.connection.readyState === 0) {
+    try {
+      await mongoose.connect(MONGODB_URI)
+      console.log('Connected to MongoDB')
+    } catch (error) {
+      console.error('MongoDB connection error:', error)
+      return res.status(500).json({ message: 'Database connection failed' })
+    }
+  }
+  next()
+}
+
+// Apply MongoDB connection middleware to all API routes
+app.use('/api/', ensureMongoConnection)
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -109,23 +126,20 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' })
 })
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB')
-    // Only start listening if not in serverless environment (Vercel)
-    if (process.env.VERCEL !== '1') {
+// Connect to MongoDB (only for non-serverless environments)
+if (process.env.VERCEL !== '1') {
+  mongoose.connect(MONGODB_URI)
+    .then(() => {
+      console.log('Connected to MongoDB')
       app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`)
       })
-    }
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error)
-    if (process.env.VERCEL !== '1') {
+    })
+    .catch((error) => {
+      console.error('MongoDB connection error:', error)
       process.exit(1)
-    }
-  })
+    })
+}
 
 export default app
 
