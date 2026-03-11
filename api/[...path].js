@@ -50,14 +50,21 @@ export default async (req, res) => {
   const start = Date.now()
   
   // Log original request details
-  console.log(`[Vercel] Original: ${req.method} ${req.url}`)
+  console.log(`[Vercel] ${req.method} ${req.url}`)
   console.log(`[Vercel] Query:`, JSON.stringify(req.query))
-  console.log(`[Vercel] Path:`, req.path)
+  console.log(`[Vercel] Original path:`, req.path)
+  console.log(`[Vercel] Original originalUrl:`, req.originalUrl)
   
   // Fix path from Vercel [...path] routing
-  // Vercel passes the path via query parameter '...path'
+  // Vercel passes the path via query parameter '...path' for catch-all routes
+  let finalPath = null
+  
   if (req.query && req.query['...path']) {
-    const pathParam = req.query['...path']
+    // Path is in query parameter (catch-all route)
+    const pathParam = Array.isArray(req.query['...path']) 
+      ? req.query['...path'].join('/')
+      : req.query['...path']
+    
     delete req.query['...path']
     
     // Rebuild query string without ...path
@@ -65,34 +72,38 @@ export default async (req, res) => {
       ? '?' + new URLSearchParams(req.query).toString()
       : ''
     
-    // Set the correct path
-    req.url = `/api/${pathParam}${remainingQuery}`
-    req.originalUrl = req.url
-    req.path = `/api/${pathParam}`
-    console.log(`[Vercel] Fixed path from query param: ${req.url}`)
+    finalPath = `/api/${pathParam}${remainingQuery}`
+    console.log(`[Vercel] Path from query param: ${finalPath}`)
   } else {
-    // If no ...path query param, use the URL directly
-    // Vercel might pass the path in the URL itself
-    if (req.url && !req.url.startsWith('/api/')) {
-      // If URL doesn't start with /api/, add it
-      req.url = `/api${req.url}`
-      req.originalUrl = req.url
-      // Update path to match
-      if (req.path && !req.path.startsWith('/api/')) {
-        req.path = `/api${req.path}`
+    // Path is in the URL itself
+    // For Vercel [...path] routes, the path might be in req.url
+    if (req.url) {
+      // Remove query string to get clean path
+      const urlPath = req.url.split('?')[0]
+      
+      if (urlPath.startsWith('/api/')) {
+        finalPath = req.url // Keep query string if exists
+        console.log(`[Vercel] Path from URL (has /api/): ${finalPath}`)
+      } else {
+        // Add /api prefix
+        finalPath = `/api${req.url}`
+        console.log(`[Vercel] Path from URL (added /api/): ${finalPath}`)
       }
-      console.log(`[Vercel] Added /api prefix: ${req.url}`)
-    } else if (req.url && req.url.startsWith('/api/')) {
-      // URL already has /api/, just ensure path matches
-      req.originalUrl = req.url
-      if (req.path !== req.url.split('?')[0]) {
-        req.path = req.url.split('?')[0]
-      }
-      console.log(`[Vercel] URL already has /api/: ${req.url}`)
+    } else {
+      // Fallback: use path
+      finalPath = req.path.startsWith('/api/') ? req.path : `/api${req.path}`
+      console.log(`[Vercel] Path from req.path: ${finalPath}`)
     }
   }
   
-  console.log(`[Vercel] Final: ${req.method} ${req.url}, path: ${req.path}, originalUrl: ${req.originalUrl}`)
+  // Set the correct path on request object
+  if (finalPath) {
+    const pathWithoutQuery = finalPath.split('?')[0]
+    req.url = finalPath
+    req.originalUrl = finalPath
+    req.path = pathWithoutQuery
+    console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
+  }
   
   try {
     // Get handler with timeout
