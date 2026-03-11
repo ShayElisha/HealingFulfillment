@@ -174,15 +174,29 @@ export default async (req, res) => {
   if (finalPath) {
     try {
       const pathWithoutQuery = finalPath.split('?')[0]
+      
+      // CRITICAL: Set all path-related properties correctly
+      // Express Router uses req.url and req.originalUrl to determine routing
+      // req.path is derived from req.url, so setting req.url should be enough
       req.url = finalPath
       req.originalUrl = finalPath
-      req.path = pathWithoutQuery
-      // Ensure method is preserved (restore from stored value)
-      // Use originalMethod if defined, otherwise keep req.method
-      if (typeof originalMethod !== 'undefined') {
+      
+      // Try to set req.path, but it might be read-only
+      // Express will derive it from req.url anyway
+      try {
+        req.path = pathWithoutQuery
+      } catch (e) {
+        // req.path might be read-only, that's OK - Express will derive it
+        console.log(`[Vercel] Could not set req.path directly (read-only), Express will derive it from req.url`)
+      }
+      
+      // CRITICAL: Ensure method is preserved BEFORE setting path
+      // This must be done after path is set to avoid conflicts
+      if (typeof originalMethod !== 'undefined' && originalMethod) {
         req.method = originalMethod
       }
-      console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
+      
+      console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path || 'derived'}`)
       console.log(`[Vercel] Method preserved: ${req.method}`)
     } catch (error) {
       console.error(`[Vercel] Error setting path:`, error.message)
@@ -190,7 +204,11 @@ export default async (req, res) => {
       // Fallback: just set the path without method change
       req.url = finalPath
       req.originalUrl = finalPath
-      req.path = finalPath.split('?')[0]
+      try {
+        req.path = finalPath.split('?')[0]
+      } catch (e) {
+        // Ignore if path is read-only
+      }
     }
   } else {
     // If no path found, return error
