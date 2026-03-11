@@ -322,6 +322,16 @@ app.use('/api/upload', uploadRoutes)
 app.use('/api', customersRoutes)
 app.use('/api/auth', authRoutes)
 
+// Alias for /api/login -> /api/auth/login
+app.all('/api/login', (req, res, next) => {
+  // Redirect to /api/auth/login
+  req.url = '/api/auth/login'
+  req.originalUrl = '/api/auth/login'
+  req.path = '/api/auth/login'
+  next()
+})
+app.use('/api/login', authRoutes)
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err)
