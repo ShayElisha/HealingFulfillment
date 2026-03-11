@@ -16,11 +16,16 @@ export default async (req, res) => {
   try {
     return await handler(req, res)
   } catch (error) {
-    console.error('Error:', error.message)
+    console.error('[Vercel Function] Error:', error)
+    console.error('[Vercel Function] Error name:', error.name)
+    console.error('[Vercel Function] Error message:', error.message)
+    console.error('[Vercel Function] Error stack:', error.stack)
+    
     if (!res.headersSent) {
       return res.status(500).json({ 
         message: 'Internal server error',
-        error: error.message
+        error: error.message,
+        errorName: error.name
       })
     }
   }

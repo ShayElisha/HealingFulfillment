@@ -20,7 +20,11 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-dotenv.config()
+// Only load .env file in non-Vercel environments
+// Vercel uses environment variables from dashboard
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  dotenv.config()
+}
 
 // Set default JWT_SECRET if not defined (for development only)
 if (!process.env.JWT_SECRET) {
@@ -115,11 +119,25 @@ const ensureMongoConnection = async (req, res, next) => {
     return next()
   }
   
+  // Check if MONGODB_URI is set
+  if (!MONGODB_URI || MONGODB_URI === 'mongodb://localhost:27017/healing-fulfillment') {
+    console.error('MongoDB URI not configured')
+    return res.status(500).json({ 
+      message: 'Database connection failed',
+      error: 'MONGODB_URI environment variable is not set'
+    })
+  }
+  
   try {
-    await mongoose.connect(MONGODB_URI)
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    })
+    console.log('MongoDB connected successfully')
     next()
   } catch (error) {
     console.error('MongoDB connection error:', error.message)
+    console.error('MongoDB connection error stack:', error.stack)
     return res.status(500).json({ 
       message: 'Database connection failed',
       error: error.message
