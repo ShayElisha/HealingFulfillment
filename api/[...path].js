@@ -264,11 +264,22 @@ export default async (req, res) => {
       }
     } catch (error) {
       console.error(`[Vercel] Handler error (${Date.now() - start}ms):`, error.message)
+      console.error(`[Vercel] Error name:`, error.name)
+      console.error(`[Vercel] Error code:`, error.code)
       console.error(`[Vercel] Error stack:`, error.stack)
+      
+      // Log more details about the error
+      if (error.cause) {
+        console.error(`[Vercel] Error cause:`, error.cause)
+      }
+      
       if (!res.headersSent) {
         res.status(500).json({ 
           message: 'Server error',
-          error: error.message
+          error: error.message,
+          errorName: error.name,
+          errorCode: error.code,
+          ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
         })
       }
     }
