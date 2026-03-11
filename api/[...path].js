@@ -107,29 +107,58 @@ export default async (req, res) => {
       return originalWriteHead(...args)
     }
     
-    // Process request
+    // Process request with proper promise handling
     try {
-      const result = await handlerInstance(req, res)
-      console.log(`[Vercel] Handler returned (${Date.now() - start}ms), responseSent: ${responseSent}`)
-      
-      // If handler returned a result but response wasn't sent, send it
-      if (result && !responseSent && !res.headersSent) {
-        console.log(`[Vercel] Sending handler result as response`)
-        res.json(result)
-      }
-      
-      // Set timeout to ensure response is sent
-      setTimeout(() => {
-        if (!responseSent && !res.headersSent) {
-          console.error(`[Vercel] Timeout: response not sent after ${Date.now() - start}ms`)
-          if (!res.headersSent) {
-            res.status(500).json({ 
-              message: 'Request timeout',
-              error: 'Response was not sent in time'
-            })
+      // Wrap handler call in Promise to ensure it completes
+      const handlerResult = await new Promise((resolve, reject) => {
+        // Set timeout
+        const timeout = setTimeout(() => {
+          if (!responseSent && !res.headersSent) {
+            console.error(`[Vercel] Handler timeout after ${Date.now() - start}ms`)
+            reject(new Error('Handler timeout'))
           }
-        }
-      }, 25000)
+        }, 25000)
+        
+        // Call handler
+        const handlerPromise = handlerInstance(req, res)
+        
+        // Handle handler promise
+        handlerPromise
+          .then((result) => {
+            clearTimeout(timeout)
+            console.log(`[Vercel] Handler promise resolved (${Date.now() - start}ms), responseSent: ${responseSent}`)
+            resolve(result)
+          })
+          .catch((error) => {
+            clearTimeout(timeout)
+            console.error(`[Vercel] Handler promise rejected (${Date.now() - start}ms):`, error.message)
+            reject(error)
+          })
+        
+        // Also check if response was sent (in case handler doesn't return promise properly)
+        const checkInterval = setInterval(() => {
+          if (responseSent || res.headersSent) {
+            clearTimeout(timeout)
+            clearInterval(checkInterval)
+            console.log(`[Vercel] Response detected via polling (${Date.now() - start}ms)`)
+            resolve(null)
+          }
+        }, 100)
+        
+        // Clear interval after timeout
+        setTimeout(() => clearInterval(checkInterval), 25000)
+      })
+      
+      console.log(`[Vercel] Handler completed (${Date.now() - start}ms), responseSent: ${responseSent}`)
+      
+      // If response wasn't sent, send error
+      if (!responseSent && !res.headersSent) {
+        console.error(`[Vercel] Response not sent, sending error`)
+        res.status(500).json({ 
+          message: 'No response from server',
+          error: 'Handler completed but no response was sent'
+        })
+      }
     } catch (error) {
       console.error(`[Vercel] Handler error (${Date.now() - start}ms):`, error.message)
       if (!res.headersSent) {
