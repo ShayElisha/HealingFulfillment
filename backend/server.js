@@ -99,9 +99,43 @@ const ensureMongoConnection = async (req, res, next) => {
   const connectionState = mongoose.connection.readyState
   console.log(`[MongoDB] Connection state: ${connectionState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`)
   
+  // Already connected - proceed
   if (connectionState === 1) {
     console.log('[MongoDB] Already connected')
     return next()
+  }
+  
+  // Currently connecting - wait for it (with timeout)
+  if (connectionState === 2) {
+    console.log('[MongoDB] Connection in progress, waiting...')
+    const waitStart = Date.now()
+    try {
+      await Promise.race([
+        new Promise((resolve) => {
+          const checkConnection = () => {
+            if (mongoose.connection.readyState === 1) {
+              resolve()
+            } else if (mongoose.connection.readyState === 0) {
+              // Connection failed, will try to reconnect below
+              resolve()
+            } else {
+              setTimeout(checkConnection, 100)
+            }
+          }
+          checkConnection()
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('MongoDB connection wait timeout')), 3000)
+        )
+      ])
+      if (mongoose.connection.readyState === 1) {
+        console.log(`[MongoDB] Connection completed in ${Date.now() - waitStart}ms`)
+        return next()
+      }
+    } catch (error) {
+      console.error(`[MongoDB] Wait timeout after ${Date.now() - waitStart}ms`)
+      // Continue to try connecting below
+    }
   }
   
   // Check if MONGODB_URI is set
@@ -117,14 +151,20 @@ const ensureMongoConnection = async (req, res, next) => {
   const connectStart = Date.now()
   
   try {
-    // Use shorter timeout for serverless
+    // Disconnect if in bad state
+    if (mongoose.connection.readyState === 3) {
+      await mongoose.disconnect()
+    }
+    
+    // Use shorter timeout for serverless - very aggressive
     await Promise.race([
       mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000, // 5 seconds
-        socketTimeoutMS: 10000, // 10 seconds
+        serverSelectionTimeoutMS: 3000, // 3 seconds - very short
+        socketTimeoutMS: 5000, // 5 seconds
+        connectTimeoutMS: 3000, // 3 seconds
       }),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('MongoDB connection timeout')), 5000)
+        setTimeout(() => reject(new Error('MongoDB connection timeout')), 3000)
       )
     ])
     console.log(`[MongoDB] Connected successfully in ${Date.now() - connectStart}ms`)
