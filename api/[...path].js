@@ -282,16 +282,29 @@ export default async (req, res) => {
     
       // Process request
       try {
-        // CRITICAL: Ensure method is set correctly and preserved
-        // serverless-http might change the method, so we need to force it
-        req.method = originalMethod
+        // CRITICAL: Force method to be correct RIGHT BEFORE calling handler
+        // Use Object.defineProperty to override any getter/setter
+        try {
+          Object.defineProperty(req, 'method', {
+            value: originalMethod,
+            writable: true,
+            configurable: true,
+            enumerable: true
+          })
+        } catch (e) {
+          // If defineProperty fails, try direct assignment
+          req.method = originalMethod
+        }
         
-        // Also set it on the request object properties that serverless-http might check
-        if (req._method) {
+        // Also set it on internal properties that might be checked
+        if (req._method !== originalMethod) {
           req._method = originalMethod
         }
         
         console.log(`[Vercel] Calling handler with method: ${req.method} (original: ${originalMethod})`)
+        console.log(`[Vercel] Request URL before handler: ${req.url}`)
+        console.log(`[Vercel] Request path before handler: ${req.path}`)
+        console.log(`[Vercel] Request originalUrl before handler: ${req.originalUrl}`)
         
         // Log body for POST/PUT/PATCH requests BEFORE handler
         if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
@@ -301,7 +314,7 @@ export default async (req, res) => {
           console.log(`[Vercel] Content-Length:`, req.headers['content-length'])
         }
         
-        // Wrap the handler call to ensure method is preserved
+        // Call handler - this will pass request to Express
         const handlerResult = await handlerInstance(req, res)
         
         // Log method after handler to see if it changed
