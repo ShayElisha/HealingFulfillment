@@ -320,20 +320,20 @@ app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api', customersRoutes)
-app.use('/api/auth', authRoutes)
 
 // Alias for /api/login -> /api/auth/login
-// Create a router that handles /login and forwards to auth routes
-const loginRouter = express.Router()
-loginRouter.all('*', (req, res, next) => {
+// Handle /api/login requests and forward to auth routes
+app.all('/api/login', (req, res, next) => {
   // Change the path to match auth routes
-  const originalPath = req.path
-  req.url = `/auth${originalPath}`
-  req.originalUrl = `/api/auth${originalPath}`
-  req.path = `/auth${originalPath}`
+  // When Express receives /api/login, it strips /api/login and passes / to the router
+  // So we need to change it to /auth/login
+  req.url = '/api/auth/login'
+  req.originalUrl = '/api/auth/login'
+  req.path = '/auth/login'
+  console.log(`[Login Alias] Redirecting ${req.method} /api/login to /api/auth/login`)
   next()
 })
-app.use('/api/login', loginRouter)
+
 app.use('/api/auth', authRoutes)
 
 // Error handling middleware
