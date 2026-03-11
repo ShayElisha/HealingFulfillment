@@ -129,14 +129,26 @@ export default async (req, res) => {
   
   // Set the correct path on request object
   if (finalPath) {
-    const pathWithoutQuery = finalPath.split('?')[0]
-    req.url = finalPath
-    req.originalUrl = finalPath
-    req.path = pathWithoutQuery
-    // Ensure method is preserved (restore from stored value)
-    req.method = originalMethod
-    console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
-    console.log(`[Vercel] Method preserved: ${req.method}`)
+    try {
+      const pathWithoutQuery = finalPath.split('?')[0]
+      req.url = finalPath
+      req.originalUrl = finalPath
+      req.path = pathWithoutQuery
+      // Ensure method is preserved (restore from stored value)
+      // Use originalMethod if defined, otherwise keep req.method
+      if (typeof originalMethod !== 'undefined') {
+        req.method = originalMethod
+      }
+      console.log(`[Vercel] Final path: ${req.method} ${req.url}, path: ${req.path}`)
+      console.log(`[Vercel] Method preserved: ${req.method}`)
+    } catch (error) {
+      console.error(`[Vercel] Error setting path:`, error.message)
+      console.error(`[Vercel] originalMethod:`, typeof originalMethod, originalMethod)
+      // Fallback: just set the path without method change
+      req.url = finalPath
+      req.originalUrl = finalPath
+      req.path = finalPath.split('?')[0]
+    }
   } else {
     // If no path found, return error
     console.error(`[Vercel] Could not determine path for ${req.method}`)
