@@ -324,12 +324,10 @@ app.use('/api', customersRoutes)
 // Alias for /api/login -> /api/auth/login
 // Handle /api/login requests and forward to auth routes
 app.all('/api/login', (req, res, next) => {
-  // Change the path to match auth routes
-  // When Express receives /api/login, it strips /api/login and passes / to the router
-  // So we need to change it to /auth/login
+  // Change the URL to match auth routes
+  // Note: req.path is read-only in serverless-http, so we only change req.url and req.originalUrl
   req.url = '/api/auth/login'
   req.originalUrl = '/api/auth/login'
-  req.path = '/auth/login'
   console.log(`[Login Alias] Redirecting ${req.method} /api/login to /api/auth/login`)
   next()
 })
