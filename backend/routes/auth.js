@@ -10,6 +10,10 @@ const router = express.Router()
 
 // POST /api/auth/login - התחברות עם אימייל וסיסמה
 router.post('/login', async (req, res, next) => {
+  console.log('[Auth Route] POST /login called')
+  console.log('[Auth Route] Request body:', JSON.stringify(req.body))
+  console.log('[Auth Route] Request path:', req.path)
+  console.log('[Auth Route] Request originalUrl:', req.originalUrl)
   try {
     const { email, password } = req.body
 

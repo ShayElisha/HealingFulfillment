@@ -68,13 +68,29 @@ app.use(express.urlencoded({ extended: true }))
 // Check if running in Vercel
 const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
 
+console.log('[Server] Environment check:', {
+  VERCEL: process.env.VERCEL,
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  VERCEL_URL: process.env.VERCEL_URL,
+  isVercel: isVercel
+})
+
 // Middleware to fix paths for Vercel
 app.use((req, res, next) => {
   const currentPath = req.path || ''
   const originalUrl = req.originalUrl || req.url || ''
   
+  console.log('[Middleware] Before path fix:', {
+    method: req.method,
+    currentPath,
+    originalUrl,
+    url: req.url,
+    isVercel
+  })
+  
   // Skip health check
   if (currentPath === '/health' || originalUrl === '/health') {
+    console.log('[Middleware] Skipping health check')
     return next()
   }
   
@@ -89,7 +105,20 @@ app.use((req, res, next) => {
     req.originalUrl = newUrl
     req.path = newPath
     
-    console.log(`[Vercel] Fixed path: ${req.method} ${req.path} (was: ${originalUrl})`)
+    console.log('[Middleware] Fixed path:', {
+      method: req.method,
+      oldPath: currentPath,
+      newPath,
+      oldUrl: originalUrl,
+      newUrl
+    })
+  } else {
+    console.log('[Middleware] Path already correct or not Vercel:', {
+      method: req.method,
+      path: currentPath,
+      isVercel,
+      startsWithApi: currentPath.startsWith('/api')
+    })
   }
   
   next()
@@ -137,17 +166,60 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// Routes
-app.use('/api/contact', contactRoutes)
-app.use('/api/booking', bookingRoutes)
-app.use('/api/blog', blogRoutes)
-app.use('/api/admin', adminRoutes)
-app.use('/api/courses', coursesRoutes)
-app.use('/api/categories', categoriesRoutes)
-app.use('/api/purchases', purchasesRoutes)
-app.use('/api/upload', uploadRoutes)
-app.use('/api', customersRoutes)
-app.use('/api/auth', authRoutes)
+// Routes with logging
+console.log('[Server] Registering routes...')
+
+app.use('/api/contact', (req, res, next) => {
+  console.log('[Route] /api/contact:', req.method, req.path)
+  next()
+}, contactRoutes)
+
+app.use('/api/booking', (req, res, next) => {
+  console.log('[Route] /api/booking:', req.method, req.path)
+  next()
+}, bookingRoutes)
+
+app.use('/api/blog', (req, res, next) => {
+  console.log('[Route] /api/blog:', req.method, req.path)
+  next()
+}, blogRoutes)
+
+app.use('/api/admin', (req, res, next) => {
+  console.log('[Route] /api/admin:', req.method, req.path)
+  next()
+}, adminRoutes)
+
+app.use('/api/courses', (req, res, next) => {
+  console.log('[Route] /api/courses:', req.method, req.path)
+  next()
+}, coursesRoutes)
+
+app.use('/api/categories', (req, res, next) => {
+  console.log('[Route] /api/categories:', req.method, req.path)
+  next()
+}, categoriesRoutes)
+
+app.use('/api/purchases', (req, res, next) => {
+  console.log('[Route] /api/purchases:', req.method, req.path)
+  next()
+}, purchasesRoutes)
+
+app.use('/api/upload', (req, res, next) => {
+  console.log('[Route] /api/upload:', req.method, req.path)
+  next()
+}, uploadRoutes)
+
+app.use('/api', (req, res, next) => {
+  console.log('[Route] /api (customers):', req.method, req.path)
+  next()
+}, customersRoutes)
+
+app.use('/api/auth', (req, res, next) => {
+  console.log('[Route] /api/auth:', req.method, req.path, 'Full URL:', req.originalUrl)
+  next()
+}, authRoutes)
+
+console.log('[Server] All routes registered')
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -160,7 +232,19 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' })
+  console.log('[404 Handler] Route not found:', {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    url: req.url,
+    headers: req.headers
+  })
+  res.status(404).json({ 
+    message: 'Route not found',
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl
+  })
 })
 
 // Connect to MongoDB (only for non-serverless environments)
