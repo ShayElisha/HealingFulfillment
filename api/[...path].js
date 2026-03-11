@@ -65,12 +65,20 @@ async function getHandler() {
 export default async (req, res) => {
   const start = Date.now()
   
+  // CRITICAL: Store the original method IMMEDIATELY - this is the actual HTTP method from Vercel
+  // In Vercel, req.method should already be set correctly (POST, GET, etc.)
+  // But we need to preserve it because serverless-http might change it
+  const originalMethod = req.method || req.headers['x-http-method-override'] || 'GET'
+  
   // Log immediately - this should always appear if the function is called
   console.log(`[Vercel] ===== FUNCTION CALLED =====`)
   console.log(`[Vercel] Timestamp: ${new Date().toISOString()}`)
-  console.log(`[Vercel] Method: ${req.method}`)
+  console.log(`[Vercel] Method: ${req.method} (originalMethod: ${originalMethod})`)
   console.log(`[Vercel] URL: ${req.url}`)
   console.log(`[Vercel] Headers:`, JSON.stringify(req.headers).substring(0, 500))
+  
+  // CRITICAL: Set method immediately to prevent any changes
+  req.method = originalMethod
   
   // For POST/PUT/PATCH requests, log body state
   // Don't read the body here - let Express middleware handle it
@@ -80,9 +88,6 @@ export default async (req, res) => {
     console.log(`[Vercel] Content-Type:`, req.headers['content-type'])
     console.log(`[Vercel] Content-Length:`, req.headers['content-length'])
   }
-  
-  // Store original method before any modifications
-  const originalMethod = req.method
   
   // Log original request details
   console.log(`[Vercel] ${req.method} ${req.url}`)
