@@ -90,11 +90,17 @@ export default async (req, res) => {
   }
   
   // Log original request details
-  console.log(`[Vercel] ${req.method} ${req.url}`)
+  console.log(`[Vercel] ===== REQUEST DETAILS =====`)
+  console.log(`[Vercel] Method: ${req.method}`)
+  console.log(`[Vercel] URL: ${req.url}`)
   console.log(`[Vercel] Original method: ${originalMethod}`)
   console.log(`[Vercel] Query:`, JSON.stringify(req.query))
+  console.log(`[Vercel] Query keys:`, Object.keys(req.query || {}))
+  console.log(`[Vercel] Has ...path:`, !!(req.query && req.query['...path']))
   console.log(`[Vercel] Original path:`, req.path)
   console.log(`[Vercel] Original originalUrl:`, req.originalUrl)
+  console.log(`[Vercel] Headers host:`, req.headers?.host)
+  console.log(`[Vercel] =========================`)
   
   // Fix path from Vercel [...path] routing
   // Vercel passes the path via query parameter '...path' for catch-all routes
