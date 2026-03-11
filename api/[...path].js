@@ -39,6 +39,15 @@ async function getHandler() {
 }
 
 export default async (req, res) => {
+  // Log request details
+  console.log('[Vercel Function] Request received:', {
+    method: req.method,
+    url: req.url,
+    originalUrl: req.originalUrl,
+    path: req.path,
+    query: req.query
+  })
+  
   const timeout = setTimeout(() => {
     if (!res.headersSent) {
       console.error('[Vercel Function] Request timeout')
