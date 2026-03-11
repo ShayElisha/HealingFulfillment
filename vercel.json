@@ -4,6 +4,13 @@
   "framework": "vite",
   "installCommand": "npm install && cd backend && npm install && cd ../frontend && npm install",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { 
+      "source": "/api/(.*)", 
+      "destination": "/api/$1" 
+    },
+    { 
+      "source": "/(.*)", 
+      "destination": "/index.html" 
+    }
   ]
 }
