@@ -121,28 +121,42 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' })
 })
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('✅ Customer Service: Connected to MongoDB')
-    
-    // Only start listening if not running on Vercel (serverless)
-    // Vercel serverless functions don't need app.listen()
-    if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
-      app.listen(PORT, () => {
-        console.log(`🚀 Customer Service running on port ${PORT}`)
-      })
-    } else {
-      console.log('🚀 Customer Service ready for Vercel serverless functions')
+// Connect to MongoDB - use connection pooling for serverless
+const connectMongoDB = async () => {
+  try {
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ Customer Service: Already connected to MongoDB')
+      return
     }
-  })
-  .catch((error) => {
+
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    })
+    console.log('✅ Customer Service: Connected to MongoDB')
+  } catch (error) {
     console.error('❌ Customer Service: MongoDB connection error:', error)
     // Don't exit on Vercel - let the function handle the error
     if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
       process.exit(1)
     }
+  }
+}
+
+// Connect to MongoDB
+if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+  // Local development - connect and start server
+  connectMongoDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Customer Service running on port ${PORT}`)
+    })
   })
+} else {
+  // Vercel serverless - connect but don't block
+  connectMongoDB()
+  console.log('🚀 Customer Service ready for Vercel serverless functions')
+}
 
 export default app
 
