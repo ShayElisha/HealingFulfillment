@@ -79,8 +79,16 @@ const generalLimiter = rateLimit({
 
 app.use('/api/', generalLimiter)
 
-// Health check
+// Health check - support both /health and /api/health
 app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    service: 'customer-service',
+    timestamp: new Date().toISOString() 
+  })
+})
+
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'customer-service',
