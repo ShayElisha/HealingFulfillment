@@ -2,7 +2,6 @@
 node_modules/
 frontend/node_modules/
 backend/node_modules/
-api/node_modules/
 
 # Environment variables
 .env
@@ -45,8 +44,6 @@ Thumbs.db
 *.swo
 *~
 
-# Vercel
-.vercel
 
 # Uploads
 backend/uploads/
