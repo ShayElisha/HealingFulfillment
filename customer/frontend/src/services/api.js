@@ -2,7 +2,21 @@ import axios from 'axios'
 
 // Use proxy in development, direct URL in production
 // In development, vite proxy will handle /api requests
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
+let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
+
+// Normalize API_URL - remove trailing slashes and ensure proper format
+if (API_URL) {
+  // Remove trailing slashes
+  API_URL = API_URL.replace(/\/+$/, '')
+  // For relative URLs starting with /, ensure no double slashes
+  if (API_URL.startsWith('/')) {
+    API_URL = API_URL.replace(/\/+/g, '/')
+  }
+  // If empty or just slashes, default to /api
+  if (!API_URL || API_URL === '/') {
+    API_URL = '/api'
+  }
+}
 
 const api = axios.create({
   baseURL: API_URL,
