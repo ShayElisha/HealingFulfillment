@@ -39,12 +39,28 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }))
 
+// CORS configuration - support both local and Vercel deployments
+const allowedOrigins = [
+  process.env.CUSTOMER_FRONTEND_URL || 'http://localhost:3000',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  // Vercel URLs
+  process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
+  process.env.VERCEL_BRANCH_URL && `https://${process.env.VERCEL_BRANCH_URL}`,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+].filter(Boolean)
+
 app.use(cors({
-  origin: [
-    process.env.CUSTOMER_FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true)
+    
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -64,8 +80,16 @@ const generalLimiter = rateLimit({
 
 app.use('/api/', generalLimiter)
 
-// Health check
+// Health check - support both /health and /api/health
 app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    service: 'customer-service',
+    timestamp: new Date().toISOString() 
+  })
+})
+
+app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'customer-service',
@@ -101,13 +125,23 @@ app.use((req, res) => {
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Customer Service: Connected to MongoDB')
-    app.listen(PORT, () => {
-      console.log(`🚀 Customer Service running on port ${PORT}`)
-    })
+    
+    // Only start listening if not running on Vercel (serverless)
+    // Vercel serverless functions don't need app.listen()
+    if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+      app.listen(PORT, () => {
+        console.log(`🚀 Customer Service running on port ${PORT}`)
+      })
+    } else {
+      console.log('🚀 Customer Service ready for Vercel serverless functions')
+    }
   })
   .catch((error) => {
     console.error('❌ Customer Service: MongoDB connection error:', error)
-    process.exit(1)
+    // Don't exit on Vercel - let the function handle the error
+    if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
+      process.exit(1)
+    }
   })
 
 export default app
