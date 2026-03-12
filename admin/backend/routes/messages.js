@@ -193,10 +193,10 @@ async function sendMessagesAsync(message, recipients, channels) {
               
               // Store the link in the result
               result.whatsappLink = whatsappLink
-              result.status = 'sent'
-              result.sentAt = new Date()
+            result.status = 'sent'
+            result.sentAt = new Date()
               result.note = 'WhatsApp link generated. Click the link to send manually.'
-              successCount++
+            successCount++
               console.log(`WhatsApp link for ${recipient.name} (${recipient.phone}): ${whatsappLink}`)
             } catch (error) {
               result.status = 'failed'

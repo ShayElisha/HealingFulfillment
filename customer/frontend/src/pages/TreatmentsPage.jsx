@@ -89,14 +89,14 @@ function TreatmentsPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center shadow-sm">
                         <span className="text-2xl">🌿</span>
-                      </div>
+                        </div>
                       <span className="text-xs font-medium text-primary-700 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
-                        טיפול מותאם
-                      </span>
-                    </div>
+                          טיפול מותאם
+                        </span>
+                      </div>
                     <h2 className="text-2xl md:text-3xl font-serif font-bold text-neutral-900 leading-tight">
-                      {treatment.name}
-                    </h2>
+                        {treatment.name}
+                      </h2>
                   </div>
 
                   {/* Content */}
@@ -188,8 +188,8 @@ function TreatmentsPage() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
-                איך זה עובד?
-              </h2>
+              איך זה עובד?
+            </h2>
               <p className="text-neutral-600 text-lg font-light max-w-2xl mx-auto">
                 תהליך מובנה ומקצועי שמוביל אותך צעד אחר צעד אל עבר המטרות שלך
               </p>
@@ -254,15 +254,15 @@ function TreatmentsPage() {
           <AnimatedSection>
             <div className="bg-gradient-to-br from-primary-50/50 to-white rounded-3xl p-12 border border-neutral-100 shadow-sm">
               <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
-                מוכן להתחיל?
-              </h2>
+              מוכן להתחיל?
+            </h2>
               <p className="text-lg text-neutral-600 mb-8 font-light">
-                בואו נכיר בפגישת היכרות ראשונה, ללא התחייבות.
-              </p>
+              בואו נכיר בפגישת היכרות ראשונה, ללא התחייבות.
+            </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button to="/booking" variant="primary" className="px-8 py-3">
-                  קבע פגישת היכרות
-                </Button>
+              קבע פגישת היכרות
+            </Button>
                 <Button to="/contact" variant="secondary" className="px-8 py-3">
                   צור קשר
                 </Button>
