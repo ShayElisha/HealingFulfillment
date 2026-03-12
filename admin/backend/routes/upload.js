@@ -9,12 +9,7 @@ const __dirname = path.dirname(__filename)
 
 const router = express.Router()
 
-// Check if running in Vercel (serverless environment)
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.VERCEL_URL
-
-// Ensure upload directories exist (only in non-serverless environments)
-// In Vercel/serverless, file uploads should use external storage (S3, Cloudinary, etc.)
-if (!isVercel) {
+// Ensure upload directories exist
   const uploadsDir = path.join(__dirname, '../uploads')
   const videosDir = path.join(uploadsDir, 'videos')
 
@@ -27,14 +22,10 @@ if (!isVercel) {
     }
   } catch (error) {
     console.warn('Failed to create upload directories:', error.message)
-  }
 }
 
 // Configure multer for file uploads
-// In Vercel/serverless, use memory storage instead of disk storage
-const storage = isVercel
-  ? multer.memoryStorage() // Use memory storage in serverless
-  : multer.diskStorage({
+const storage = multer.diskStorage({
       destination: (req, file, cb) => {
         // Only videos allowed
         if (file.mimetype.startsWith('video/')) {
@@ -69,15 +60,6 @@ router.post('/', upload.single('file'), (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' })
-    }
-
-    // In Vercel/serverless, file uploads to filesystem are not supported
-    // Files should be uploaded to external storage (S3, Cloudinary, etc.)
-    if (isVercel) {
-      return res.status(501).json({ 
-        message: 'File uploads are not supported in serverless environment',
-        error: 'Please use external storage service (S3, Cloudinary, etc.) for file uploads'
-      })
     }
 
     const fileType = 'video' // Only videos allowed
