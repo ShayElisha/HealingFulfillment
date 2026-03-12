@@ -45,6 +45,8 @@ app.use(helmet({
 app.use(cors({
   origin: [
     process.env.ADMIN_FRONTEND_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
     'http://localhost:3001',
     'http://127.0.0.1:3001'
   ].filter(Boolean),
@@ -144,17 +146,19 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' })
 })
 
-// Connect and start server
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Admin Service running on port ${PORT}`)
+// Connect and start server (only in local development, not in Vercel)
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Admin Service running on port ${PORT}`)
+      })
     })
-  })
-  .catch((error) => {
-    console.error('❌ Admin Service: MongoDB connection error:', error)
-    process.exit(1)
-  })
+    .catch((error) => {
+      console.error('❌ Admin Service: MongoDB connection error:', error)
+      process.exit(1)
+    })
+}
 
 export default app
 
