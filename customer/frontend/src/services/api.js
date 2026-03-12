@@ -4,18 +4,12 @@ import axios from 'axios'
 // In development, vite proxy will handle /api requests
 let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
 
-// Normalize API_URL - remove trailing slashes and ensure proper format
-if (API_URL) {
-  // Remove trailing slashes
-  API_URL = API_URL.replace(/\/+$/, '')
-  // For relative URLs starting with /, ensure no double slashes
-  if (API_URL.startsWith('/')) {
-    API_URL = API_URL.replace(/\/+/g, '/')
-  }
-  // If empty or just slashes, default to /api
-  if (!API_URL || API_URL === '/') {
-    API_URL = '/api'
-  }
+// Normalize API_URL - remove leading/trailing slashes for relative URLs
+if (API_URL && API_URL.startsWith('/')) {
+  // Remove any double slashes
+  API_URL = API_URL.replace(/\/+/g, '/')
+  // Ensure it doesn't end with slash
+  API_URL = API_URL.replace(/\/$/, '') || '/api'
 }
 
 const api = axios.create({
