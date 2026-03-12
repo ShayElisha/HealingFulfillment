@@ -1,0 +1,21 @@
+# העתק קובץ זה ל-.env.local או הגדר ב-Vercel Dashboard
+
+# MongoDB Connection
+MONGODB_URI=mongodb://localhost:27017/healing-fulfillment
+# או עבור MongoDB Atlas:
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/healing-fulfillment?retryWrites=true&w=majority
+
+# JWT Secret Key (צור מפתח אקראי ארוך)
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Frontend URL (ב-production, השתמש ב-URL של Vercel)
+ADMIN_FRONTEND_URL=http://localhost:3001
+# ב-production:
+# ADMIN_FRONTEND_URL=https://your-app.vercel.app
+
+# Backend Port (רק לפיתוח מקומי)
+ADMIN_PORT=5001
+
+# Node Environment
+NODE_ENV=development
+

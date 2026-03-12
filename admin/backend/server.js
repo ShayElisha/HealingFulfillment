@@ -44,10 +44,12 @@ app.use(helmet({
 
 app.use(cors({
   origin: [
-    process.env.ADMIN_FRONTEND_URL || 'http://localhost:3001',
+    process.env.ADMIN_FRONTEND_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
     'http://localhost:3001',
     'http://127.0.0.1:3001'
-  ],
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -55,6 +57,39 @@ app.use(cors({
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+// Connect to MongoDB
+let isConnected = false
+
+const connectDB = async () => {
+  if (isConnected) {
+    return
+  }
+  
+  try {
+    await mongoose.connect(MONGODB_URI)
+    isConnected = true
+    console.log('✅ Admin Service: Connected to MongoDB')
+  } catch (error) {
+    console.error('❌ Admin Service: MongoDB connection error:', error)
+    throw error
+  }
+}
+
+// Middleware to ensure DB connection in Vercel
+app.use(async (req, res, next) => {
+  if (!isConnected) {
+    try {
+      await connectDB()
+    } catch (error) {
+      return res.status(500).json({ 
+        message: 'Database connection failed',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    }
+  }
+  next()
+})
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
@@ -111,18 +146,19 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' })
 })
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => {
-    console.log('✅ Admin Service: Connected to MongoDB')
-    app.listen(PORT, () => {
-      console.log(`🚀 Admin Service running on port ${PORT}`)
+// For local development, connect and start server
+if (!process.env.VERCEL) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`🚀 Admin Service running on port ${PORT}`)
+      })
     })
-  })
-  .catch((error) => {
-    console.error('❌ Admin Service: MongoDB connection error:', error)
-    process.exit(1)
-  })
+    .catch((error) => {
+      console.error('❌ Admin Service: MongoDB connection error:', error)
+      process.exit(1)
+    })
+}
 
 export default app
 

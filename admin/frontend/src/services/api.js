@@ -2,7 +2,24 @@ import axios from 'axios'
 
 // Use proxy in development, direct URL in production
 // In development, vite proxy will handle /api requests
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5001/api')
+// In production (Vercel), use the same domain with /api path
+const getApiUrl = () => {
+  // If VITE_API_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  
+  // In development, use proxy
+  if (import.meta.env.DEV) {
+    return '/api'
+  }
+  
+  // In production (Vercel), use same domain
+  // Vercel will rewrite /api/* to /api/index.js
+  return '/api'
+}
+
+const API_URL = getApiUrl()
 
 const api = axios.create({
   baseURL: API_URL,

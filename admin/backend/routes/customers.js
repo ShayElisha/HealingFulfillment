@@ -41,21 +41,36 @@ const upload = multer({
 router.get('/admin/customers', async (req, res, next) => {
   try {
     const customers = await Customer.find()
-      .populate('purchases', 'course price status createdAt')
-      .populate('bookings', 'preferredDate preferredTime status meetingType')
+      .populate({
+        path: 'purchases',
+        select: 'course price status createdAt',
+        options: { lean: true }
+      })
+      .populate({
+        path: 'bookings',
+        select: 'preferredDate preferredTime status meetingType',
+        options: { lean: true }
+      })
       .sort({ createdAt: -1 })
       .lean()
     
-    // Calculate statistics
+    // Calculate statistics and filter out null references
     const customersWithStats = customers.map(customer => {
-      const bookings = Array.isArray(customer.bookings) ? customer.bookings : []
-      const purchases = Array.isArray(customer.purchases) ? customer.purchases : []
+      // Filter out null references from populate
+      const bookings = Array.isArray(customer.bookings) 
+        ? customer.bookings.filter(b => b !== null && b !== undefined && b._id)
+        : []
+      const purchases = Array.isArray(customer.purchases) 
+        ? customer.purchases.filter(p => p !== null && p !== undefined && p._id)
+        : []
       
       const confirmedBookings = bookings.filter(b => b && b.status === 'confirmed').length
       const completedPurchases = purchases.filter(p => p && p.status === 'completed').length
       
       return {
         ...customer,
+        bookings: bookings, // Return filtered bookings
+        purchases: purchases, // Return filtered purchases
         stats: {
           totalSessions: bookings.length,
           confirmedSessions: confirmedBookings,
@@ -71,7 +86,11 @@ router.get('/admin/customers', async (req, res, next) => {
     })
   } catch (error) {
     console.error('Error fetching customers:', error)
-    next(error)
+    console.error('Error stack:', error.stack)
+    res.status(500).json({
+      message: 'Error fetching customers',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    })
   }
 })
 
