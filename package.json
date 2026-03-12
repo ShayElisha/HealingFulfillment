@@ -1,22 +1,23 @@
 {
-  "name": "healing-fulfillment",
+  "name": "healing-fulfillment-monorepo",
   "version": "1.0.0",
-  "description": "Therapist website - טיפול בחרדות, פוסט טראומה, שחרור חסימות רגשיות",
+  "description": "Healing Fulfillment - Microservices Monorepo",
+  "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:admin": "cd admin-frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:admin\" \"npm run dev:backend\"",
-    "build": "cd frontend && npm install && npm run build",
-    "build:admin": "cd admin-frontend && npm run build",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ../admin-frontend && npm install"
+    "dev:customer": "concurrently \"npm run dev --prefix customer/frontend\" \"npm run dev --prefix customer/backend\"",
+    "dev:admin": "concurrently \"npm run dev --prefix admin/frontend\" \"npm run dev --prefix admin/backend\"",
+    "dev:all": "concurrently \"npm run dev --prefix customer/frontend\" \"npm run dev --prefix customer/backend\" \"npm run dev --prefix admin/frontend\" \"npm run dev --prefix admin/backend\"",
+    "install:customer": "npm install --prefix customer/frontend && npm install --prefix customer/backend",
+    "install:admin": "npm install --prefix admin/frontend && npm install --prefix admin/backend",
+    "install:all": "npm run install:customer && npm run install:admin",
+    "build:customer": "npm run build --prefix customer/frontend",
+    "build:admin": "npm run build --prefix admin/frontend",
+    "build:all": "npm run build:customer && npm run build:admin"
   },
-  "keywords": ["therapy", "healing", "anxiety", "trauma"],
+  "keywords": ["microservices", "monorepo", "therapy", "healing"],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
-
