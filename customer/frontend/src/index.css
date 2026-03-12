@@ -24,17 +24,23 @@
     @apply bg-primary-500 text-white px-6 py-3 rounded-xl font-medium 
            transition-all duration-300 hover:bg-primary-600 
            hover:shadow-soft-lg active:scale-95;
+    background-color: rgb(0, 180, 140) !important;
+    opacity: 1 !important;
   }
   
   .btn-secondary {
     @apply bg-white text-primary-600 px-6 py-3 rounded-xl font-medium 
            border-2 border-primary-500 transition-all duration-300 
            hover:bg-primary-50 active:scale-95;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
   }
   
   .btn-soft {
     @apply bg-neutral-100 text-neutral-700 px-6 py-3 rounded-xl font-medium 
            transition-all duration-300 hover:bg-neutral-200 active:scale-95;
+    background-color: rgb(245, 245, 245) !important;
+    opacity: 1 !important;
   }
   
   .section-padding {
@@ -52,6 +58,8 @@
   .card-soft {
     @apply bg-white rounded-2xl shadow-soft p-6 md:p-8 
            transition-all duration-300 hover:shadow-soft-lg;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
   }
 }
 

@@ -6,7 +6,7 @@ function Footer() {
   const { openContactModal } = useContact()
 
   return (
-    <footer className="bg-neutral-900 text-neutral-300 mt-auto">
+    <footer className="bg-neutral-900 text-neutral-300 mt-auto relative" style={{ zIndex: 10 }}>
       <div className="container-custom section-padding">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           {/* About Section */}

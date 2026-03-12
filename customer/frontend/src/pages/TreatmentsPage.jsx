@@ -42,157 +42,139 @@ function TreatmentsPage() {
         />
       </Helmet>
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-20 bg-gradient-to-br from-primary-50 via-white to-primary-50 overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-primary-200/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary-300/20 rounded-full blur-3xl"></div>
+      {/* Hero Section - עדין ומקצועי */}
+      <section className="relative pt-32 pb-24 bg-gradient-to-b from-neutral-50 via-white to-neutral-50 overflow-hidden">
+        {/* Decorative Background - עדין מאוד */}
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-primary-100/30 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-primary-200/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2"></div>
         
         <div className="container-custom relative z-10">
           <AnimatedSection>
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-block mb-6 px-4 py-2 bg-primary-100 rounded-full">
-                <span className="text-primary-700 font-semibold text-sm">טיפולים מותאמים אישית</span>
+            <div className="max-w-3xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 mb-6 px-5 py-2.5 bg-white/80 backdrop-blur-sm rounded-full border border-primary-100 shadow-sm">
+                <div className="w-2 h-2 bg-primary-400 rounded-full animate-pulse"></div>
+                <span className="text-primary-700 font-medium text-sm">טיפולים מותאמים אישית</span>
               </div>
-              <h1 className="text-5xl md:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight">
-                <span className="bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                  סוגי טיפולים
-                </span>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-[1.1]">
+                <span className="text-neutral-900">סוגי</span>{' '}
+                <span className="text-primary-600">טיפולים</span>
               </h1>
-              <p className="text-xl md:text-2xl text-neutral-700 leading-relaxed max-w-2xl mx-auto font-medium">
+              <p className="text-lg md:text-xl text-neutral-600 leading-relaxed max-w-2xl mx-auto font-light">
                 כל אדם הוא עולם בפני עצמו, ולכן כל תהליך טיפולי מותאם אישית
-                לצרכים הייחודיים שלך.
+                לצרכים הייחודיים שלך. כאן תמצא את המרחב הבטוח והמכיל לצמיחה והתפתחות.
               </p>
-              <div className="mt-8 flex justify-center gap-4">
-                <div className="flex items-center gap-2 text-neutral-600">
-                  <span className="text-2xl">🎯</span>
-                  <span className="text-sm font-medium">מותאם אישית</span>
-                </div>
-                <div className="flex items-center gap-2 text-neutral-600">
-                  <span className="text-2xl">💚</span>
-                  <span className="text-sm font-medium">מקצועי ואמין</span>
-                </div>
-                <div className="flex items-center gap-2 text-neutral-600">
-                  <span className="text-2xl">🌟</span>
-                  <span className="text-sm font-medium">תוצאות מוכחות</span>
-                </div>
-              </div>
             </div>
           </AnimatedSection>
         </div>
       </section>
 
-      {/* Treatments Grid */}
+      {/* Treatments Grid - עיצוב מקצועי ועדין */}
       <Section variant="white">
         {loading ? (
-          <div className="text-center py-16">
-            <p className="text-neutral-600">טוען טיפולים...</p>
+          <div className="text-center py-20">
+            <div className="inline-block w-8 h-8 border-3 border-primary-300 border-t-primary-600 rounded-full animate-spin"></div>
+            <p className="text-neutral-500 mt-4 text-sm font-medium">טוען טיפולים...</p>
           </div>
         ) : treatments.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-neutral-600">אין טיפולים זמינים כרגע</p>
+          <div className="text-center py-20">
+            <p className="text-neutral-500">אין טיפולים זמינים כרגע</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
             {treatments.map((treatment, index) => (
-              <AnimatedSection key={treatment._id} delay={index * 0.15}>
-                <div className="group relative h-full bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-neutral-100 hover:border-primary-200 transform hover:-translate-y-2">
-                  {/* Gradient Header */}
-                  <div className="relative bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 p-6 text-white">
-                    <div className="absolute inset-0 bg-black/10"></div>
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                          <span className="text-2xl">✨</span>
-                        </div>
-                        <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
-                          טיפול מותאם
-                        </span>
+              <AnimatedSection key={treatment._id} delay={index * 0.1}>
+                <div className="group relative h-full bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden border border-neutral-100 hover:border-primary-200/50">
+                  {/* Header - עדין ומקצועי */}
+                  <div className="relative bg-gradient-to-br from-primary-50 via-primary-50/50 to-white p-8 border-b border-neutral-100">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center shadow-sm">
+                        <span className="text-2xl">🌿</span>
                       </div>
-                      <h2 className="text-2xl md:text-3xl font-serif font-bold mb-2 leading-tight">
-                        {treatment.name}
-                      </h2>
+                      <span className="text-xs font-medium text-primary-700 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
+                        טיפול מותאם
+                      </span>
                     </div>
+                    <h2 className="text-2xl md:text-3xl font-serif font-bold text-neutral-900 leading-tight">
+                      {treatment.name}
+                    </h2>
                   </div>
 
                   {/* Content */}
-                  <div className="p-6">
+                  <div className="p-8 space-y-6">
                     {treatment.description && (
-                      <p className="text-neutral-700 leading-relaxed mb-6 text-lg">
+                      <p className="text-neutral-700 leading-relaxed text-base font-light">
                         {treatment.description}
                       </p>
                     )}
                     
-                    {/* Symptoms */}
+                    {/* Symptoms - עדין */}
                     {treatment.symptoms && treatment.symptoms.length > 0 && (
-                      <div className="mb-6 p-4 bg-primary-50 rounded-xl border border-primary-200">
-                        <h3 className="text-lg font-bold text-primary-800 mb-3 flex items-center gap-2">
-                          <span className="text-xl">🔍</span>
-                          סימפטומים נפוצים:
+                      <div className="p-5 bg-neutral-50/50 rounded-2xl border border-neutral-100">
+                        <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                          <span className="text-primary-500">●</span>
+                          <span>סימפטומים נפוצים</span>
                         </h3>
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                           {treatment.symptoms.map((symptom, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-neutral-700">
-                              <span className="text-primary-600 mt-1.5 font-bold">▸</span>
-                              <span className="flex-1">{symptom}</span>
+                            <li key={idx} className="flex items-start gap-3 text-neutral-600 text-sm">
+                              <span className="text-primary-400 mt-1.5 text-xs">▹</span>
+                              <span className="flex-1 leading-relaxed">{symptom}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
 
-                    {/* Coping Methods */}
+                    {/* Coping Methods - עדין */}
                     {treatment.copingMethods && treatment.copingMethods.length > 0 && (
-                      <div className="mb-6 p-4 bg-primary-100 rounded-xl border border-primary-300">
-                        <h3 className="text-lg font-bold text-primary-800 mb-3 flex items-center gap-2">
-                          <span className="text-xl">🛠️</span>
-                          דרכי התמודדות:
+                      <div className="p-5 bg-primary-50/30 rounded-2xl border border-primary-100/50">
+                        <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                          <span className="text-primary-500">●</span>
+                          <span>דרכי התמודדות</span>
                         </h3>
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                           {treatment.copingMethods.map((method, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-neutral-700">
-                              <span className="text-primary-600 mt-1.5 font-bold">▸</span>
-                              <span className="flex-1">{method}</span>
+                            <li key={idx} className="flex items-start gap-3 text-neutral-600 text-sm">
+                              <span className="text-primary-400 mt-1.5 text-xs">▹</span>
+                              <span className="flex-1 leading-relaxed">{method}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
 
-                    {/* Therapeutic Approach */}
+                    {/* Therapeutic Approach - עדין */}
                     {treatment.therapeuticApproach && treatment.therapeuticApproach.length > 0 && (
-                      <div className="mb-6 p-5 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl border-2 border-primary-200">
-                        <h3 className="text-lg font-bold text-primary-900 mb-3 flex items-center gap-2">
-                          <span className="text-xl">💜</span>
-                          הגישה הטיפולית שלי:
+                      <div className="p-5 bg-gradient-to-br from-primary-50/40 to-white rounded-2xl border border-primary-100/50">
+                        <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center gap-2">
+                          <span className="text-primary-500">●</span>
+                          <span>הגישה הטיפולית</span>
                         </h3>
-                        <ul className="space-y-2">
+                        <ul className="space-y-2.5">
                           {treatment.therapeuticApproach.map((approach, idx) => (
-                            <li key={idx} className="flex items-start gap-3 text-neutral-800">
-                              <span className="text-primary-600 mt-1.5 font-bold text-lg">✓</span>
-                              <span className="flex-1 font-medium">{approach}</span>
+                            <li key={idx} className="flex items-start gap-3 text-neutral-700 text-sm">
+                              <span className="text-primary-500 mt-1 text-xs font-bold">✓</span>
+                              <span className="flex-1 leading-relaxed font-light">{approach}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
 
-                    {/* CTA Button */}
+                    {/* CTA Button - עדין ומקצועי */}
                     <Link
                       to={`/category/${treatment._id}`}
-                      className="group/btn relative inline-flex items-center justify-center w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-bold rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 overflow-hidden"
+                      className="group/btn relative inline-flex items-center justify-center w-full px-6 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-medium rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      <span className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover/btn:scale-x-100 transition-transform duration-300 origin-left"></span>
-                      <span className="relative flex items-center gap-2">
+                      <span className="relative flex items-center gap-2 text-sm">
                         <span>קרא עוד על הטיפול</span>
-                        <span className="text-xl transform group-hover/btn:translate-x-1 transition-transform">→</span>
+                        <span className="text-lg transform group-hover/btn:translate-x-0.5 transition-transform">→</span>
                       </span>
                     </Link>
                   </div>
 
-                  {/* Decorative Elements */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary-200/10 rounded-full blur-3xl -z-10"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary-300/10 rounded-full blur-2xl -z-10"></div>
+                  {/* Subtle decorative element */}
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-primary-100/20 rounded-full blur-3xl -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 </div>
               </AnimatedSection>
             ))}
@@ -200,14 +182,19 @@ function TreatmentsPage() {
         )}
       </Section>
 
-      {/* Process Section */}
-      <Section variant="primary">
+      {/* Process Section - עיצוב מקצועי */}
+      <Section variant="neutral">
         <div className="max-w-4xl mx-auto">
           <AnimatedSection>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-8 text-center">
-              איך זה עובד?
-            </h2>
-            <div className="space-y-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
+                איך זה עובד?
+              </h2>
+              <p className="text-neutral-600 text-lg font-light max-w-2xl mx-auto">
+                תהליך מובנה ומקצועי שמוביל אותך צעד אחר צעד אל עבר המטרות שלך
+              </p>
+            </div>
+            <div className="space-y-4">
               {[
                 {
                   step: '1',
@@ -240,16 +227,16 @@ function TreatmentsPage() {
                     'תהליך של צמיחה מתמשכת, עם כלים שתוכל להשתמש בהם גם אחרי סיום הטיפול.',
                 },
               ].map((item, index) => (
-                <AnimatedSection key={index} delay={index * 0.1}>
-                  <div className="bg-white rounded-2xl p-6 shadow-soft flex gap-6">
-                    <div className="flex-shrink-0 w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-xl">
+                <AnimatedSection key={index} delay={index * 0.08}>
+                  <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-neutral-100 flex gap-5 group hover:border-primary-200/50">
+                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center text-primary-700 font-bold text-lg shadow-sm group-hover:shadow-md transition-shadow">
                       {item.step}
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-neutral-900 mb-2">
+                    <div className="flex-1 pt-1">
+                      <h3 className="text-lg font-semibold text-neutral-900 mb-2">
                         {item.title}
                       </h3>
-                      <p className="text-neutral-700 leading-relaxed">
+                      <p className="text-neutral-600 leading-relaxed text-sm font-light">
                         {item.description}
                       </p>
                     </div>
@@ -261,19 +248,26 @@ function TreatmentsPage() {
         </div>
       </Section>
 
-      {/* CTA */}
+      {/* CTA - עדין ומקצועי */}
       <Section variant="white">
         <div className="max-w-3xl mx-auto text-center">
           <AnimatedSection>
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-6">
-              מוכן להתחיל?
-            </h2>
-            <p className="text-xl text-neutral-600 mb-8">
-              בואו נכיר בפגישת היכרות ראשונה, ללא התחייבות.
-            </p>
-            <Button to="/booking" variant="primary">
-              קבע פגישת היכרות
-            </Button>
+            <div className="bg-gradient-to-br from-primary-50/50 to-white rounded-3xl p-12 border border-neutral-100 shadow-sm">
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-neutral-900 mb-4">
+                מוכן להתחיל?
+              </h2>
+              <p className="text-lg text-neutral-600 mb-8 font-light">
+                בואו נכיר בפגישת היכרות ראשונה, ללא התחייבות.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button to="/booking" variant="primary" className="px-8 py-3">
+                  קבע פגישת היכרות
+                </Button>
+                <Button to="/contact" variant="secondary" className="px-8 py-3">
+                  צור קשר
+                </Button>
+              </div>
+            </div>
           </AnimatedSection>
         </div>
       </Section>
@@ -282,4 +276,3 @@ function TreatmentsPage() {
 }
 
 export default TreatmentsPage
-

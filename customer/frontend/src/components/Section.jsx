@@ -16,9 +16,11 @@ function Section({
   return (
     <section
       id={id}
-      className={`section-padding ${variantClasses[variant]} ${className}`}
+      className={`section-padding ${className} relative`}
+      style={{ zIndex: 10, position: 'relative' }}
     >
-      <div className="container-custom">
+      <div className={`absolute inset-0 ${variantClasses[variant]}`} style={{ zIndex: 0 }}></div>
+      <div className="container-custom relative" style={{ zIndex: 1 }}>
         {children}
       </div>
     </section>

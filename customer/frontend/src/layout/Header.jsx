@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import CategoriesDropdown from '../components/CategoriesDropdown'
 import { usePurchase } from '../context/PurchaseContext'
 import { useAuth } from '../context/AuthContext'
+import logoImage from '../assets/IMG_1562-Photoroom.png'
 
 function Header({ isScrolled }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -33,9 +34,14 @@ function Header({ isScrolled }) {
       <nav className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-reverse space-x-2">
-            <div className="text-2xl md:text-3xl font-serif font-bold text-primary-600">
-              ריפוי והגשמה
+          <Link to="/" className="flex items-center space-x-reverse space-x-3">
+            <img 
+              src={logoImage} 
+              alt="יניב תנעמי" 
+              className="h-12 md:h-14 w-auto object-contain"
+            />
+            <div className="text-xl md:text-2xl font-serif font-bold text-primary-600">
+              יניב תנעמי
             </div>
           </Link>
 
