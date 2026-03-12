@@ -12,7 +12,8 @@ const customerSchema = new mongoose.Schema({
     required: [true, 'Email is required'],
     trim: true,
     lowercase: true,
-    unique: true
+    unique: true,
+    index: true
   },
   phone: {
     type: String,
@@ -139,7 +140,6 @@ customerSchema.pre('save', function(next) {
 })
 
 // Index for faster queries
-customerSchema.index({ email: 1 })
 customerSchema.index({ status: 1 })
 
 const Customer = mongoose.model('Customer', customerSchema)

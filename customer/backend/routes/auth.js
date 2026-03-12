@@ -10,8 +10,21 @@ import { sendRegularMeetingConfirmationEmail } from '../services/emailService.js
 
 const router = express.Router()
 
+// GET /api/auth/login - Return info about login endpoint
+router.get('/login', (req, res) => {
+  res.status(405).json({
+    message: 'Method not allowed',
+    error: 'Login endpoint requires POST request',
+    allowedMethods: ['POST']
+  })
+})
+
 // POST /api/auth/login - התחברות עם אימייל וסיסמה
 router.post('/login', async (req, res, next) => {
+  console.log('[Auth Route] POST /login called')
+  console.log('[Auth Route] Request body:', JSON.stringify(req.body))
+  console.log('[Auth Route] Request path:', req.path)
+  console.log('[Auth Route] Request originalUrl:', req.originalUrl)
   try {
     const { email, password } = req.body
 

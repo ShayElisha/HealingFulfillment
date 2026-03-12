@@ -6,9 +6,22 @@ const router = express.Router()
 // GET /api/categories - Get all active categories
 router.get('/', async (req, res, next) => {
   try {
+    // Check MongoDB connection
+    const mongoose = await import('mongoose')
+    if (mongoose.default.connection.readyState !== 1) {
+      console.error('MongoDB not connected. State:', mongoose.default.connection.readyState)
+      return res.status(500).json({ 
+        message: 'Database connection not available',
+        error: 'MongoDB connection state: ' + mongoose.default.connection.readyState
+      })
+    }
+
+    console.log('[Categories] Fetching categories from database...')
     const categories = await Category.find({ isActive: true })
       .sort({ order: 1, createdAt: -1 })
       .lean()
+    
+    console.log('[Categories] Found', categories.length, 'categories')
     
     // Normalize therapeuticApproach, symptoms, and copingMethods to arrays
     const normalizedCategories = categories.map(cat => {
@@ -35,10 +48,18 @@ router.get('/', async (req, res, next) => {
       data: normalizedCategories
     })
   } catch (error) {
-    console.error('Error fetching categories:', error)
-    console.error('Error details:', error.message)
-    console.error('Error stack:', error.stack)
-    next(error)
+    console.error('[Categories] Error fetching categories:', error)
+    console.error('[Categories] Error name:', error.name)
+    console.error('[Categories] Error message:', error.message)
+    console.error('[Categories] Error stack:', error.stack)
+    
+    // Return more detailed error information
+    res.status(500).json({
+      message: 'Failed to fetch categories',
+      error: error.message,
+      errorName: error.name,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    })
   }
 })
 
