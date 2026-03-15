@@ -41,12 +41,15 @@ api.interceptors.request.use(
     
     // Fix double slashes in URL
     if (config.baseURL && config.url) {
-      // Remove leading slash from url if baseURL ends with slash, or vice versa
-      const baseURL = config.baseURL.replace(/\/+$/, '') // Remove trailing slashes
-      const url = config.url.replace(/^\/+/, '') // Remove leading slashes
-      config.url = '/' + url // Ensure url starts with /
-      // The baseURL should not end with /, and url should start with /
-      // Axios will combine them correctly
+      // Normalize URLs to prevent double slashes
+      const baseURL = (config.baseURL || '').replace(/\/+$/, '') // Remove trailing slashes
+      const url = (config.url || '').replace(/^\/+/, '') // Remove leading slashes
+      
+      // Reconstruct the URL properly
+      if (baseURL && url) {
+        config.url = '/' + url
+        config.baseURL = baseURL
+      }
     }
     
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
