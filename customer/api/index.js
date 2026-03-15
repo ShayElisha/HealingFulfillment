@@ -1,19 +1,5 @@
 // Vercel Serverless Function wrapper for Express app
-let app
-
-// Lazy load the app to catch import errors
-try {
-  app = await import('../backend/server.js').then(m => m.default)
-} catch (error) {
-  console.error('Failed to import server.js:', error)
-  // Create a minimal error handler
-  app = (req, res) => {
-    res.status(500).json({
-      message: 'Server initialization error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
-  }
-}
+import app from '../backend/server.js'
 
 // Export the Express app as a serverless function
 // Vercel will handle routing automatically
@@ -49,6 +35,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Serverless Function Error:', error)
     console.error('Error stack:', error.stack)
+    console.error('Request URL:', req.url)
+    console.error('Request Method:', req.method)
     if (!res.headersSent) {
       res.status(500).json({
         message: 'Internal server error',
