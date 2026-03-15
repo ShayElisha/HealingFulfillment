@@ -5,11 +5,21 @@ import axios from 'axios'
 let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
 
 // Normalize API_URL - remove leading/trailing slashes for relative URLs
-if (API_URL && API_URL.startsWith('/')) {
+if (API_URL) {
   // Remove any double slashes
   API_URL = API_URL.replace(/\/+/g, '/')
-  // Ensure it doesn't end with slash
-  API_URL = API_URL.replace(/\/$/, '') || '/api'
+  // Ensure it doesn't end with slash (except for root)
+  if (API_URL !== '/' && API_URL.endsWith('/')) {
+    API_URL = API_URL.slice(0, -1)
+  }
+  // Ensure it starts with / for relative URLs
+  if (API_URL.startsWith('/') && API_URL.length > 1) {
+    API_URL = API_URL.replace(/\/+/g, '/')
+  }
+  // Default to /api if empty
+  if (!API_URL || API_URL === '/') {
+    API_URL = '/api'
+  }
 }
 
 const api = axios.create({

@@ -26,18 +26,13 @@ export default async function handler(req, res) {
     // Vercel passes the full path including /api, so we need to ensure
     // the Express app receives it correctly
     // The Express routes are already set up for /api/*, so this should work
-    
     return app(req, res)
   } catch (error) {
     console.error('Serverless Function Error:', error)
-    console.error('Request URL:', req.url)
-    console.error('Request Path:', req.path)
-    console.error('Request Method:', req.method)
     if (!res.headersSent) {
       res.status(500).json({
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       })
     }
   }
