@@ -166,11 +166,6 @@ function AdminPage() {
   const [activeTab, setActiveTab] = useState('categories')
   const [categories, setCategories] = useState([])
   const [courses, setCourses] = useState([])
-  
-  // Debug: Log courses state changes
-  useEffect(() => {
-    console.log('AdminPage - courses state changed:', courses.length, courses)
-  }, [courses])
   const [purchases, setPurchases] = useState([])
   const [bookings, setBookings] = useState([])
   const [customers, setCustomers] = useState([])
@@ -258,43 +253,62 @@ function AdminPage() {
         customerService.getAll()
       ])
       
-      // API flow:
-      // 1. Backend returns: { message: "...", data: [...] }
-      // 2. Axios response: response.data = { message: "...", data: [...] }
-      // 3. courseService.getAll() returns: response.data = { message: "...", data: [...] }
-      // 4. So coursesRes = { message: "...", data: [...] }
-      // 5. We need: coursesRes.data which is the array
-      
+      // Debug logging
       console.log('AdminPage - Raw responses:', {
+        categoriesRes,
         coursesRes,
-        coursesResType: typeof coursesRes,
-        coursesResKeys: coursesRes ? Object.keys(coursesRes) : null,
-        coursesResData: coursesRes?.data,
-        coursesResDataIsArray: Array.isArray(coursesRes?.data)
+        purchasesRes,
+        bookingsRes,
+        customersRes
       })
       
-      // Extract data arrays - courseService returns { message, data } where data is the array
-      const categoriesData = categoriesRes?.data || []
-      const coursesData = coursesRes?.data || []
-      const purchasesData = purchasesRes?.data || []
-      const bookingsData = bookingsRes?.data || []
-      const customersData = customersRes?.data || []
+      // API returns { message, data }, and adminApi already extracts response.data from axios
+      // So categoriesRes is already { message, data } (the parsed JSON response)
+      // We need to extract the 'data' property from each response
       
-      console.log('AdminPage - Extracted arrays:', {
-        categories: categoriesData.length,
-        courses: coursesData.length,
-        purchases: purchasesData.length,
-        bookings: bookingsData.length,
-        customers: customersData.length,
-        coursesSample: coursesData[0]
+      // Helper function to safely extract array data
+      const extractDataArray = (response) => {
+        if (!response) return []
+        
+        // If response is already an array, return it
+        if (Array.isArray(response)) {
+          return response
+        }
+        
+        // If response has a 'data' property that is an array, return it
+        if (response.data && Array.isArray(response.data)) {
+          return response.data
+        }
+        
+        // If response.data exists but is not an array, wrap it
+        if (response.data && !Array.isArray(response.data)) {
+          console.warn('AdminPage: Expected array but got object:', response.data)
+          return []
+        }
+        
+        // Fallback: return empty array
+        return []
+      }
+      
+      const categoriesData = extractDataArray(categoriesRes)
+      const coursesData = extractDataArray(coursesRes)
+      const purchasesData = extractDataArray(purchasesRes)
+      const bookingsData = extractDataArray(bookingsRes)
+      const customersData = extractDataArray(customersRes)
+      
+      console.log('AdminPage - Extracted data:', {
+        categoriesData: { count: categoriesData.length, type: typeof categoriesData, isArray: Array.isArray(categoriesData) },
+        coursesData: { count: coursesData.length, type: typeof coursesData, isArray: Array.isArray(coursesData), sample: coursesData[0] },
+        purchasesData: { count: purchasesData.length, type: typeof purchasesData, isArray: Array.isArray(purchasesData) },
+        bookingsData: { count: bookingsData.length, type: typeof bookingsData, isArray: Array.isArray(bookingsData) },
+        customersData: { count: customersData.length, type: typeof customersData, isArray: Array.isArray(customersData) }
       })
       
-      // Ensure all are arrays
-      setCategories(Array.isArray(categoriesData) ? categoriesData : [])
-      setCourses(Array.isArray(coursesData) ? coursesData : [])
-      setPurchases(Array.isArray(purchasesData) ? purchasesData : [])
-      setBookings(Array.isArray(bookingsData) ? bookingsData : [])
-      setCustomers(Array.isArray(customersData) ? customersData : [])
+      setCategories(categoriesData)
+      setCourses(coursesData)
+      setPurchases(purchasesData)
+      setBookings(bookingsData)
+      setCustomers(customersData)
     } catch (error) {
       console.error('Error loading data:', error)
       console.error('Error details:', error.response?.data || error.message)
@@ -1159,9 +1173,26 @@ function AdminPage() {
 
               {loading ? (
                 <p className="text-center py-8">טוען...</p>
+              ) : !Array.isArray(courses) ? (
+                <Card>
+                  <p className="text-center text-red-600 py-8">
+                    שגיאה: courses אינו מערך. סוג: {typeof courses}
+                    <br />
+                    <small>{JSON.stringify(courses)}</small>
+                  </p>
+                </Card>
+              ) : courses.length === 0 ? (
+                <Card>
+                  <p className="text-center text-neutral-500 py-8">אין מסלולים זמינים</p>
+                </Card>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {courses.map((course) => (
+                  {courses.map((course) => {
+                    if (!course || !course._id) {
+                      console.warn('Invalid course:', course)
+                      return null
+                    }
+                    return (
                     <Card key={course._id}>
                       <div className="flex justify-between items-start mb-3">
                         <h3 className="text-xl font-semibold">{course.title}</h3>
