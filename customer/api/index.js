@@ -141,6 +141,36 @@ async function loadRoutes() {
       app.use('/api/purchases', routes.purchases)
       app.use('/api/messages', routes.messages)
       
+      // Add error handling middleware after routes
+      app.use((err, req, res, next) => {
+        console.error('Express error:', err)
+        console.error('Error type:', err.constructor?.name)
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+        console.error('Request URL:', req.url)
+        console.error('Request Method:', req.method)
+        
+        if (!res.headersSent) {
+          res.status(err.status || 500).json({
+            message: err.message || 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { 
+              stack: err.stack,
+              details: err.toString(),
+              type: err.constructor?.name
+            })
+          })
+        }
+      })
+      
+      // Add 404 handler after routes are mounted (must be last)
+      app.use((req, res) => {
+        res.status(404).json({ 
+          message: 'Route not found',
+          path: req.path,
+          method: req.method
+        })
+      })
+      
       routesLoaded = true
       console.log('✅ All routes loaded successfully')
     } catch (error) {
@@ -155,35 +185,8 @@ async function loadRoutes() {
   return routesLoadPromise
 }
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Express error:', err)
-  console.error('Error type:', err.constructor?.name)
-  console.error('Error message:', err.message)
-  console.error('Error stack:', err.stack)
-  console.error('Request URL:', req.url)
-  console.error('Request Method:', req.method)
-  
-  if (!res.headersSent) {
-    res.status(err.status || 500).json({
-      message: err.message || 'Internal server error',
-      ...(process.env.NODE_ENV === 'development' && { 
-        stack: err.stack,
-        details: err.toString(),
-        type: err.constructor?.name
-      })
-    })
-  }
-})
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    message: 'Route not found',
-    path: req.path,
-    method: req.method
-  })
-})
+// Error handling middleware - will be added after routes are loaded
+// This is a placeholder - actual error handler is added in loadRoutes()
 
 // Vercel Serverless Function handler
 export default async function handler(req, res) {
