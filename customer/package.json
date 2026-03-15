@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Healing Fulfillment Customer Service - Root package for Vercel",
   "private": true,
+  "type": "module",
   "scripts": {},
   "engines": {
     "node": ">=18.0.0",
