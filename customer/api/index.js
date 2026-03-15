@@ -43,10 +43,13 @@ const allowedOrigins = [
   process.env.CUSTOMER_FRONTEND_URL || 'http://localhost:3000',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'https://healing-fulfillment.vercel.app',
   process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
   process.env.VERCEL_BRANCH_URL && `https://${process.env.VERCEL_BRANCH_URL}`,
   process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
 ].filter(Boolean)
+
+console.log('Allowed CORS origins:', allowedOrigins)
 
 app.use(cors({
   origin: (origin, callback) => {
