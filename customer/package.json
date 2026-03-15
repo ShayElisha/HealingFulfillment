@@ -4,7 +4,11 @@
   "description": "Healing Fulfillment Customer Service - Root package for Vercel",
   "private": true,
   "type": "module",
-  "scripts": {},
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "cd backend && node --watch server.js",
+    "start": "cd backend && node server.js"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
@@ -20,6 +24,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.0.3",
     "nodemailer": "^8.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }
 
