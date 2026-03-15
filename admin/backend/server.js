@@ -114,6 +114,15 @@ const adminLimiter = rateLimit({
 app.use('/api/', generalLimiter)
 app.use('/api/admin', adminLimiter)
 
+// Handle OPTIONS requests for CORS preflight
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.sendStatus(200)
+})
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ 
@@ -124,8 +133,10 @@ app.get('/health', (req, res) => {
 })
 
 // Routes - Admin Service
-app.use('/api/admin', adminRoutes)
+// IMPORTANT: customersRoutes must come before adminRoutes because it handles /admin/customers
+// which would otherwise be caught by /api/admin prefix
 app.use('/api', customersRoutes)
+app.use('/api/admin', adminRoutes)
 app.use('/api/courses', coursesRoutes)
 app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
