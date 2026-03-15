@@ -93,9 +93,43 @@ async function ensureMongoConnection() {
   cached.promise = mongoose.connect(MONGODB_URI, connectionOptions)
     .then((mongooseInstance) => {
       console.log('✅ MongoDB: Connected successfully')
+      console.log('🔍 Connection readyState after connect:', mongoose.connection.readyState)
       cached.conn = mongooseInstance
       cached.promise = null
       
+      // CRITICAL: Wait for connection to be fully ready
+      return new Promise((resolve, reject) => {
+        if (mongoose.connection.readyState === 1) {
+          console.log('✅ Connection immediately ready')
+          resolve(mongooseInstance)
+          return
+        }
+        
+        // Wait for 'connected' event
+        const timeout = setTimeout(() => {
+          mongoose.connection.removeListener('connected', onConnected)
+          mongoose.connection.removeListener('error', onError)
+          reject(new Error('Connection timeout - readyState never became 1'))
+        }, 5000)
+        
+        const onConnected = () => {
+          clearTimeout(timeout)
+          console.log('✅ Connection event fired, readyState:', mongoose.connection.readyState)
+          mongoose.connection.removeListener('error', onError)
+          resolve(mongooseInstance)
+        }
+        
+        const onError = (err) => {
+          clearTimeout(timeout)
+          mongoose.connection.removeListener('connected', onConnected)
+          reject(err)
+        }
+        
+        mongoose.connection.once('connected', onConnected)
+        mongoose.connection.once('error', onError)
+      })
+    })
+    .then((mongooseInstance) => {
       // Handle connection events
       mongoose.connection.on('error', (err) => {
         console.error('❌ MongoDB: Connection error:', err.message)
@@ -112,7 +146,7 @@ async function ensureMongoConnection() {
       mongoose.connection.on('reconnected', () => {
         console.log('✅ MongoDB: Reconnected')
       })
-
+      
       return mongooseInstance
     })
     .catch((error) => {
@@ -266,26 +300,38 @@ export default async function handler(req, res) {
     }
 
     // Wait for MongoDB connection - this MUST complete before routes are loaded
+    console.log('🔍 Checking MongoDB connection state:', mongoose.connection.readyState)
+    console.log('🔍 MONGODB_URI exists:', !!MONGODB_URI)
+    
     try {
+      console.log('🔄 Starting MongoDB connection...')
       const connection = await ensureMongoConnection()
+      console.log('✅ ensureMongoConnection() completed')
       
       // CRITICAL: Verify connection is actually ready (readyState === 1)
       // Wait a bit more if connection promise resolved but state is not ready
       let retries = 0
-      while (mongoose.connection.readyState !== 1 && retries < 10) {
-        console.log(`⏳ Waiting for connection readyState (current: ${mongoose.connection.readyState}, attempt ${retries + 1}/10)`)
+      const maxRetries = 50 // 5 seconds total (50 * 100ms)
+      while (mongoose.connection.readyState !== 1 && retries < maxRetries) {
+        console.log(`⏳ Waiting for connection readyState (current: ${mongoose.connection.readyState}, attempt ${retries + 1}/${maxRetries})`)
         await new Promise(resolve => setTimeout(resolve, 100))
         retries++
       }
       
-      if (mongoose.connection.readyState !== 1) {
-        throw new Error(`MongoDB connection not ready after waiting. State: ${mongoose.connection.readyState}`)
+      const finalState = mongoose.connection.readyState
+      console.log(`🔍 Final connection state: ${finalState}`)
+      
+      if (finalState !== 1) {
+        const errorMsg = `MongoDB connection not ready after waiting. State: ${finalState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`
+        console.error('❌', errorMsg)
+        throw new Error(errorMsg)
       }
       
-      console.log('✅ MongoDB connection verified and ready before route handling')
+      console.log('✅ MongoDB connection verified and ready (readyState=1) before route handling')
     } catch (connectionError) {
       console.error('❌ MongoDB connection failed:', connectionError.message)
       console.error('Connection state:', mongoose.connection.readyState)
+      console.error('Connection error name:', connectionError.name)
       console.error('Connection error stack:', connectionError.stack)
       if (!res.headersSent) {
         return res.status(503).json({
@@ -293,7 +339,8 @@ export default async function handler(req, res) {
           error: 'Unable to connect to database. Please try again later.',
           ...(process.env.NODE_ENV === 'development' && {
             details: connectionError.message,
-            state: mongoose.connection.readyState
+            state: mongoose.connection.readyState,
+            name: connectionError.name
           })
         })
       }
@@ -307,23 +354,53 @@ export default async function handler(req, res) {
       console.log('✅ Routes loaded successfully')
     }
     
-    // Verify connection is still active before handling request
-    if (mongoose.connection.readyState !== 1) {
-      console.warn('⚠️ MongoDB connection lost, attempting reconnect...')
+    // CRITICAL: Verify connection is still active before handling request
+    const connectionStateBeforeRequest = mongoose.connection.readyState
+    console.log(`🔍 Connection state before request handling: ${connectionStateBeforeRequest}`)
+    
+    if (connectionStateBeforeRequest !== 1) {
+      console.warn(`⚠️ MongoDB connection not ready (state: ${connectionStateBeforeRequest}), attempting reconnect...`)
       try {
         await ensureMongoConnection()
+        // Wait for connection to be ready
+        let reconnectRetries = 0
+        while (mongoose.connection.readyState !== 1 && reconnectRetries < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          reconnectRetries++
+        }
+        
+        if (mongoose.connection.readyState !== 1) {
+          throw new Error(`Reconnection failed. State: ${mongoose.connection.readyState}`)
+        }
+        console.log('✅ Reconnection successful')
       } catch (reconnectError) {
         console.error('❌ Reconnection failed:', reconnectError.message)
         if (!res.headersSent) {
           return res.status(503).json({
             message: 'Database connection lost',
-            error: 'Unable to reconnect to database'
+            error: 'Unable to reconnect to database',
+            ...(process.env.NODE_ENV === 'development' && {
+              state: mongoose.connection.readyState
+            })
           })
         }
         return
       }
     }
     
+    // Final verification before passing to Express
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ CRITICAL: Connection not ready before Express handler')
+      if (!res.headersSent) {
+        return res.status(503).json({
+          message: 'Database not ready',
+          error: 'Database connection is not ready to handle requests'
+        })
+      }
+      return
+    }
+    
+    console.log('✅ Passing request to Express app (connection ready)')
     // Handle the request
     return app(req, res)
   } catch (error) {
