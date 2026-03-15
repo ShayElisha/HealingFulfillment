@@ -401,8 +401,47 @@ export default async function handler(req, res) {
     }
     
     console.log('✅ Passing request to Express app (connection ready)')
-    // Handle the request
-    return app(req, res)
+    console.log('🔍 Final connection state before Express:', mongoose.connection.readyState)
+    
+    // CRITICAL: Ensure connection is ready one more time
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ CRITICAL ERROR: Connection not ready right before Express!')
+      if (!res.headersSent) {
+        return res.status(503).json({
+          message: 'Database connection lost',
+          error: 'Database connection is not ready',
+          state: mongoose.connection.readyState
+        })
+      }
+      return
+    }
+    
+    // Handle the request - wrap in try-catch to catch any async errors
+    try {
+      return await new Promise((resolve, reject) => {
+        // Set timeout to catch if Express doesn't respond
+        const timeout = setTimeout(() => {
+          if (!res.headersSent) {
+            console.error('❌ Express handler timeout')
+            reject(new Error('Express handler timeout'))
+          }
+        }, 30000)
+        
+        // Handle Express response
+        const originalEnd = res.end.bind(res)
+        res.end = function(...args) {
+          clearTimeout(timeout)
+          originalEnd(...args)
+          resolve()
+        }
+        
+        // Call Express app
+        app(req, res)
+      })
+    } catch (expressError) {
+      console.error('❌ Express handler error:', expressError)
+      throw expressError
+    }
   } catch (error) {
     console.error('Handler error:', error)
     console.error('Error type:', error?.constructor?.name || typeof error)
