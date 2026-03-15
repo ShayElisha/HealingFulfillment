@@ -29,7 +29,25 @@ async function connectDB() {
   console.log('🔌 [DB] Cached promise exists:', !!cached.promise)
   
   if (!MONGODB_URI) {
-    throw new Error('MONGODB_URI is not defined in environment variables')
+    const error = new Error('MONGODB_URI is not defined in environment variables')
+    error.name = 'ConfigurationError'
+    error.statusCode = 500
+    throw error
+  }
+
+  // Validate MONGODB_URI format
+  if (!MONGODB_URI.startsWith('mongodb://') && !MONGODB_URI.startsWith('mongodb+srv://')) {
+    const error = new Error('MONGODB_URI must start with mongodb:// or mongodb+srv://')
+    error.name = 'ConfigurationError'
+    error.statusCode = 500
+    throw error
+  }
+
+  // Check if URI includes database name and proper options
+  const hasDatabase = MONGODB_URI.includes('/') && (MONGODB_URI.split('/').length > 3 || MONGODB_URI.includes('?'))
+  if (!hasDatabase) {
+    console.warn('⚠️ [DB] MONGODB_URI may be missing database name or connection options')
+    console.warn('⚠️ [DB] Recommended format: mongodb+srv://user:pass@cluster.mongodb.net/database?retryWrites=true&w=majority')
   }
 
   // Return cached connection if available and ready
@@ -177,6 +195,81 @@ app.get('/api/health', (req, res) => {
     service: 'customer-service',
     timestamp: new Date().toISOString() 
   })
+})
+
+// Database connection test endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const connectionInfo = {
+      readyState: mongoose.connection.readyState,
+      readyStateText: {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+      }[mongoose.connection.readyState] || 'unknown',
+      hasMongoDBUri: !!MONGODB_URI,
+      mongoDBUriPrefix: MONGODB_URI ? MONGODB_URI.substring(0, 30) + '...' : 'not set',
+      cachedConnection: !!cached.conn,
+      cachedPromise: !!cached.promise,
+      host: mongoose.connection.host || 'N/A',
+      port: mongoose.connection.port || 'N/A',
+      name: mongoose.connection.name || 'N/A'
+    }
+
+    // Try to connect if not connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('🔄 [TEST-DB] Attempting connection...')
+      try {
+        await connectDB()
+        connectionInfo.connectionAttempt = 'success'
+        connectionInfo.finalReadyState = mongoose.connection.readyState
+        connectionInfo.finalReadyStateText = {
+          0: 'disconnected',
+          1: 'connected',
+          2: 'connecting',
+          3: 'disconnecting'
+        }[mongoose.connection.readyState] || 'unknown'
+      } catch (error) {
+        connectionInfo.connectionAttempt = 'failed'
+        connectionInfo.connectionError = error.message
+        connectionInfo.connectionErrorName = error.name
+        return res.status(503).json({
+          status: 'error',
+          message: 'Database connection test failed',
+          connectionInfo,
+          error: error.message,
+          errorName: error.name
+        })
+      }
+    }
+
+    // Try a simple query to verify connection works
+    try {
+      const testResult = await mongoose.connection.db.admin().ping()
+      connectionInfo.pingTest = 'success'
+      connectionInfo.pingResult = testResult
+    } catch (pingError) {
+      connectionInfo.pingTest = 'failed'
+      connectionInfo.pingError = pingError.message
+    }
+
+    res.json({
+      status: 'success',
+      message: 'Database connection test completed',
+      connectionInfo,
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error('❌ [TEST-DB] Error:', error)
+    res.status(500).json({
+      status: 'error',
+      message: 'Database test endpoint error',
+      error: error.message,
+      errorName: error.name,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    })
+  }
 })
 
 // Routes loader - lazy load to avoid import errors
@@ -328,12 +421,28 @@ export default async function handler(req, res) {
     return app(req, res)
   } catch (error) {
     console.error('❌ [HANDLER] Error:', error.message)
+    console.error('❌ [HANDLER] Error name:', error.name)
     console.error('❌ [HANDLER] Stack:', error.stack)
     
     if (!res.headersSent) {
-      return res.status(500).json({
-        message: 'Internal server error',
-        error: error.message
+      // Determine appropriate status code
+      let statusCode = 500
+      if (error.name === 'ConfigurationError' || error.statusCode === 500) {
+        statusCode = 500
+      } else if (error.name === 'MongoServerError' || error.name === 'MongooseError') {
+        statusCode = 503 // Service Unavailable for DB errors
+      } else if (error.statusCode) {
+        statusCode = error.statusCode
+      }
+
+      return res.status(statusCode).json({
+        message: error.message || 'Internal server error',
+        error: error.message,
+        errorName: error.name,
+        ...(process.env.NODE_ENV === 'development' && {
+          stack: error.stack,
+          connectionState: mongoose.connection.readyState
+        })
       })
     }
   }
