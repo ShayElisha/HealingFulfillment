@@ -83,7 +83,21 @@ async function getApp() {
  */
 export default async function handler(req, res) {
   const requestId = Date.now()
+  
+  // Ensure req.url and req.originalUrl are set correctly for Vercel
+  // Vercel rewrites /api/* to /api/index.js, but preserves the original path in req.url
+  if (!req.originalUrl && req.url) {
+    req.originalUrl = req.url
+  }
+  
+  // Ensure req.path is set (Express uses this for routing)
+  if (!req.path && req.url) {
+    // Remove query string for path calculation
+    req.path = req.url.split('?')[0]
+  }
+  
   console.log(`📥 [${requestId}] Incoming request: ${req.method} ${req.url}`)
+  console.log(`📥 [${requestId}] Path: ${req.path || req.url}`)
   
   try {
     // Get the Express app instance (cached after first import)
@@ -93,6 +107,7 @@ export default async function handler(req, res) {
     
     // Forward the request to Express
     // Vercel preserves the original URL in req.url, so Express routing will work correctly
+    // The Express app routes are registered with /api/* prefixes, which match the incoming URLs
     // Wrap in Promise to handle async Express responses
     return new Promise((resolve, reject) => {
       // Track if response was sent
