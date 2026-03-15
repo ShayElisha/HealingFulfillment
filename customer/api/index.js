@@ -158,12 +158,19 @@ async function loadRoutes() {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Express error:', err)
+  console.error('Error type:', err.constructor?.name)
+  console.error('Error message:', err.message)
+  console.error('Error stack:', err.stack)
+  console.error('Request URL:', req.url)
+  console.error('Request Method:', req.method)
+  
   if (!res.headersSent) {
     res.status(err.status || 500).json({
       message: err.message || 'Internal server error',
       ...(process.env.NODE_ENV === 'development' && { 
         stack: err.stack,
-        details: err.toString()
+        details: err.toString(),
+        type: err.constructor?.name
       })
     })
   }
@@ -181,31 +188,44 @@ app.use((req, res) => {
 // Vercel Serverless Function handler
 export default async function handler(req, res) {
   try {
+    console.log('Handler called:', req.method, req.url)
+    
     // Ensure MongoDB connection
     if (MONGODB_URI) {
-      await ensureMongoConnection()
+      const connected = await ensureMongoConnection()
+      if (!connected) {
+        console.warn('MongoDB not connected, but continuing')
+      }
+    } else {
+      console.warn('MONGODB_URI not set')
     }
     
     // Load routes on first request
     if (!routesLoaded) {
+      console.log('Loading routes...')
       await loadRoutes()
+      console.log('Routes loaded successfully')
     }
     
     // Handle the request
+    console.log('Passing request to Express app')
     return app(req, res)
   } catch (error) {
     console.error('Handler error:', error)
-    console.error('Error type:', error.constructor.name)
-    console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
+    console.error('Error type:', error?.constructor?.name || typeof error)
+    console.error('Error message:', error?.message || String(error))
+    console.error('Error stack:', error?.stack)
+    console.error('Request URL:', req.url)
+    console.error('Request Method:', req.method)
     
     if (!res.headersSent) {
       res.status(500).json({
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        error: error?.message || String(error),
         ...(process.env.NODE_ENV === 'development' && { 
-          stack: error.stack,
-          type: error.constructor.name
+          stack: error?.stack,
+          type: error?.constructor?.name,
+          details: error?.toString()
         })
       })
     }
