@@ -36,6 +36,10 @@ const app = express()
 const PORT = process.env.ADMIN_PORT || 5001
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/healing-fulfillment'
 
+// Trust proxy - Required for Vercel and other proxy environments
+// This fixes X-Forwarded-For errors and ensures correct IP addresses
+app.set('trust proxy', 1)
+
 // Middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
