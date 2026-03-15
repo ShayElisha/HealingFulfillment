@@ -100,6 +100,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')))
 app.use('/uploads/customers', express.static(path.join(__dirname, 'uploads/customers')))
 
+// Handle OPTIONS requests for CORS preflight - MUST be before rate limiting
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.sendStatus(200)
+})
+
 // Rate limiting - more lenient for admin panel
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -113,15 +122,6 @@ const adminLimiter = rateLimit({
 
 app.use('/api/', generalLimiter)
 app.use('/api/admin', adminLimiter)
-
-// Handle OPTIONS requests for CORS preflight
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  res.header('Access-Control-Allow-Credentials', 'true')
-  res.sendStatus(200)
-})
 
 // Health check
 app.get('/health', (req, res) => {

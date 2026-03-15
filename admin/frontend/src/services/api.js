@@ -10,12 +10,15 @@ const getApiUrl = () => {
   }
   
   // In development, use proxy
-  if (import.meta.env.DEV) {
+  // import.meta.env.DEV is true in dev mode, false in production
+  // import.meta.env.PROD is true in production, false in dev mode
+  if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
     return '/api'
   }
   
   // In production (Vercel), use same domain
   // Vercel will rewrite /api/* to /api/index.js
+  // Always use /api in production - it will be rewritten by Vercel
   return '/api'
 }
 
