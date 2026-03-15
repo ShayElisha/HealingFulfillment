@@ -43,6 +43,11 @@ app.get('/api/health', (req, res) => {
 // MongoDB connection handler - Serverless-optimized with global caching
 const MONGODB_URI = process.env.MONGODB_URI
 
+// CRITICAL: Disable Mongoose buffering globally BEFORE any connection
+// This prevents commands from being queued if connection is not ready
+mongoose.set('bufferCommands', false)
+mongoose.set('bufferMaxEntries', 0)
+
 // Use global cache for serverless functions (persists across invocations in same container)
 let cached = global.mongoose
 if (!cached) {
@@ -82,8 +87,7 @@ async function ensureMongoConnection() {
     socketTimeoutMS: 45000,
     maxPoolSize: 10, // Maintain up to 10 socket connections
     minPoolSize: 1, // Maintain at least 1 socket connection
-    bufferMaxEntries: 0, // Disable mongoose buffering - fail fast if not connected
-    bufferCommands: false, // Disable mongoose buffering
+    // Note: bufferCommands and bufferMaxEntries are set globally above
   }
 
   cached.promise = mongoose.connect(MONGODB_URI, connectionOptions)
@@ -263,16 +267,33 @@ export default async function handler(req, res) {
 
     // Wait for MongoDB connection - this MUST complete before routes are loaded
     try {
-      await ensureMongoConnection()
-      console.log('✅ MongoDB connection verified before route handling')
+      const connection = await ensureMongoConnection()
+      
+      // CRITICAL: Verify connection is actually ready (readyState === 1)
+      // Wait a bit more if connection promise resolved but state is not ready
+      let retries = 0
+      while (mongoose.connection.readyState !== 1 && retries < 10) {
+        console.log(`⏳ Waiting for connection readyState (current: ${mongoose.connection.readyState}, attempt ${retries + 1}/10)`)
+        await new Promise(resolve => setTimeout(resolve, 100))
+        retries++
+      }
+      
+      if (mongoose.connection.readyState !== 1) {
+        throw new Error(`MongoDB connection not ready after waiting. State: ${mongoose.connection.readyState}`)
+      }
+      
+      console.log('✅ MongoDB connection verified and ready before route handling')
     } catch (connectionError) {
       console.error('❌ MongoDB connection failed:', connectionError.message)
+      console.error('Connection state:', mongoose.connection.readyState)
+      console.error('Connection error stack:', connectionError.stack)
       if (!res.headersSent) {
         return res.status(503).json({
           message: 'Database connection failed',
           error: 'Unable to connect to database. Please try again later.',
           ...(process.env.NODE_ENV === 'development' && {
-            details: connectionError.message
+            details: connectionError.message,
+            state: mongoose.connection.readyState
           })
         })
       }
