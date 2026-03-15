@@ -40,40 +40,95 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// MongoDB connection handler
+// MongoDB connection handler - Serverless-optimized with global caching
 const MONGODB_URI = process.env.MONGODB_URI
-let mongoConnectionPromise = null
+
+// Use global cache for serverless functions (persists across invocations in same container)
+let cached = global.mongoose
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null }
+}
 
 async function ensureMongoConnection() {
-  // Already connected
-  if (mongoose.connection.readyState === 1) {
-    return true
-  }
-  
-  // Connection in progress
-  if (mongoConnectionPromise) {
-    return mongoConnectionPromise
-  }
-  
-  // Start new connection
+  // Validate MONGODB_URI
   if (!MONGODB_URI) {
-    console.warn('MONGODB_URI not set - some routes may not work')
-    return false
+    throw new Error('MONGODB_URI is not defined in environment variables')
   }
+
+  // Already connected and ready
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    console.log('✅ MongoDB: Using existing connection')
+    return cached.conn
+  }
+
+  // Connection in progress - wait for it
+  if (cached.promise) {
+    console.log('⏳ MongoDB: Waiting for existing connection promise...')
+    try {
+      await cached.promise
+      return cached.conn
+    } catch (error) {
+      // If promise failed, reset and try again
+      cached.promise = null
+      throw error
+    }
+  }
+
+  // Start new connection
+  console.log('🔄 MongoDB: Establishing new connection...')
   
-  mongoConnectionPromise = mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000,
+  const connectionOptions = {
+    serverSelectionTimeoutMS: 30000, // Increased to 30 seconds
     socketTimeoutMS: 45000,
-  }).then(() => {
-    console.log('✅ MongoDB connected')
-    return true
-  }).catch((error) => {
-    console.error('❌ MongoDB connection error:', error.message)
-    mongoConnectionPromise = null
-    return false
-  })
-  
-  return mongoConnectionPromise
+    maxPoolSize: 10, // Maintain up to 10 socket connections
+    minPoolSize: 1, // Maintain at least 1 socket connection
+    bufferMaxEntries: 0, // Disable mongoose buffering - fail fast if not connected
+    bufferCommands: false, // Disable mongoose buffering
+  }
+
+  cached.promise = mongoose.connect(MONGODB_URI, connectionOptions)
+    .then((mongooseInstance) => {
+      console.log('✅ MongoDB: Connected successfully')
+      cached.conn = mongooseInstance
+      cached.promise = null
+      
+      // Handle connection events
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ MongoDB: Connection error:', err.message)
+        cached.conn = null
+        cached.promise = null
+      })
+
+      mongoose.connection.on('disconnected', () => {
+        console.warn('⚠️ MongoDB: Disconnected')
+        cached.conn = null
+        cached.promise = null
+      })
+
+      mongoose.connection.on('reconnected', () => {
+        console.log('✅ MongoDB: Reconnected')
+      })
+
+      return mongooseInstance
+    })
+    .catch((error) => {
+      console.error('❌ MongoDB: Connection failed:', error.message)
+      console.error('Connection error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      })
+      cached.promise = null
+      cached.conn = null
+      throw error
+    })
+
+  try {
+    const result = await cached.promise
+    return result
+  } catch (error) {
+    throw error
+  }
 }
 
 // Routes loader - lazy load to avoid import errors
@@ -193,25 +248,62 @@ export default async function handler(req, res) {
   try {
     console.log('Handler called:', req.method, req.url)
     
-    // Ensure MongoDB connection
-    if (MONGODB_URI) {
-      const connected = await ensureMongoConnection()
-      if (!connected) {
-        console.warn('MongoDB not connected, but continuing')
+    // CRITICAL: Ensure MongoDB connection BEFORE loading routes
+    // Routes will execute queries immediately, so connection must be ready
+    if (!MONGODB_URI) {
+      console.error('❌ MONGODB_URI not set in environment variables')
+      if (!res.headersSent) {
+        return res.status(500).json({
+          message: 'Server configuration error',
+          error: 'MONGODB_URI environment variable is not set'
+        })
       }
-    } else {
-      console.warn('MONGODB_URI not set')
+      return
+    }
+
+    // Wait for MongoDB connection - this MUST complete before routes are loaded
+    try {
+      await ensureMongoConnection()
+      console.log('✅ MongoDB connection verified before route handling')
+    } catch (connectionError) {
+      console.error('❌ MongoDB connection failed:', connectionError.message)
+      if (!res.headersSent) {
+        return res.status(503).json({
+          message: 'Database connection failed',
+          error: 'Unable to connect to database. Please try again later.',
+          ...(process.env.NODE_ENV === 'development' && {
+            details: connectionError.message
+          })
+        })
+      }
+      return
     }
     
-    // Load routes on first request
+    // Load routes on first request (MongoDB is now connected)
     if (!routesLoaded) {
       console.log('Loading routes...')
       await loadRoutes()
-      console.log('Routes loaded successfully')
+      console.log('✅ Routes loaded successfully')
+    }
+    
+    // Verify connection is still active before handling request
+    if (mongoose.connection.readyState !== 1) {
+      console.warn('⚠️ MongoDB connection lost, attempting reconnect...')
+      try {
+        await ensureMongoConnection()
+      } catch (reconnectError) {
+        console.error('❌ Reconnection failed:', reconnectError.message)
+        if (!res.headersSent) {
+          return res.status(503).json({
+            message: 'Database connection lost',
+            error: 'Unable to reconnect to database'
+          })
+        }
+        return
+      }
     }
     
     // Handle the request
-    console.log('Passing request to Express app')
     return app(req, res)
   } catch (error) {
     console.error('Handler error:', error)
