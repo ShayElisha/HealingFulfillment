@@ -8,23 +8,15 @@ import mongoose from 'mongoose'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-// Import routes with error handling
-let authRoutes, bookingRoutes, contactRoutes, reviewsRoutes, coursesRoutes, categoriesRoutes, purchasesRoutes, messagesRoutes
-
-try {
-  authRoutes = (await import('../backend/routes/auth.js')).default
-  bookingRoutes = (await import('../backend/routes/booking.js')).default
-  contactRoutes = (await import('../backend/routes/contact.js')).default
-  reviewsRoutes = (await import('../backend/routes/reviews.js')).default
-  coursesRoutes = (await import('../backend/routes/courses.js')).default
-  categoriesRoutes = (await import('../backend/routes/categories.js')).default
-  purchasesRoutes = (await import('../backend/routes/purchases.js')).default
-  messagesRoutes = (await import('../backend/routes/messages.js')).default
-  console.log('✅ All routes imported successfully')
-} catch (error) {
-  console.error('❌ Error importing routes:', error)
-  throw error
-}
+// Import routes
+import authRoutes from '../backend/routes/auth.js'
+import bookingRoutes from '../backend/routes/booking.js'
+import contactRoutes from '../backend/routes/contact.js'
+import reviewsRoutes from '../backend/routes/reviews.js'
+import coursesRoutes from '../backend/routes/courses.js'
+import categoriesRoutes from '../backend/routes/categories.js'
+import purchasesRoutes from '../backend/routes/purchases.js'
+import messagesRoutes from '../backend/routes/messages.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -167,8 +159,15 @@ export default async function handler(req, res) {
     // Ensure MongoDB connection before handling request
     if (!mongoConnected && mongoose.connection.readyState === 0) {
       const connected = await connectMongoDB()
-      if (!connected) {
+      if (!connected && MONGODB_URI) {
         console.warn('MongoDB not connected, but continuing with request')
+        // Return error if MongoDB is required but not connected
+        if (!res.headersSent) {
+          return res.status(503).json({
+            message: 'Database connection unavailable',
+            error: 'MongoDB connection failed'
+          })
+        }
       }
     }
     
@@ -176,10 +175,13 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Handler error:', error)
     console.error('Error stack:', error.stack)
+    console.error('Request URL:', req.url)
+    console.error('Request Method:', req.method)
     if (!res.headersSent) {
       res.status(500).json({
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       })
     }
   }
