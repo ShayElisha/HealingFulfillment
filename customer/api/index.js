@@ -22,11 +22,18 @@ if (!cached) {
 }
 
 async function connectDB() {
+  console.log('🔌 [DB] ========================================')
   console.log('🔌 [DB] connectDB() called')
   console.log('🔌 [DB] MONGODB_URI exists:', !!MONGODB_URI)
-  console.log('🔌 [DB] Current readyState:', mongoose.connection.readyState)
+  console.log('🔌 [DB] Current readyState:', mongoose.connection.readyState, {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  }[mongoose.connection.readyState])
   console.log('🔌 [DB] Cached conn exists:', !!cached.conn)
   console.log('🔌 [DB] Cached promise exists:', !!cached.promise)
+  console.log('🔌 [DB] bufferCommands setting:', mongoose.get('bufferCommands'))
   
   if (!MONGODB_URI) {
     const error = new Error('MONGODB_URI is not defined in environment variables')
@@ -43,11 +50,27 @@ async function connectDB() {
     throw error
   }
 
-  // Check if URI includes database name and proper options
-  const hasDatabase = MONGODB_URI.includes('/') && (MONGODB_URI.split('/').length > 3 || MONGODB_URI.includes('?'))
+  // Validate URI includes database name and recommended options
+  const uriParts = MONGODB_URI.split('/')
+  const hasDatabase = uriParts.length > 3 && uriParts[3] && !uriParts[3].includes('@')
+  const hasRetryWrites = MONGODB_URI.includes('retryWrites=true')
+  const hasWMajority = MONGODB_URI.includes('w=majority')
+  
+  console.log('🔍 [DB] URI validation:', {
+    hasDatabase,
+    hasRetryWrites,
+    hasWMajority,
+    databaseName: hasDatabase ? uriParts[3].split('?')[0] : 'not found'
+  })
+  
   if (!hasDatabase) {
-    console.warn('⚠️ [DB] MONGODB_URI may be missing database name or connection options')
+    console.warn('⚠️ [DB] MONGODB_URI may be missing database name')
     console.warn('⚠️ [DB] Recommended format: mongodb+srv://user:pass@cluster.mongodb.net/database?retryWrites=true&w=majority')
+  }
+  
+  if (!hasRetryWrites || !hasWMajority) {
+    console.warn('⚠️ [DB] MONGODB_URI missing recommended options')
+    console.warn('⚠️ [DB] Recommended: Add ?retryWrites=true&w=majority to connection string')
   }
 
   // Return cached connection if available and ready
@@ -79,14 +102,23 @@ async function connectDB() {
 
   // Start new connection
   console.log('🔄 [DB] Starting new MongoDB connection...')
+  console.log('🔍 [DB] MONGODB_URI format check:', {
+    hasDatabase: MONGODB_URI.includes('/') && MONGODB_URI.split('/').length > 3,
+    hasRetryWrites: MONGODB_URI.includes('retryWrites=true'),
+    hasWMajority: MONGODB_URI.includes('w=majority')
+  })
   
+  // Connection options - only supported options
   const connectionOptions = {
-    serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-    maxPoolSize: 10,
-    minPoolSize: 1,
-    bufferMaxEntries: 0,
+    serverSelectionTimeoutMS: 30000, // 30 seconds to select server
+    socketTimeoutMS: 45000, // 45 seconds socket timeout
+    maxPoolSize: 10, // Maximum number of connections in pool
+    minPoolSize: 1, // Minimum number of connections in pool
+    // Note: bufferMaxEntries is deprecated - use mongoose.set('bufferCommands', false) instead
+    // Note: bufferCommands is set globally above via mongoose.set()
   }
+  
+  console.log('🔍 [DB] Connection options:', JSON.stringify(connectionOptions, null, 2))
 
   cached.promise = mongoose.connect(MONGODB_URI, connectionOptions)
     .then((mongooseInstance) => {
@@ -158,10 +190,27 @@ async function connectDB() {
 
   try {
     const result = await cached.promise
-    console.log('✅ [DB] connectDB() completed successfully, readyState:', mongoose.connection.readyState)
+    const finalReadyState = mongoose.connection.readyState
+    console.log('✅ [DB] connectDB() completed successfully')
+    console.log('🔍 [DB] Final readyState:', finalReadyState, {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    }[finalReadyState])
+    console.log('🔍 [DB] Connection details:', {
+      host: mongoose.connection.host,
+      port: mongoose.connection.port,
+      name: mongoose.connection.name,
+      readyState: finalReadyState
+    })
     return result
   } catch (error) {
-    console.error('❌ [DB] connectDB() failed:', error.message)
+    console.error('❌ [DB] connectDB() failed')
+    console.error('❌ [DB] Error name:', error.name)
+    console.error('❌ [DB] Error message:', error.message)
+    console.error('❌ [DB] Error stack:', error.stack)
+    console.error('❌ [DB] Connection state at error:', mongoose.connection.readyState)
     throw error
   }
 }
