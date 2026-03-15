@@ -1,119 +1,189 @@
-// Vercel Serverless Function - Minimal wrapper
+// Vercel Serverless Function - ES Module compatible wrapper
+// This file must use ONLY ES module syntax - no CommonJS patterns
+
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 
+// Initialize dotenv first
 dotenv.config()
 
+// Create Express app
 const app = express()
-const MONGODB_URI = process.env.MONGODB_URI
 
-// Basic middleware
+// Basic CORS - allow all origins for now (can be restricted later)
 app.use(cors({
   origin: true,
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
-// Health check - no dependencies
+// Health check endpoints (no dependencies)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({ 
+    status: 'ok', 
+    service: 'customer-service',
+    timestamp: new Date().toISOString() 
+  })
 })
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+  res.json({ 
+    status: 'ok', 
+    service: 'customer-service',
+    timestamp: new Date().toISOString() 
+  })
 })
 
-// MongoDB connection
-let mongoPromise = null
+// MongoDB connection handler
+const MONGODB_URI = process.env.MONGODB_URI
+let mongoConnectionPromise = null
 
-async function getMongoConnection() {
+async function ensureMongoConnection() {
+  // Already connected
   if (mongoose.connection.readyState === 1) {
     return true
   }
   
-  if (!mongoPromise) {
-    mongoPromise = mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    }).then(() => {
-      console.log('✅ MongoDB connected')
-      return true
-    }).catch((error) => {
-      console.error('❌ MongoDB connection error:', error)
-      mongoPromise = null
-      return false
-    })
+  // Connection in progress
+  if (mongoConnectionPromise) {
+    return mongoConnectionPromise
   }
   
-  return mongoPromise
+  // Start new connection
+  if (!MONGODB_URI) {
+    console.warn('MONGODB_URI not set - some routes may not work')
+    return false
+  }
+  
+  mongoConnectionPromise = mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+  }).then(() => {
+    console.log('✅ MongoDB connected')
+    return true
+  }).catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message)
+    mongoConnectionPromise = null
+    return false
+  })
+  
+  return mongoConnectionPromise
 }
 
-// Lazy load routes
+// Routes loader - lazy load to avoid import errors
 let routesLoaded = false
+let routesLoadPromise = null
 
 async function loadRoutes() {
-  if (routesLoaded) return
-  
-  try {
-    const [
-      { default: authRoutes },
-      { default: bookingRoutes },
-      { default: contactRoutes },
-      { default: reviewsRoutes },
-      { default: coursesRoutes },
-      { default: categoriesRoutes },
-      { default: purchasesRoutes },
-      { default: messagesRoutes }
-    ] = await Promise.all([
-      import('../backend/routes/auth.js'),
-      import('../backend/routes/booking.js'),
-      import('../backend/routes/contact.js'),
-      import('../backend/routes/reviews.js'),
-      import('../backend/routes/courses.js'),
-      import('../backend/routes/categories.js'),
-      import('../backend/routes/purchases.js'),
-      import('../backend/routes/messages.js')
-    ])
-    
-    app.use('/api/auth', authRoutes)
-    app.use('/api/booking', bookingRoutes)
-    app.use('/api/contact', contactRoutes)
-    app.use('/api/reviews', reviewsRoutes)
-    app.use('/api/courses', coursesRoutes)
-    app.use('/api/categories', categoriesRoutes)
-    app.use('/api/purchases', purchasesRoutes)
-    app.use('/api/messages', messagesRoutes)
-    
-    routesLoaded = true
-    console.log('✅ Routes loaded successfully')
-  } catch (error) {
-    console.error('❌ Error loading routes:', error)
-    console.error('Error stack:', error.stack)
-    throw error
+  if (routesLoaded) {
+    return
   }
+  
+  if (routesLoadPromise) {
+    return routesLoadPromise
+  }
+  
+  routesLoadPromise = (async () => {
+    try {
+      // Dynamic imports - all routes must export default
+      const [
+        authModule,
+        bookingModule,
+        contactModule,
+        reviewsModule,
+        coursesModule,
+        categoriesModule,
+        purchasesModule,
+        messagesModule
+      ] = await Promise.all([
+        import('../backend/routes/auth.js'),
+        import('../backend/routes/booking.js'),
+        import('../backend/routes/contact.js'),
+        import('../backend/routes/reviews.js'),
+        import('../backend/routes/courses.js'),
+        import('../backend/routes/categories.js'),
+        import('../backend/routes/purchases.js'),
+        import('../backend/routes/messages.js')
+      ])
+      
+      // Verify all modules have default export
+      const routes = {
+        auth: authModule.default,
+        booking: bookingModule.default,
+        contact: contactModule.default,
+        reviews: reviewsModule.default,
+        courses: coursesModule.default,
+        categories: categoriesModule.default,
+        purchases: purchasesModule.default,
+        messages: messagesModule.default
+      }
+      
+      // Check if any route is missing default export
+      for (const [name, route] of Object.entries(routes)) {
+        if (!route) {
+          throw new Error(`Route ${name} does not have a default export`)
+        }
+      }
+      
+      // Mount routes
+      app.use('/api/auth', routes.auth)
+      app.use('/api/booking', routes.booking)
+      app.use('/api/contact', routes.contact)
+      app.use('/api/reviews', routes.reviews)
+      app.use('/api/courses', routes.courses)
+      app.use('/api/categories', routes.categories)
+      app.use('/api/purchases', routes.purchases)
+      app.use('/api/messages', routes.messages)
+      
+      routesLoaded = true
+      console.log('✅ All routes loaded successfully')
+    } catch (error) {
+      console.error('❌ Error loading routes:', error)
+      console.error('Error details:', error.message)
+      console.error('Error stack:', error.stack)
+      routesLoadPromise = null
+      throw error
+    }
+  })()
+  
+  return routesLoadPromise
 }
 
-// Error handling
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Express error:', err)
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal server error'
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { 
+        stack: err.stack,
+        details: err.toString()
+      })
+    })
+  }
+})
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.path,
+    method: req.method
   })
 })
 
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' })
-})
-
-// Export handler
+// Vercel Serverless Function handler
 export default async function handler(req, res) {
   try {
     // Ensure MongoDB connection
     if (MONGODB_URI) {
-      await getMongoConnection()
+      await ensureMongoConnection()
     }
     
     // Load routes on first request
@@ -121,14 +191,22 @@ export default async function handler(req, res) {
       await loadRoutes()
     }
     
+    // Handle the request
     return app(req, res)
   } catch (error) {
     console.error('Handler error:', error)
+    console.error('Error type:', error.constructor.name)
+    console.error('Error message:', error.message)
     console.error('Error stack:', error.stack)
+    
     if (!res.headersSent) {
       res.status(500).json({
         message: 'Internal server error',
-        error: error.message
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        ...(process.env.NODE_ENV === 'development' && { 
+          stack: error.stack,
+          type: error.constructor.name
+        })
       })
     }
   }
