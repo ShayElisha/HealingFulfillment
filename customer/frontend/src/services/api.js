@@ -4,17 +4,17 @@ import axios from 'axios'
 // In development, vite proxy will handle /api requests
 let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
 
-// Normalize API_URL - remove leading/trailing slashes for relative URLs
+// Normalize API_URL - ensure proper format
 if (API_URL) {
   // Remove any double slashes
   API_URL = API_URL.replace(/\/+/g, '/')
-  // Ensure it doesn't end with slash (except for root)
-  if (API_URL !== '/' && API_URL.endsWith('/')) {
+  // Remove trailing slash (axios will add it when needed)
+  if (API_URL.endsWith('/') && API_URL !== '/') {
     API_URL = API_URL.slice(0, -1)
   }
   // Ensure it starts with / for relative URLs
-  if (API_URL.startsWith('/') && API_URL.length > 1) {
-    API_URL = API_URL.replace(/\/+/g, '/')
+  if (!API_URL.startsWith('/') && !API_URL.startsWith('http')) {
+    API_URL = '/' + API_URL
   }
   // Default to /api if empty
   if (!API_URL || API_URL === '/') {
@@ -38,6 +38,17 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // Fix double slashes in URL
+    if (config.baseURL && config.url) {
+      // Remove leading slash from url if baseURL ends with slash, or vice versa
+      const baseURL = config.baseURL.replace(/\/+$/, '') // Remove trailing slashes
+      const url = config.url.replace(/^\/+/, '') // Remove leading slashes
+      config.url = '/' + url // Ensure url starts with /
+      // The baseURL should not end with /, and url should start with /
+      // Axios will combine them correctly
+    }
+    
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
     return config
   },
