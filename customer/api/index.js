@@ -116,33 +116,60 @@ app.use((req, res) => {
 
 // MongoDB connection
 let mongoConnected = false
+let mongoConnecting = false
 
 async function connectMongoDB() {
   if (mongoConnected || mongoose.connection.readyState === 1) {
-    return
+    return true
   }
   
+  if (mongoConnecting) {
+    // Wait for ongoing connection
+    while (mongoConnecting) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    return mongoConnected
+  }
+  
+  mongoConnecting = true
   try {
     await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
     })
     mongoConnected = true
     console.log('✅ MongoDB connected')
+    return true
   } catch (error) {
     console.error('❌ MongoDB connection error:', error)
+    console.error('MONGODB_URI:', MONGODB_URI ? 'Set' : 'Not set')
+    mongoConnected = false
+    return false
+  } finally {
+    mongoConnecting = false
   }
 }
 
-// Connect to MongoDB on first request
-connectMongoDB()
-
 // Export handler for Vercel
 export default async function handler(req, res) {
-  // Ensure MongoDB connection
-  if (!mongoConnected && mongoose.connection.readyState === 0) {
-    await connectMongoDB()
+  try {
+    // Ensure MongoDB connection before handling request
+    if (!mongoConnected && mongoose.connection.readyState === 0) {
+      const connected = await connectMongoDB()
+      if (!connected) {
+        console.warn('MongoDB not connected, but continuing with request')
+      }
+    }
+    
+    return app(req, res)
+  } catch (error) {
+    console.error('Handler error:', error)
+    console.error('Error stack:', error.stack)
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    }
   }
-  
-  return app(req, res)
 }
