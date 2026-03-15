@@ -6,6 +6,20 @@ let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'h
 
 // Normalize API_URL - ensure proper format
 if (API_URL) {
+  // Remove protocol if present but incomplete (e.g., "healing-fulfillment.vercel.app/api/")
+  if (API_URL.includes('.vercel.app') || API_URL.includes('.app') || API_URL.includes('localhost')) {
+    // If it looks like a domain but doesn't start with http, treat as relative
+    if (!API_URL.startsWith('http://') && !API_URL.startsWith('https://')) {
+      // Extract just the path part
+      const pathMatch = API_URL.match(/\/api.*$/)
+      if (pathMatch) {
+        API_URL = pathMatch[0]
+      } else {
+        API_URL = '/api'
+      }
+    }
+  }
+  
   // Remove any double slashes
   API_URL = API_URL.replace(/\/+/g, '/')
   // Remove trailing slash (axios will add it when needed)
