@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "cd frontend && NODE_ENV=development npm install",
+  "installCommand": "cd frontend && NODE_ENV=development npm install && cd ../api && npm install",
   "buildCommand": "cd frontend && NODE_ENV=development npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": null,
