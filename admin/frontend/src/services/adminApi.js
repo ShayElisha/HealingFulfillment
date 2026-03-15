@@ -21,8 +21,17 @@ export const categoryService = {
 
 export const courseService = {
   getAll: async () => {
-    const response = await api.get('/admin/courses')
-    return response.data
+    console.log('courseService.getAll() - Making request to /admin/courses')
+    try {
+      const response = await api.get('/admin/courses')
+      console.log('courseService.getAll() - Response received:', response)
+      console.log('courseService.getAll() - Response.data:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('courseService.getAll() - Error:', error)
+      console.error('courseService.getAll() - Error response:', error.response)
+      throw error
+    }
   },
   getById: async (id) => {
     const response = await api.get(`/admin/courses/${id}`)

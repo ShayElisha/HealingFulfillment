@@ -252,6 +252,16 @@ function AdminPage() {
         bookingService.getAll(),
         customerService.getAll()
       ])
+      
+      // Debug logging
+      console.log('AdminPage - Raw responses:', {
+        categoriesRes,
+        coursesRes,
+        purchasesRes,
+        bookingsRes,
+        customersRes
+      })
+      
       // API returns { message, data }, and adminApi already extracts response.data
       // So categoriesRes is already { message, data }
       // Safely extract data with fallbacks
@@ -260,6 +270,17 @@ function AdminPage() {
       const purchasesData = purchasesRes?.data || purchasesRes || []
       const bookingsData = bookingsRes?.data || bookingsRes || []
       const customersData = customersRes?.data || customersRes || []
+      
+      console.log('AdminPage - Extracted data:', {
+        categoriesData,
+        coursesData,
+        purchasesData,
+        bookingsData,
+        customersData
+      })
+      
+      console.log('AdminPage - Courses data type:', typeof coursesData, 'Is array?', Array.isArray(coursesData))
+      console.log('AdminPage - Courses count:', coursesData?.length || 0)
       
       setCategories(Array.isArray(categoriesData) ? categoriesData : [])
       setCourses(Array.isArray(coursesData) ? coursesData : [])
