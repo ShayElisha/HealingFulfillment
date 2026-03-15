@@ -4,21 +4,26 @@ import axios from 'axios'
 // In development, vite proxy will handle /api requests
 // In production (Vercel), use /api which will be rewritten to /api/index.js
 const getApiUrl = () => {
-  // If VITE_API_URL is explicitly set, use it
+  // If VITE_API_URL is explicitly set, use it (highest priority)
   if (import.meta.env.VITE_API_URL) {
+    console.log('Using VITE_API_URL:', import.meta.env.VITE_API_URL)
     return import.meta.env.VITE_API_URL
   }
   
+  // Check if we're in production
+  const isProduction = import.meta.env.PROD || import.meta.env.MODE === 'production'
+  const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
+  
   // In development, use proxy
-  // import.meta.env.DEV is true in dev mode, false in production
-  // import.meta.env.PROD is true in production, false in dev mode
-  if (import.meta.env.DEV || import.meta.env.MODE === 'development') {
+  if (isDevelopment) {
+    console.log('Development mode: Using /api proxy')
     return '/api'
   }
   
   // In production (Vercel), use same domain
   // Vercel will rewrite /api/* to /api/index.js
   // Always use /api in production - it will be rewritten by Vercel
+  console.log('Production mode: Using /api (Vercel rewrite)')
   return '/api'
 }
 
@@ -27,12 +32,22 @@ const API_URL = getApiUrl()
 // Ensure baseURL doesn't end with slash to avoid double slashes
 const normalizedBaseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
 
+console.log('API Configuration:', {
+  API_URL,
+  normalizedBaseURL,
+  isProduction: import.meta.env.PROD,
+  isDevelopment: import.meta.env.DEV,
+  mode: import.meta.env.MODE,
+  viteApiUrl: import.meta.env.VITE_API_URL
+})
+
 const api = axios.create({
   baseURL: normalizedBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // 30 seconds timeout for production
+  withCredentials: false, // Don't send credentials for same-origin requests
 })
 
 // Add request interceptor for debugging and URL normalization
