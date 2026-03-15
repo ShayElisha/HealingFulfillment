@@ -101,8 +101,6 @@ const connectDB = async () => {
         serverSelectionTimeoutMS: 30000, // 30 seconds
         socketTimeoutMS: 45000, // 45 seconds
         connectTimeoutMS: 30000, // 30 seconds
-        bufferMaxEntries: 0, // Disable mongoose buffering
-        bufferCommands: false, // Disable mongoose buffering
       })
       isConnected = true
       isConnecting = false
