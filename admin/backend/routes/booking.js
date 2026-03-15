@@ -6,6 +6,23 @@ import { sendIntroMeetingConfirmationEmail, sendRegularMeetingConfirmationEmail 
 
 const router = express.Router()
 
+// GET /api/booking - Get all bookings
+router.get('/', async (req, res, next) => {
+  try {
+    const bookings = await Booking.find()
+      .sort({ createdAt: -1 })
+      .lean()
+    
+    res.json({
+      message: 'Bookings retrieved successfully',
+      data: bookings
+    })
+  } catch (error) {
+    console.error('Error fetching bookings:', error)
+    next(error)
+  }
+})
+
 // POST /api/booking
 router.post('/', validateBooking, async (req, res, next) => {
   try {
