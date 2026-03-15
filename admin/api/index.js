@@ -97,30 +97,52 @@ export default async function handler(req, res) {
     return new Promise((resolve, reject) => {
       // Track if response was sent
       let responseSent = false
+      let timeoutId = null
       
-      const checkComplete = () => {
-        if (!responseSent && res.headersSent) {
+      const markComplete = () => {
+        if (!responseSent) {
           responseSent = true
+          if (timeoutId) clearTimeout(timeoutId)
+          console.log(`✅ [${requestId}] Response sent successfully`)
           resolve()
         }
       }
       
+      // Set timeout to prevent hanging (30 seconds)
+      timeoutId = setTimeout(() => {
+        if (!responseSent) {
+          responseSent = true
+          console.error(`❌ [${requestId}] Request timeout after 30 seconds`)
+          if (!res.headersSent) {
+            res.status(504).json({
+              message: 'Request timeout',
+              requestId: requestId
+            })
+          }
+          resolve()
+        }
+      }, 30000)
+      
       // Monitor response events
-      res.on('finish', checkComplete)
-      res.on('close', checkComplete)
+      res.once('finish', markComplete)
+      res.once('close', markComplete)
       
       // Handle Express errors
       app(req, res, (err) => {
         if (err) {
           console.error(`❌ [${requestId}] Express error:`, err)
-          if (!res.headersSent) {
-            res.status(500).json({
-              message: 'Internal server error',
-              requestId: requestId,
-              error: process.env.NODE_ENV === 'development' ? err.message : undefined
-            })
+          if (!responseSent) {
+            responseSent = true
+            if (timeoutId) clearTimeout(timeoutId)
+            if (!res.headersSent) {
+              res.status(500).json({
+                message: 'Internal server error',
+                requestId: requestId,
+                error: process.env.NODE_ENV === 'development' ? err.message : undefined
+              })
+            }
+            reject(err)
           }
-          reject(err)
         }
       })
     })

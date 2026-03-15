@@ -68,9 +68,20 @@ api.interceptors.request.use(
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
+    console.log(`API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status,
+      data: response.data
+    })
     return response
   },
   (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    })
     if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
       console.error('API Connection Error: Backend server is not running or not accessible')
       console.error('Please make sure the admin backend server is running on port 5001')

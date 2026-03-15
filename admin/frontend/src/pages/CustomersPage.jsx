@@ -19,11 +19,27 @@ function CustomersPage() {
     try {
       setLoading(true)
       const response = await customerService.getAll()
-      const customersData = response?.data || response || []
-      setCustomers(Array.isArray(customersData) ? customersData : [])
+      console.log('CustomersPage - Raw response:', response)
+      
+      // customerService.getAll() returns response.data from axios
+      // which is already { message: "...", data: [...] }
+      // So we need to extract the data property
+      const customersData = response?.data || []
+      console.log('CustomersPage - Extracted data:', customersData)
+      console.log('CustomersPage - Is array?', Array.isArray(customersData))
+      
+      const finalCustomers = Array.isArray(customersData) ? customersData : []
+      console.log('CustomersPage - Final customers count:', finalCustomers.length)
+      setCustomers(finalCustomers)
     } catch (error) {
       console.error('Error loading customers:', error)
-      toast.error('שגיאה בטעינת הלקוחות')
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+      toast.error(`שגיאה בטעינת הלקוחות: ${error.response?.data?.message || error.message}`)
+      setCustomers([])
     } finally {
       setLoading(false)
     }
