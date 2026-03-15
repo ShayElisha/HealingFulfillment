@@ -283,13 +283,16 @@ async function loadRoutes() {
 
 // Vercel Serverless Function handler
 export default async function handler(req, res) {
+  // CRITICAL: MongoDB connection MUST happen FIRST, before ANY Express routing
   try {
-    console.log('Handler called:', req.method, req.url)
+    console.log('🚀 [HANDLER] Called:', req.method, req.url)
+    console.log('🚀 [HANDLER] MONGODB_URI exists:', !!MONGODB_URI)
+    console.log('🚀 [HANDLER] Initial connection state:', mongoose.connection.readyState)
     
     // CRITICAL: Ensure MongoDB connection BEFORE loading routes
     // Routes will execute queries immediately, so connection must be ready
     if (!MONGODB_URI) {
-      console.error('❌ MONGODB_URI not set in environment variables')
+      console.error('❌ [HANDLER] MONGODB_URI not set in environment variables')
       if (!res.headersSent) {
         return res.status(500).json({
           message: 'Server configuration error',
@@ -300,13 +303,14 @@ export default async function handler(req, res) {
     }
 
     // Wait for MongoDB connection - this MUST complete before routes are loaded
-    console.log('🔍 Checking MongoDB connection state:', mongoose.connection.readyState)
-    console.log('🔍 MONGODB_URI exists:', !!MONGODB_URI)
+    console.log('🔍 [HANDLER] Checking MongoDB connection state:', mongoose.connection.readyState)
+    console.log('🔍 [HANDLER] About to call ensureMongoConnection()...')
     
     try {
-      console.log('🔄 Starting MongoDB connection...')
+      console.log('🔄 [HANDLER] Starting MongoDB connection...')
       const connection = await ensureMongoConnection()
-      console.log('✅ ensureMongoConnection() completed')
+      console.log('✅ [HANDLER] ensureMongoConnection() completed, connection:', !!connection)
+      console.log('✅ [HANDLER] Connection state after ensureMongoConnection:', mongoose.connection.readyState)
       
       // CRITICAL: Verify connection is actually ready (readyState === 1)
       // Wait a bit more if connection promise resolved but state is not ready
@@ -327,12 +331,12 @@ export default async function handler(req, res) {
         throw new Error(errorMsg)
       }
       
-      console.log('✅ MongoDB connection verified and ready (readyState=1) before route handling')
+      console.log('✅ [HANDLER] MongoDB connection verified and ready (readyState=1) before route handling')
     } catch (connectionError) {
-      console.error('❌ MongoDB connection failed:', connectionError.message)
-      console.error('Connection state:', mongoose.connection.readyState)
-      console.error('Connection error name:', connectionError.name)
-      console.error('Connection error stack:', connectionError.stack)
+      console.error('❌ [HANDLER] MongoDB connection failed:', connectionError.message)
+      console.error('❌ [HANDLER] Connection state:', mongoose.connection.readyState)
+      console.error('❌ [HANDLER] Connection error name:', connectionError.name)
+      console.error('❌ [HANDLER] Connection error stack:', connectionError.stack)
       if (!res.headersSent) {
         return res.status(503).json({
           message: 'Database connection failed',
@@ -349,14 +353,14 @@ export default async function handler(req, res) {
     
     // Load routes on first request (MongoDB is now connected)
     if (!routesLoaded) {
-      console.log('Loading routes...')
+      console.log('📦 [HANDLER] Loading routes...')
       await loadRoutes()
-      console.log('✅ Routes loaded successfully')
+      console.log('✅ [HANDLER] Routes loaded successfully')
     }
     
     // CRITICAL: Verify connection is still active before handling request
     const connectionStateBeforeRequest = mongoose.connection.readyState
-    console.log(`🔍 Connection state before request handling: ${connectionStateBeforeRequest}`)
+    console.log(`🔍 [HANDLER] Connection state before request handling: ${connectionStateBeforeRequest}`)
     
     if (connectionStateBeforeRequest !== 1) {
       console.warn(`⚠️ MongoDB connection not ready (state: ${connectionStateBeforeRequest}), attempting reconnect...`)
@@ -400,8 +404,8 @@ export default async function handler(req, res) {
       return
     }
     
-    console.log('✅ Passing request to Express app (connection ready)')
-    console.log('🔍 Final connection state before Express:', mongoose.connection.readyState)
+    console.log('✅ [HANDLER] Passing request to Express app (connection ready)')
+    console.log('🔍 [HANDLER] Final connection state before Express:', mongoose.connection.readyState)
     
     // CRITICAL: Ensure connection is ready one more time
     if (mongoose.connection.readyState !== 1) {
