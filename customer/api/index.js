@@ -46,7 +46,6 @@ const MONGODB_URI = process.env.MONGODB_URI
 // CRITICAL: Disable Mongoose buffering globally BEFORE any connection
 // This prevents commands from being queued if connection is not ready
 mongoose.set('bufferCommands', false)
-mongoose.set('bufferMaxEntries', 0)
 
 // Use global cache for serverless functions (persists across invocations in same container)
 let cached = global.mongoose
@@ -87,7 +86,8 @@ async function ensureMongoConnection() {
     socketTimeoutMS: 45000,
     maxPoolSize: 10, // Maintain up to 10 socket connections
     minPoolSize: 1, // Maintain at least 1 socket connection
-    // Note: bufferCommands and bufferMaxEntries are set globally above
+    bufferMaxEntries: 0, // Disable buffering in connection options
+    // Note: bufferCommands is set globally above via mongoose.set()
   }
 
   cached.promise = mongoose.connect(MONGODB_URI, connectionOptions)
