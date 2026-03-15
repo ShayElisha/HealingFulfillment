@@ -141,15 +141,22 @@ export default async function handler(req, res) {
       
       // Set timeout to prevent hanging (30 seconds)
       timeoutId = setTimeout(() => {
-        if (!responseSent) {
+        if (!responseSent && !res.headersSent) {
           responseSent = true
           console.error(`❌ [${requestId}] Request timeout after 30 seconds`)
-          if (!res.headersSent) {
+          try {
             res.status(504).json({
               message: 'Request timeout',
               requestId: requestId
             })
+          } catch (sendError) {
+            // Ignore errors if headers already sent
+            console.error(`❌ [${requestId}] Failed to send timeout response:`, sendError.message)
           }
+          resolve()
+        } else if (!responseSent) {
+          // Response was sent but we didn't mark it - mark it now
+          responseSent = true
           resolve()
         }
       }, 30000)
@@ -162,17 +169,26 @@ export default async function handler(req, res) {
       app(req, res, (err) => {
         if (err) {
           console.error(`❌ [${requestId}] Express error:`, err)
-          if (!responseSent) {
+          // Only handle error if response hasn't been sent yet
+          if (!responseSent && !res.headersSent) {
             responseSent = true
             if (timeoutId) clearTimeout(timeoutId)
-            if (!res.headersSent) {
+            try {
               res.status(500).json({
                 message: 'Internal server error',
                 requestId: requestId,
                 error: process.env.NODE_ENV === 'development' ? err.message : undefined
               })
+            } catch (sendError) {
+              // Ignore errors if headers already sent
+              console.error(`❌ [${requestId}] Failed to send error response:`, sendError.message)
             }
             reject(err)
+          } else if (!responseSent) {
+            // Response was sent but we didn't mark it - mark it now
+            responseSent = true
+            if (timeoutId) clearTimeout(timeoutId)
+            resolve()
           }
         }
       })

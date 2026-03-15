@@ -80,34 +80,80 @@ app.use(express.urlencoded({ extended: true }))
 
 // Connect to MongoDB
 let isConnected = false
+let isConnecting = false
+let connectionPromise = null
 
 const connectDB = async () => {
   if (isConnected) {
     return
   }
   
-  try {
-    await mongoose.connect(MONGODB_URI)
-    isConnected = true
-    console.log('✅ Admin Service: Connected to MongoDB')
-  } catch (error) {
-    console.error('❌ Admin Service: MongoDB connection error:', error)
-    throw error
+  // If already connecting, wait for that promise
+  if (isConnecting && connectionPromise) {
+    return connectionPromise
   }
+  
+  isConnecting = true
+  connectionPromise = (async () => {
+    try {
+      // Increase timeout for Vercel serverless (30 seconds)
+      await mongoose.connect(MONGODB_URI, {
+        serverSelectionTimeoutMS: 30000, // 30 seconds
+        socketTimeoutMS: 45000, // 45 seconds
+        connectTimeoutMS: 30000, // 30 seconds
+        bufferMaxEntries: 0, // Disable mongoose buffering
+        bufferCommands: false, // Disable mongoose buffering
+      })
+      isConnected = true
+      isConnecting = false
+      connectionPromise = null
+      console.log('✅ Admin Service: Connected to MongoDB')
+    } catch (error) {
+      isConnecting = false
+      connectionPromise = null
+      console.error('❌ Admin Service: MongoDB connection error:', error)
+      throw error
+    }
+  })()
+  
+  return connectionPromise
 }
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
-  if (!isConnected) {
+  // Skip if already sent response
+  if (res.headersSent) {
+    return next()
+  }
+  
+  if (!isConnected && !isConnecting) {
     try {
       await connectDB()
     } catch (error) {
-      return res.status(500).json({ 
-        message: 'Database connection failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      })
+      // Only send error if response hasn't been sent
+      if (!res.headersSent) {
+        return res.status(500).json({ 
+          message: 'Database connection failed',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        })
+      }
+      return
+    }
+  } else if (isConnecting && connectionPromise) {
+    // Wait for connection if it's in progress
+    try {
+      await connectionPromise
+    } catch (error) {
+      if (!res.headersSent) {
+        return res.status(500).json({ 
+          message: 'Database connection failed',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        })
+      }
+      return
     }
   }
+  
   next()
 })
 
