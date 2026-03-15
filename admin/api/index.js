@@ -92,8 +92,38 @@ export default async function handler(req, res) {
     console.log(`✅ [${requestId}] Express app loaded, forwarding request to Express`)
     
     // Forward the request to Express
-    // Express will handle routing, middleware, and responses
-    return app(req, res)
+    // Vercel preserves the original URL in req.url, so Express routing will work correctly
+    // Wrap in Promise to handle async Express responses
+    return new Promise((resolve, reject) => {
+      // Track if response was sent
+      let responseSent = false
+      
+      const checkComplete = () => {
+        if (!responseSent && res.headersSent) {
+          responseSent = true
+          resolve()
+        }
+      }
+      
+      // Monitor response events
+      res.on('finish', checkComplete)
+      res.on('close', checkComplete)
+      
+      // Handle Express errors
+      app(req, res, (err) => {
+        if (err) {
+          console.error(`❌ [${requestId}] Express error:`, err)
+          if (!res.headersSent) {
+            res.status(500).json({
+              message: 'Internal server error',
+              requestId: requestId,
+              error: process.env.NODE_ENV === 'development' ? err.message : undefined
+            })
+          }
+          reject(err)
+        }
+      })
+    })
   } catch (error) {
     console.error(`❌ [${requestId}] Serverless function error:`, error)
     console.error(`❌ [${requestId}] Error details:`, {

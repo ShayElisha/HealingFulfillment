@@ -47,13 +47,29 @@ app.use(helmet({
 }))
 
 app.use(cors({
-  origin: [
-    process.env.ADMIN_FRONTEND_URL,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
-    'http://localhost:3001',
-    'http://127.0.0.1:3001'
-  ].filter(Boolean),
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
+    if (!origin) return callback(null, true)
+    
+    const allowedOrigins = [
+      process.env.ADMIN_FRONTEND_URL,
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+      process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
+      'http://localhost:3001',
+      'http://127.0.0.1:3001'
+    ].filter(Boolean)
+    
+    // In Vercel production, allow same-origin requests (frontend and API on same domain)
+    if (process.env.VERCEL) {
+      return callback(null, true)
+    }
+    
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
