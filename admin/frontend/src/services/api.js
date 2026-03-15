@@ -21,18 +21,39 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl()
 
+// Ensure baseURL doesn't end with slash to avoid double slashes
+const normalizedBaseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL
+
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: normalizedBaseURL,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 seconds timeout
 })
 
-// Add request interceptor for debugging
+// Add request interceptor for debugging and URL normalization
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+    // Normalize baseURL - remove trailing slash
+    if (config.baseURL && config.baseURL.endsWith('/')) {
+      config.baseURL = config.baseURL.slice(0, -1)
+    }
+    
+    // Normalize URL - ensure it starts with /
+    if (config.url) {
+      if (!config.url.startsWith('/')) {
+        config.url = '/' + config.url
+      }
+    }
+    
+    // Build full URL and normalize double slashes
+    const fullUrl = `${config.baseURL || ''}${config.url || ''}`.replace(/\/+/g, '/')
+    
+    // Update config.url to use the normalized full URL (relative to baseURL)
+    // Axios will combine baseURL + url, so we keep url as relative path
+    console.log(`API Request: ${config.method?.toUpperCase()} ${fullUrl}`)
+    
     return config
   },
   (error) => {
