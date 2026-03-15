@@ -84,20 +84,36 @@ async function getApp() {
 export default async function handler(req, res) {
   const requestId = Date.now()
   
-  // Ensure req.url and req.originalUrl are set correctly for Vercel
-  // Vercel rewrites /api/* to /api/index.js, but preserves the original path in req.url
-  if (!req.originalUrl && req.url) {
-    req.originalUrl = req.url
+  // Vercel passes the original URL in req.url
+  // For /api/admin/courses, req.url will be '/api/admin/courses'
+  // But we need to ensure Express receives it correctly
+  
+  // Get the original URL from Vercel's query parameter or req.url
+  let originalUrl = req.url || req.query.url || '/'
+  
+  // Vercel sometimes passes the path in req.query.url
+  // Check if we need to reconstruct the URL
+  if (req.query && req.query.url) {
+    originalUrl = req.query.url
   }
   
-  // Ensure req.path is set (Express uses this for routing)
-  if (!req.path && req.url) {
-    // Remove query string for path calculation
-    req.path = req.url.split('?')[0]
+  // Ensure we have the full path including /api prefix
+  if (!originalUrl.startsWith('/api') && originalUrl !== '/') {
+    // If the URL doesn't start with /api, it might be a relative path
+    // Vercel rewrite should preserve the full path, but let's be safe
+    originalUrl = originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl
   }
   
-  console.log(`📥 [${requestId}] Incoming request: ${req.method} ${req.url}`)
-  console.log(`📥 [${requestId}] Path: ${req.path || req.url}`)
+  // Set Express request properties
+  req.url = originalUrl
+  req.originalUrl = originalUrl
+  req.path = originalUrl.split('?')[0]
+  req.baseUrl = ''
+  
+  console.log(`📥 [${requestId}] Incoming request: ${req.method}`)
+  console.log(`📥 [${requestId}] Original URL: ${originalUrl}`)
+  console.log(`📥 [${requestId}] Path: ${req.path}`)
+  console.log(`📥 [${requestId}] Query:`, req.query)
   
   try {
     // Get the Express app instance (cached after first import)
