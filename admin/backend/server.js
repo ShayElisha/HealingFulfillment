@@ -147,7 +147,15 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' })
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.path,
+    method: req.method,
+    ...(process.env.NODE_ENV === 'development' && {
+      url: req.url,
+      originalUrl: req.originalUrl
+    })
+  })
 })
 
 // Connect and start server (only in local development, not in Vercel)
