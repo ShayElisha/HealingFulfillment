@@ -17,7 +17,6 @@ import bookingRoutes from './routes/booking.js'
 import uploadRoutes from './routes/upload.js'
 import messagesRoutes from './routes/messages.js'
 import reviewsRoutes from './routes/reviews.js'
-import testEmailRoutes from './routes/test-email.js'
 import contactRoutes from './routes/contact.js'
 import leadsRoutes from './routes/leads.js'
 import transactionsRoutes from './routes/transactions.js'
@@ -206,7 +205,6 @@ app.use('/api/booking', bookingRoutes)
 app.use('/api/upload', uploadRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/reviews', reviewsRoutes)
-app.use('/api/test-email', testEmailRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/leads', leadsRoutes)
 app.use('/api/transactions', transactionsRoutes)

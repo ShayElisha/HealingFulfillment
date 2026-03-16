@@ -46,6 +46,5 @@ FRONTEND_URL=http://localhost:3001
 - `/api/upload/*` - העלאת קבצים
 - `/api/messages/*` - שליחת הודעות
 - `/api/reviews/*` - ניהול ביקורות
-- `/api/test-email/*` - בדיקת אימייל
 - `/api/contact/*` - צפייה בפניות
 
