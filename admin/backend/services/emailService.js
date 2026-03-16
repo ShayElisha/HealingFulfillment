@@ -1,10 +1,11 @@
 import nodemailer from 'nodemailer'
-import dotenv from 'dotenv'
 
-dotenv.config()
+// Note: In Vercel, environment variables are automatically loaded
+// dotenv.config() is only needed for local development with .env file
 
 // פונקציה ליצירת transporter
 const createTransporter = () => {
+  // Read environment variables directly (works in both local and Vercel)
   const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
   const smtpPort = parseInt(process.env.SMTP_PORT || '587')
   const smtpUser = process.env.SMTP_USER
@@ -14,11 +15,25 @@ const createTransporter = () => {
     host: smtpHost,
     port: smtpPort,
     user: smtpUser ? `${smtpUser.substring(0, 3)}***` : '❌ Not set',
-    password: smtpPassword ? '✅ Set' : '❌ Not set'
+    password: smtpPassword ? '✅ Set' : '❌ Not set',
+    environment: process.env.VERCEL ? 'Vercel' : 'Local',
+    nodeEnv: process.env.NODE_ENV
+  })
+
+  // Debug: Log all SMTP-related environment variables (safely)
+  console.log('📧 Environment check:', {
+    SMTP_HOST: process.env.SMTP_HOST || 'not set (using default)',
+    SMTP_PORT: process.env.SMTP_PORT || 'not set (using default)',
+    SMTP_USER: process.env.SMTP_USER ? 'set' : 'NOT SET',
+    SMTP_PASSWORD: process.env.SMTP_PASSWORD ? 'set' : 'NOT SET',
+    VERCEL: process.env.VERCEL ? 'yes' : 'no',
+    NODE_ENV: process.env.NODE_ENV || 'not set'
   })
 
   if (!smtpUser || !smtpPassword) {
     console.warn('⚠️  SMTP credentials not configured')
+    console.warn('⚠️  SMTP_USER:', smtpUser ? 'set' : 'NOT SET')
+    console.warn('⚠️  SMTP_PASSWORD:', smtpPassword ? 'set' : 'NOT SET')
     return null
   }
 
