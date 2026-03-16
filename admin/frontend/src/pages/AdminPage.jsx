@@ -213,7 +213,8 @@ function AdminPage() {
     customerEmail: '',
     customerPhone: '',
     paymentMethod: 'other',
-    notes: ''
+    notes: '',
+    status: 'pending'
   })
 
   const [bookingForm, setBookingForm] = useState({
@@ -545,9 +546,10 @@ function AdminPage() {
         customerEmail: '',
         customerPhone: '',
         paymentMethod: 'other',
-        notes: ''
+        notes: '',
+        status: 'pending'
       })
-      toast.success('רכישה נוצרה בהצלחה!')
+      toast.success('רכישה נוצרה בהצלחה!' + (purchaseForm.status === 'completed' ? ' הכנסה נוצרה אוטומטית.' : ''))
     } catch (error) {
       console.error('Error creating purchase:', error)
       const errorMessage = error.response?.data?.message || 
@@ -1343,20 +1345,42 @@ function AdminPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-neutral-900">
-                        שיטת תשלום
-                      </label>
-                      <select
-                        value={purchaseForm.paymentMethod}
-                        onChange={(e) => setPurchaseForm({ ...purchaseForm, paymentMethod: e.target.value })}
-                        className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      >
-                        <option value="other">אחר</option>
-                        <option value="credit_card">כרטיס אשראי</option>
-                        <option value="bank_transfer">העברה בנקאית</option>
-                        <option value="paypal">PayPal</option>
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-neutral-900">
+                          שיטת תשלום
+                        </label>
+                        <select
+                          value={purchaseForm.paymentMethod}
+                          onChange={(e) => setPurchaseForm({ ...purchaseForm, paymentMethod: e.target.value })}
+                          className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="other">אחר</option>
+                          <option value="credit_card">כרטיס אשראי</option>
+                          <option value="bank_transfer">העברה בנקאית</option>
+                          <option value="paypal">PayPal</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-neutral-900">
+                          סטטוס *
+                        </label>
+                        <select
+                          required
+                          value={purchaseForm.status}
+                          onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}
+                          className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="pending">ממתין</option>
+                          <option value="completed">הושלם</option>
+                          <option value="cancelled">בוטל</option>
+                        </select>
+                        {purchaseForm.status === 'completed' && (
+                          <p className="mt-2 text-xs text-green-600">
+                            💡 הכנסה תיווצר אוטומטית
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -1386,7 +1410,8 @@ function AdminPage() {
                             customerEmail: '',
                             customerPhone: '',
                             paymentMethod: 'other',
-                            notes: ''
+                            notes: '',
+                            status: 'pending'
                           })
                         }}
                         className="px-6 py-3"

@@ -2,6 +2,7 @@ import express from 'express'
 import Purchase from '../models/Purchase.js'
 import Course from '../models/Course.js'
 import Customer from '../models/Customer.js'
+import Transaction from '../models/Transaction.js'
 import { sendPurchaseConfirmationEmail } from '../services/emailService.js'
 
 const router = express.Router()
@@ -55,6 +56,43 @@ router.post('/', async (req, res, next) => {
     
     await purchase.populate('course', 'title')
     await purchase.populate('customer', 'name email phone')
+
+    // Create income transaction for the purchase
+    try {
+      // Check if transaction already exists for this purchase
+      const existingTransaction = await Transaction.findOne({ purchase: purchase._id })
+      
+      if (!existingTransaction) {
+        // Map payment method from purchase to transaction format
+        const paymentMethodMap = {
+          'credit_card': 'credit_card',
+          'bank_transfer': 'bank_transfer',
+          'paypal': 'bank_transfer', // PayPal is similar to bank transfer
+          'other': 'other'
+        }
+        
+        const transaction = new Transaction({
+          type: 'income',
+          category: 'course_sales',
+          amount: purchase.price,
+          description: `רכישת מסלול: ${purchase.course?.title || 'מסלול'}`,
+          date: new Date(),
+          paymentMethod: paymentMethodMap[purchase.paymentMethod] || 'other',
+          customer: purchase.customer?._id || purchase.customer || null,
+          purchase: purchase._id,
+          createdBy: 'customer',
+          notes: `נוצר אוטומטית מרכישה #${purchase._id}`
+        })
+        
+        await transaction.save()
+        console.log(`✅ Created income transaction for purchase ${purchase._id}: ₪${purchase.price}`)
+      } else {
+        console.log(`ℹ️ Transaction already exists for purchase ${purchase._id}`)
+      }
+    } catch (transactionError) {
+      // Log error but don't fail the purchase creation
+      console.error('❌ Error creating income transaction:', transactionError)
+    }
 
     // שלח אימייל אישור רכישה
     if (customer.email) {
