@@ -3,16 +3,44 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-// יצירת transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-})
+// פונקציה ליצירת transporter
+const createTransporter = () => {
+  const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com'
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587')
+  const smtpUser = process.env.SMTP_USER
+  const smtpPassword = process.env.SMTP_PASSWORD
+
+  console.log('📧 Creating SMTP transporter with config:', {
+    host: smtpHost,
+    port: smtpPort,
+    user: smtpUser ? `${smtpUser.substring(0, 3)}***` : '❌ Not set',
+    password: smtpPassword ? '✅ Set' : '❌ Not set'
+  })
+
+  if (!smtpUser || !smtpPassword) {
+    console.warn('⚠️  SMTP credentials not configured')
+    return null
+  }
+
+  return nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465, // true for 465, false for other ports
+    auth: {
+      user: smtpUser,
+      pass: smtpPassword,
+    },
+    // Additional options for better compatibility
+    tls: {
+      rejectUnauthorized: false // Allow self-signed certificates
+    }
+  })
+}
+
+// יצירת transporter (נוצר מחדש בכל קריאה כדי לוודא שמשתני הסביבה מעודכנים)
+const getTransporter = () => {
+  return createTransporter()
+}
 
 // תבנית HTML בסיסית
 export const getBaseTemplate = (title, content) => {
@@ -113,22 +141,43 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     console.log('📧 SMTP_PASSWORD:', process.env.SMTP_PASSWORD ? '✅ Set' : '❌ Not set')
     console.log('📧 SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com')
     console.log('📧 SMTP_PORT:', process.env.SMTP_PORT || '587')
+    console.log('📧 NODE_ENV:', process.env.NODE_ENV)
+    console.log('📧 VERCEL:', process.env.VERCEL ? '✅ Yes' : '❌ No')
 
     // בדיקה שהאימייל מוגדר
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
       console.warn('⚠️  SMTP credentials not configured. Email not sent.')
       console.log('📧 Email would be sent to:', to)
       console.log('📧 Subject:', subject)
-      return { success: false, message: 'SMTP not configured' }
+      console.log('📧 To configure SMTP, set these environment variables:')
+      console.log('   - SMTP_HOST (default: smtp.gmail.com)')
+      console.log('   - SMTP_PORT (default: 587)')
+      console.log('   - SMTP_USER (your email address)')
+      console.log('   - SMTP_PASSWORD (your email password or app password)')
+      return { success: false, message: 'SMTP not configured', error: 'SMTP credentials missing' }
+    }
+
+    // יצירת transporter
+    const transporter = getTransporter()
+    if (!transporter) {
+      return { success: false, message: 'Failed to create SMTP transporter', error: 'Transporter creation failed' }
     }
 
     // בדיקת תקינות ה-transporter
     try {
+      console.log('📧 Verifying SMTP connection...')
       await transporter.verify()
       console.log('✅ SMTP server connection verified')
     } catch (verifyError) {
       console.error('❌ SMTP server verification failed:', verifyError)
-      return { success: false, error: `SMTP verification failed: ${verifyError.message}` }
+      console.error('❌ Error code:', verifyError.code)
+      console.error('❌ Error command:', verifyError.command)
+      return { 
+        success: false, 
+        error: `SMTP verification failed: ${verifyError.message}`,
+        code: verifyError.code,
+        command: verifyError.command
+      }
     }
 
     const mailOptions = {
