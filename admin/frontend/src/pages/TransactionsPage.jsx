@@ -57,18 +57,40 @@ function TransactionsPage() {
       
       const [transactionsRes, customersRes] = await Promise.all([
         transactionService.getAll(apiParams).catch((err) => {
-          console.error('Error fetching transactions:', err)
-          console.error('Error details:', err.response?.data || err.message)
+          console.error('❌ Error fetching transactions:', err)
+          console.error('❌ Error details:', err.response?.data || err.message)
+          console.error('❌ Error stack:', err.stack)
           return { data: { data: [] } }
         }),
         customerService.getAll().catch(() => ({ data: { data: [] } }))
       ])
       
-      console.log('Transactions API Response:', transactionsRes)
-      console.log('Transactions Data:', transactionsRes?.data)
+      console.log('📊 Transactions API Response (full):', transactionsRes)
+      console.log('📊 Transactions API Response type:', typeof transactionsRes)
+      console.log('📊 Transactions API Response.data:', transactionsRes?.data)
+      console.log('📊 Transactions API Response.data type:', typeof transactionsRes?.data)
+      console.log('📊 Transactions API Response.data.data:', transactionsRes?.data?.data)
+      console.log('📊 Transactions API Response.data.data type:', typeof transactionsRes?.data?.data)
+      console.log('📊 Transactions API Response.data.data isArray:', Array.isArray(transactionsRes?.data?.data))
       
-      const transactionsData = transactionsRes?.data?.data || transactionsRes?.data || []
+      // Handle different response formats
+      let transactionsData = []
+      if (transactionsRes?.data?.data && Array.isArray(transactionsRes.data.data)) {
+        // Standard format: { message, data: [transactions], pagination }
+        transactionsData = transactionsRes.data.data
+      } else if (Array.isArray(transactionsRes?.data)) {
+        // Direct array format
+        transactionsData = transactionsRes.data
+      } else if (Array.isArray(transactionsRes)) {
+        // Response is already an array
+        transactionsData = transactionsRes
+      }
+      
       const customersData = customersRes?.data || []
+      
+      console.log('✅ Parsed Transactions:', transactionsData)
+      console.log('✅ Transactions Count:', transactionsData.length)
+      console.log('✅ First Transaction Sample:', transactionsData[0])
       
       console.log('Parsed Transactions:', transactionsData)
       console.log('Transactions Count:', Array.isArray(transactionsData) ? transactionsData.length : 0)

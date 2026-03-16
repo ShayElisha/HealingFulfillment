@@ -44,7 +44,14 @@ router.get('/', async (req, res, next) => {
     
     const transactions = await Transaction.find(query)
       .populate('customer', 'name email phone')
-      .populate('purchase', 'course price status')
+      .populate({
+        path: 'purchase',
+        select: 'course price status customerName customerEmail',
+        populate: {
+          path: 'course',
+          select: 'title price'
+        }
+      })
       .sort({ date: -1, createdAt: -1 })
       .limit(parseInt(limit))
       .skip(skip)
