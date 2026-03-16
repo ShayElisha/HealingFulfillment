@@ -217,11 +217,30 @@ router.post('/', async (req, res, next) => {
 // PUT /api/transactions/:id - Update transaction
 router.put('/:id', async (req, res, next) => {
   try {
-    const updateData = { ...req.body }
+    console.log('📥 Updating transaction:', req.params.id, 'with data:', req.body)
     
-    if (updateData.date) {
-      updateData.date = new Date(updateData.date)
+    // Clean and prepare update data
+    const updateData = {
+      type: req.body.type,
+      category: req.body.category,
+      amount: typeof req.body.amount === 'string' ? parseFloat(req.body.amount) : req.body.amount,
+      description: req.body.description,
+      date: req.body.date ? new Date(req.body.date) : undefined,
+      paymentMethod: req.body.paymentMethod || 'bank_transfer',
+      reference: req.body.reference && req.body.reference.trim() !== '' ? req.body.reference : undefined,
+      customer: req.body.customer && req.body.customer.trim() !== '' ? req.body.customer : null,
+      purchase: req.body.purchase && req.body.purchase.trim() !== '' ? req.body.purchase : null,
+      notes: req.body.notes && req.body.notes.trim() !== '' ? req.body.notes : undefined
     }
+    
+    // Remove undefined fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key]
+      }
+    })
+    
+    console.log('📥 Processed update data:', updateData)
     
     const transaction = await Transaction.findByIdAndUpdate(
       req.params.id,
@@ -229,7 +248,14 @@ router.put('/:id', async (req, res, next) => {
       { new: true, runValidators: true }
     )
       .populate('customer', 'name email phone')
-      .populate('purchase', 'course price status')
+      .populate({
+        path: 'purchase',
+        select: 'course price status customerName customerEmail',
+        populate: {
+          path: 'course',
+          select: 'title price'
+        }
+      })
       .lean()
     
     if (!transaction) {
@@ -241,10 +267,17 @@ router.put('/:id', async (req, res, next) => {
       data: transaction
     })
   } catch (error) {
+    console.error('❌ Error updating transaction:', error)
     if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(e => ({
+        field: e.path,
+        message: e.message
+      }))
+      console.error('❌ Validation errors:', validationErrors)
       return res.status(400).json({
         message: 'Validation error',
-        errors: Object.values(error.errors).map(e => e.message)
+        errors: validationErrors.map(e => e.message),
+        details: validationErrors
       })
     }
     next(error)
