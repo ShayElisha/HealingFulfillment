@@ -3,6 +3,15 @@ import Category from '../models/Category.js'
 import Course from '../models/Course.js'
 import Purchase from '../models/Purchase.js'
 import Booking from '../models/Booking.js'
+import Customer from '../models/Customer.js'
+import { 
+  sendBookingConfirmedEmail, 
+  sendBookingCancelledEmail, 
+  sendBookingCompletedEmail,
+  sendSessionSummaryEmail,
+  sendPurchaseCompletedEmail,
+  sendPurchaseCancelledEmail
+} from '../services/emailService.js'
 import Transaction from '../models/Transaction.js'
 
 const router = express.Router()
@@ -359,6 +368,49 @@ router.put('/purchases/:id/status', async (req, res, next) => {
         // Log error but don't fail the purchase update
         console.error('Error creating transaction for purchase:', transactionError)
       }
+      
+      // Send email notification for completed purchase
+      if (purchase.customer) {
+        try {
+          const customer = await Customer.findById(purchase.customer)
+          if (customer && customer.email) {
+            const course = await Course.findById(purchase.course)
+            if (course) {
+              const emailResult = await sendPurchaseCompletedEmail(purchase, course, customer)
+              if (emailResult && emailResult.success) {
+                console.log(`✅ Purchase completed email sent to ${customer.email}`)
+              } else {
+                console.error('❌ Failed to send purchase completed email:', emailResult?.error || emailResult?.message)
+              }
+            }
+          }
+        } catch (emailError) {
+          console.error('❌ Error sending purchase completed email:', emailError)
+        }
+      }
+    }
+    
+    // If status changed to 'cancelled', send cancellation email
+    if (status === 'cancelled' && oldPurchase.status !== 'cancelled') {
+      if (purchase.customer) {
+        try {
+          const customer = await Customer.findById(purchase.customer)
+          if (customer && customer.email) {
+            const course = await Course.findById(purchase.course)
+            if (course) {
+              const cancellationReason = req.body.cancellationReason || undefined
+              const emailResult = await sendPurchaseCancelledEmail(purchase, course, customer, cancellationReason)
+              if (emailResult && emailResult.success) {
+                console.log(`✅ Purchase cancelled email sent to ${customer.email}`)
+              } else {
+                console.error('❌ Failed to send purchase cancelled email:', emailResult?.error || emailResult?.message)
+              }
+            }
+          }
+        } catch (emailError) {
+          console.error('❌ Error sending purchase cancelled email:', emailError)
+        }
+      }
     }
     
     // If status changed from 'completed' to something else, optionally delete the transaction
@@ -398,6 +450,13 @@ router.get('/bookings', async (req, res, next) => {
 router.put('/bookings/:id/status', async (req, res, next) => {
   try {
     const { status } = req.body
+    
+    // Get the booking before updating to check previous status
+    const oldBooking = await Booking.findById(req.params.id)
+    if (!oldBooking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+    
     const booking = await Booking.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -406,6 +465,43 @@ router.put('/bookings/:id/status', async (req, res, next) => {
     
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
+    }
+    
+    // Send email notifications based on status change
+    if (booking.email) {
+      try {
+        let emailResult = null
+        
+        if (status === 'confirmed' && oldBooking.status !== 'confirmed') {
+          // Send confirmation email
+          emailResult = await sendBookingConfirmedEmail(booking)
+          if (emailResult && emailResult.success) {
+            console.log(`✅ Booking confirmed email sent to ${booking.email}`)
+          } else {
+            console.error('❌ Failed to send booking confirmed email:', emailResult?.error || emailResult?.message)
+          }
+        } else if (status === 'cancelled' && oldBooking.status !== 'cancelled') {
+          // Send cancellation email
+          const cancellationReason = req.body.cancellationReason || undefined
+          emailResult = await sendBookingCancelledEmail(booking, cancellationReason)
+          if (emailResult && emailResult.success) {
+            console.log(`✅ Booking cancelled email sent to ${booking.email}`)
+          } else {
+            console.error('❌ Failed to send booking cancelled email:', emailResult?.error || emailResult?.message)
+          }
+        } else if (status === 'completed' && oldBooking.status !== 'completed') {
+          // Send completion email
+          emailResult = await sendBookingCompletedEmail(booking)
+          if (emailResult && emailResult.success) {
+            console.log(`✅ Booking completed email sent to ${booking.email}`)
+          } else {
+            console.error('❌ Failed to send booking completed email:', emailResult?.error || emailResult?.message)
+          }
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending booking status email:', emailError)
+        // Don't fail the request if email fails
+      }
     }
     
     res.json({
@@ -430,6 +526,21 @@ router.put('/bookings/:id/session-summary', async (req, res, next) => {
     
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
+    }
+    
+    // Send session summary email to customer
+    if (booking.email && sessionSummary && sessionSummary.trim() !== '') {
+      try {
+        const emailResult = await sendSessionSummaryEmail(booking)
+        if (emailResult && emailResult.success) {
+          console.log(`✅ Session summary email sent to ${booking.email}`)
+        } else {
+          console.error('❌ Failed to send session summary email:', emailResult?.error || emailResult?.message)
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending session summary email:', emailError)
+        // Don't fail the request if email fails
+      }
     }
     
     res.json({

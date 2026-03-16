@@ -383,3 +383,226 @@ export const sendAccountCreationEmail = async (customer, initialPassword) => {
   })
 }
 
+// תבנית אימייל לאישור פגישה
+export const sendBookingConfirmedEmail = async (booking) => {
+  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+
+  const content = `
+    <h2>הפגישה שלך אושרה! ✅</h2>
+    <p>שלום ${booking.name},</p>
+    <p>אנו שמחים לאשר את הפגישה שלך.</p>
+    <div class="info-box">
+      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
+      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+    </div>
+    <p>אנא ודא שאתה זמין בתאריך ובשעה שנקבעו.</p>
+    <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו בהקדם.</p>
+    <p>מצפים לראותך!<br>יניב טנעמי</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'הפגישה שלך אושרה - ריפוי והגשמה',
+    html: getBaseTemplate('אישור פגישה', content),
+  })
+}
+
+// תבנית אימייל לביטול פגישה
+export const sendBookingCancelledEmail = async (booking, cancellationReason) => {
+  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+
+  const content = `
+    <h2>הפגישה בוטלה</h2>
+    <p>שלום ${booking.name},</p>
+    <p>אנו מודיעים לך שהפגישה הבאה בוטלה:</p>
+    <div class="info-box">
+      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
+      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
+    </div>
+    ${cancellationReason ? `<p><strong>סיבת ביטול:</strong> ${cancellationReason}</p>` : ''}
+    <p>אם תרצה לקבוע פגישה חדשה, אנא צור קשר איתנו ואנו נשמח לעזור.</p>
+    <p>אם יש לך שאלות, אנא צור קשר איתנו.</p>
+    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'ביטול פגישה - ריפוי והגשמה',
+    html: getBaseTemplate('ביטול פגישה', content),
+  })
+}
+
+// תבנית אימייל לסיום פגישה
+export const sendBookingCompletedEmail = async (booking) => {
+  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+
+  const content = `
+    <h2>תודה על הפגישה! 🙏</h2>
+    <p>שלום ${booking.name},</p>
+    <p>תודה על השתתפותך בפגישה:</p>
+    <div class="info-box">
+      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
+      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
+    </div>
+    <p>אנו מקווים שהפגישה הייתה מועילה עבורך.</p>
+    <p>אם יש לך שאלות או תרצה לקבוע פגישה נוספת, אנא צור קשר איתנו.</p>
+    <p>אנו כאן עבורך בכל עת.<br>יניב טנעמי</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'תודה על הפגישה - ריפוי והגשמה',
+    html: getBaseTemplate('תודה על הפגישה', content),
+  })
+}
+
+// תבנית אימייל לסיכום פגישה
+export const sendSessionSummaryEmail = async (booking) => {
+  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+
+  const content = `
+    <h2>סיכום הפגישה שלך</h2>
+    <p>שלום ${booking.name},</p>
+    <p>להלן סיכום הפגישה שהתקיימה:</p>
+    <div class="info-box">
+      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
+      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
+    </div>
+    <div class="info-box" style="background-color: #f0f7ff; border-right-color: #4A90E2;">
+      <h3 style="color: #4A90E2; margin-top: 0;">סיכום הפגישה:</h3>
+      <p style="white-space: pre-wrap;">${booking.sessionSummary || 'לא צוין סיכום'}</p>
+    </div>
+    <p>אם יש לך שאלות או תרצה לקבוע פגישה נוספת, אנא צור קשר איתנו.</p>
+    <p>אנו כאן עבורך בכל עת.<br>יניב טנעמי</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'סיכום הפגישה - ריפוי והגשמה',
+    html: getBaseTemplate('סיכום פגישה', content),
+  })
+}
+
+// תבנית אימייל לאישור השלמת רכישה
+export const sendPurchaseCompletedEmail = async (purchase, course, customer) => {
+  const content = `
+    <h2>תשלומך התקבל! ✅</h2>
+    <p>שלום ${customer.name},</p>
+    <p>אנו שמחים לאשר שהתשלום עבור הרכישה שלך התקבל בהצלחה.</p>
+    <div class="info-box">
+      <p><strong>מסלול:</strong> ${course.title}</p>
+      <p><strong>מחיר:</strong> ₪${purchase.price}</p>
+      <p><strong>שיטת תשלום:</strong> ${purchase.paymentMethod === 'credit_card' ? 'כרטיס אשראי' : purchase.paymentMethod === 'bank_transfer' ? 'העברה בנקאית' : purchase.paymentMethod === 'paypal' ? 'PayPal' : 'אחר'}</p>
+      <p><strong>תאריך רכישה:</strong> ${new Date(purchase.createdAt).toLocaleDateString('he-IL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}</p>
+      <p><strong>תאריך אישור:</strong> ${new Date().toLocaleDateString('he-IL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}</p>
+    </div>
+    <h3>מה הלאה?</h3>
+    <p>ניצור איתך קשר בקרוב כדי לתאם את הפגישות ולהתחיל את המסלול.</p>
+    <p>אם יש לך שאלות, אנא צור קשר איתנו.</p>
+    <p>תודה על האמון!<br>צוות ריפוי והגשמה</p>
+  `
+
+  return await sendEmail({
+    to: customer.email,
+    subject: 'תשלומך התקבל - ריפוי והגשמה',
+    html: getBaseTemplate('אישור תשלום', content),
+  })
+}
+
+// תבנית אימייל לביטול רכישה
+export const sendPurchaseCancelledEmail = async (purchase, course, customer, cancellationReason) => {
+  const content = `
+    <h2>רכישתך בוטלה</h2>
+    <p>שלום ${customer.name},</p>
+    <p>אנו מודיעים לך שהרכישה הבאה בוטלה:</p>
+    <div class="info-box">
+      <p><strong>מסלול:</strong> ${course.title}</p>
+      <p><strong>מחיר:</strong> ₪${purchase.price}</p>
+      <p><strong>תאריך רכישה:</strong> ${new Date(purchase.createdAt).toLocaleDateString('he-IL', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })}</p>
+    </div>
+    ${cancellationReason ? `<p><strong>סיבת ביטול:</strong> ${cancellationReason}</p>` : ''}
+    <p>אם התשלום כבר בוצע, נטפל בהחזר בהתאם למדיניות שלנו.</p>
+    <p>אם יש לך שאלות או תרצה ליצור קשר, אנא צור קשר איתנו.</p>
+    <p>אם תרצה, תוכל לרכוש את המסלול שוב בעתיד.</p>
+    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+  `
+
+  return await sendEmail({
+    to: customer.email,
+    subject: 'ביטול רכישה - ריפוי והגשמה',
+    html: getBaseTemplate('ביטול רכישה', content),
+  })
+}
+
+// תבנית אימייל לתזכורת לפני פגישה
+export const sendBookingReminderEmail = async (booking) => {
+  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+
+  const timeStr = booking.preferredTime || ''
+
+  const content = `
+    <h2>תזכורת: פגישה קרובה 📅</h2>
+    <p>שלום ${booking.name},</p>
+    <p>זוהי תזכורת שהפגישה שלך מתקיימת מחר:</p>
+    <div class="info-box" style="background-color: #fff3cd; border-right-color: #ffc107;">
+      <p><strong>📅 תאריך:</strong> ${dateStr}</p>
+      ${timeStr ? `<p><strong>🕐 שעה:</strong> ${timeStr}</p>` : ''}
+      <p><strong>📍 סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>🔗 קישור זום:</strong> <a href="${booking.zoomLink}" style="color: #8B5CF6; font-weight: bold;">${booking.zoomLink}</a></p>` : ''}
+    </div>
+    <h3>הכנות מומלצות:</h3>
+    <ul>
+      <li>ודא שאתה זמין בתאריך ובשעה שנקבעו</li>
+      ${booking.meetingType === 'zoom' ? '<li>בדוק את החיבור לאינטרנט והמיקרופון</li><li>הכן את קישור הזום מראש</li>' : '<li>הכן את הכתובת והגע בזמן</li>'}
+      <li>הכן שאלות או נושאים שתרצה לדון בהם</li>
+    </ul>
+    <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו בהקדם.</p>
+    <p>מצפים לראותך!<br>יניב טנעמי</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'תזכורת: פגישה מחר - ריפוי והגשמה',
+    html: getBaseTemplate('תזכורת פגישה', content),
+  })
+}
+
