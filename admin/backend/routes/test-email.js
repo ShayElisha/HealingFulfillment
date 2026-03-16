@@ -37,11 +37,36 @@ router.get('/', async (req, res) => {
       response: result.response
     })
   } else {
-    res.status(500).json({
-      message: 'Failed to send email',
+    // Provide detailed error information
+    const errorResponse = {
+      message: result.message || 'Failed to send email',
       error: result.error,
-      code: result.code
-    })
+      code: result.code,
+      ...(result.missingVariables && {
+        missingVariables: result.missingVariables,
+        instructions: result.instructions
+      })
+    }
+    
+    // If SMTP credentials are missing, provide setup instructions
+    if (result.error && result.error.includes('SMTP credentials missing')) {
+      errorResponse.setupInstructions = {
+        step1: 'Go to Vercel Dashboard → Your Project → Settings → Environment Variables',
+        step2: 'Add the following environment variables:',
+        required: {
+          SMTP_USER: 'Your email address (e.g., your-email@gmail.com)',
+          SMTP_PASSWORD: 'Your email password or App Password (for Gmail)'
+        },
+        optional: {
+          SMTP_HOST: 'SMTP server host (default: smtp.gmail.com)',
+          SMTP_PORT: 'SMTP server port (default: 587)'
+        },
+        step3: 'After adding variables, redeploy your project',
+        step4: 'For Gmail: Create App Password at Google Account → Security → 2-Step Verification → App passwords'
+      }
+    }
+    
+    res.status(500).json(errorResponse)
   }
 })
 

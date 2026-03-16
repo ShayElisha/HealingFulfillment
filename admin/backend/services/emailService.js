@@ -137,24 +137,53 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     console.log('📧 Attempting to send email...')
     console.log('📧 To:', to)
     console.log('📧 Subject:', subject)
-    console.log('📧 SMTP_USER:', process.env.SMTP_USER ? '✅ Set' : '❌ Not set')
-    console.log('📧 SMTP_PASSWORD:', process.env.SMTP_PASSWORD ? '✅ Set' : '❌ Not set')
-    console.log('📧 SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com')
-    console.log('📧 SMTP_PORT:', process.env.SMTP_PORT || '587')
-    console.log('📧 NODE_ENV:', process.env.NODE_ENV)
-    console.log('📧 VERCEL:', process.env.VERCEL ? '✅ Yes' : '❌ No')
-
+    
+    // בדיקה מפורטת של משתני הסביבה
+    const envCheck = {
+      SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+      SMTP_PORT: process.env.SMTP_PORT || '587 (default)',
+      SMTP_USER: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***` : '❌ NOT SET',
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD ? '✅ Set (hidden)' : '❌ NOT SET',
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      VERCEL: process.env.VERCEL ? '✅ Yes' : '❌ No',
+      VERCEL_ENV: process.env.VERCEL_ENV || 'not set'
+    }
+    
+    console.log('📧 Environment variables check:')
+    console.log(JSON.stringify(envCheck, null, 2))
+    
+    // בדיקת כל משתני הסביבה
+    const missingVars = []
+    if (!process.env.SMTP_USER) missingVars.push('SMTP_USER')
+    if (!process.env.SMTP_PASSWORD) missingVars.push('SMTP_PASSWORD')
+    
     // בדיקה שהאימייל מוגדר
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.warn('⚠️  SMTP credentials not configured. Email not sent.')
-      console.log('📧 Email would be sent to:', to)
-      console.log('📧 Subject:', subject)
-      console.log('📧 To configure SMTP, set these environment variables:')
-      console.log('   - SMTP_HOST (default: smtp.gmail.com)')
-      console.log('   - SMTP_PORT (default: 587)')
-      console.log('   - SMTP_USER (your email address)')
-      console.log('   - SMTP_PASSWORD (your email password or app password)')
-      return { success: false, message: 'SMTP not configured', error: 'SMTP credentials missing' }
+    if (missingVars.length > 0) {
+      const errorMessage = `SMTP credentials missing: ${missingVars.join(', ')}`
+      console.error('❌', errorMessage)
+      console.error('📧 Email would be sent to:', to)
+      console.error('📧 Subject:', subject)
+      console.error('')
+      console.error('🔧 To fix this issue:')
+      console.error('   1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables')
+      console.error('   2. Add the following environment variables:')
+      console.error('      - SMTP_HOST (optional, default: smtp.gmail.com)')
+      console.error('      - SMTP_PORT (optional, default: 587)')
+      console.error('      - SMTP_USER (required: your email address)')
+      console.error('      - SMTP_PASSWORD (required: your email password or app password)')
+      console.error('   3. After adding variables, redeploy your project')
+      console.error('   4. For Gmail, you need to create an App Password:')
+      console.error('      - Go to Google Account → Security → 2-Step Verification → App passwords')
+      console.error('      - Create a new app password and use it as SMTP_PASSWORD')
+      console.error('')
+      
+      return { 
+        success: false, 
+        message: 'Failed to send email',
+        error: errorMessage,
+        missingVariables: missingVars,
+        instructions: 'Please configure SMTP environment variables in Vercel Dashboard'
+      }
     }
 
     // יצירת transporter
