@@ -10,13 +10,15 @@ router.get('/', async (req, res, next) => {
   try {
     const { type, category, startDate, endDate, customerId, limit = 100, page = 1 } = req.query
     
+    console.log('📊 Fetching transactions with filters:', { type, category, startDate, endDate, customerId, limit, page })
+    
     const query = {}
     
-    if (type) {
+    if (type && type !== 'all') {
       query.type = type
     }
     
-    if (category) {
+    if (category && category !== 'all') {
       query.category = category
     }
     
@@ -36,6 +38,8 @@ router.get('/', async (req, res, next) => {
       query.customer = customerId
     }
     
+    console.log('📊 MongoDB query:', JSON.stringify(query, null, 2))
+    
     const skip = (parseInt(page) - 1) * parseInt(limit)
     
     const transactions = await Transaction.find(query)
@@ -48,6 +52,8 @@ router.get('/', async (req, res, next) => {
     
     const total = await Transaction.countDocuments(query)
     
+    console.log(`✅ Found ${transactions.length} transactions (total: ${total})`)
+    
     res.json({
       message: 'Transactions retrieved successfully',
       data: transactions,
@@ -59,6 +65,7 @@ router.get('/', async (req, res, next) => {
       }
     })
   } catch (error) {
+    console.error('❌ Error fetching transactions:', error)
     next(error)
   }
 })

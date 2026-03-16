@@ -40,13 +40,38 @@ function TransactionsPage() {
   const loadData = async () => {
     try {
       setLoading(true)
+      // Prepare API params - remove 'all' values and empty strings
+      const apiParams = {}
+      if (filters.type && filters.type !== 'all') {
+        apiParams.type = filters.type
+      }
+      if (filters.category && filters.category !== 'all') {
+        apiParams.category = filters.category
+      }
+      if (filters.startDate) {
+        apiParams.startDate = filters.startDate
+      }
+      if (filters.endDate) {
+        apiParams.endDate = filters.endDate
+      }
+      
       const [transactionsRes, customersRes] = await Promise.all([
-        transactionService.getAll(filters).catch(() => ({ data: { data: [] } })),
+        transactionService.getAll(apiParams).catch((err) => {
+          console.error('Error fetching transactions:', err)
+          console.error('Error details:', err.response?.data || err.message)
+          return { data: { data: [] } }
+        }),
         customerService.getAll().catch(() => ({ data: { data: [] } }))
       ])
       
+      console.log('Transactions API Response:', transactionsRes)
+      console.log('Transactions Data:', transactionsRes?.data)
+      
       const transactionsData = transactionsRes?.data?.data || transactionsRes?.data || []
       const customersData = customersRes?.data || []
+      
+      console.log('Parsed Transactions:', transactionsData)
+      console.log('Transactions Count:', Array.isArray(transactionsData) ? transactionsData.length : 0)
       
       setTransactions(Array.isArray(transactionsData) ? transactionsData : [])
       setCustomers(Array.isArray(customersData) ? customersData : [])
@@ -456,13 +481,29 @@ function TransactionsPage() {
           {loading ? (
             <Card>
               <div className="text-center py-12">
-                <p className="text-neutral-600">טוען...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                <p className="text-neutral-600">טוען רשומות...</p>
               </div>
             </Card>
           ) : filteredTransactions.length === 0 ? (
             <Card>
               <div className="text-center py-12">
-                <p className="text-neutral-500">אין רשומות</p>
+                <div className="text-4xl mb-4">📊</div>
+                <p className="text-neutral-700 font-medium mb-2">אין רשומות להצגה</p>
+                <p className="text-neutral-500 text-sm mb-4">
+                  {filters.type !== 'all' || filters.category !== 'all' || filters.startDate || filters.endDate
+                    ? 'לא נמצאו רשומות לפי הפילטרים שנבחרו'
+                    : 'עדיין לא נוצרו רשומות הכנסות או הוצאות'}
+                </p>
+                {filters.type !== 'all' || filters.category !== 'all' || filters.startDate || filters.endDate ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setFilters({ type: 'all', category: 'all', startDate: '', endDate: '' })}
+                    className="mt-4"
+                  >
+                    נקה פילטרים
+                  </Button>
+                ) : null}
               </div>
             </Card>
           ) : (
