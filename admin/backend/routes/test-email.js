@@ -3,6 +3,59 @@ import { sendEmail } from '../services/emailService.js'
 
 const router = express.Router()
 
+// GET /api/test-email/check - Check SMTP configuration
+router.get('/check', (req, res) => {
+  const envStatus = {
+    SMTP_HOST: {
+      value: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+      set: !!process.env.SMTP_HOST,
+      required: false
+    },
+    SMTP_PORT: {
+      value: process.env.SMTP_PORT || '587 (default)',
+      set: !!process.env.SMTP_PORT,
+      required: false
+    },
+    SMTP_USER: {
+      value: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 3)}***` : 'NOT SET',
+      set: !!process.env.SMTP_USER,
+      required: true
+    },
+    SMTP_PASSWORD: {
+      value: process.env.SMTP_PASSWORD ? '*** (hidden)' : 'NOT SET',
+      set: !!process.env.SMTP_PASSWORD,
+      required: true
+    }
+  }
+
+  const missing = Object.entries(envStatus)
+    .filter(([key, status]) => status.required && !status.set)
+    .map(([key]) => key)
+
+  const allSet = missing.length === 0
+
+  res.json({
+    configured: allSet,
+    missingVariables: missing,
+    environment: {
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      VERCEL: !!process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV || 'not set'
+    },
+    variables: envStatus,
+    instructions: allSet ? null : {
+      message: 'Please configure the missing environment variables in Vercel Dashboard',
+      steps: [
+        'Go to Vercel Dashboard → Your Project → Settings → Environment Variables',
+        `Add the following required variables: ${missing.join(', ')}`,
+        'Select all environments (Production, Preview, Development)',
+        'Redeploy your project after adding variables',
+        'For Gmail: Create App Password at Google Account → Security → 2-Step Verification → App passwords'
+      ]
+    }
+  })
+})
+
 // GET /api/test-email - Test email sending
 router.get('/', async (req, res) => {
   const testEmail = req.query.email || process.env.SMTP_USER
