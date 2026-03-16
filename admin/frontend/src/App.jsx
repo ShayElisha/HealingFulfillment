@@ -8,6 +8,7 @@ import BookingsPage from './pages/BookingsPage'
 import ContactsPage from './pages/ContactsPage'
 import MessagesPage from './pages/MessagesPage'
 import ReviewsPage from './pages/ReviewsPage'
+import LeadsPage from './pages/LeadsPage'
 import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
@@ -53,6 +54,7 @@ function App() {
           <Route path="/contacts" element={<ContactsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/leads" element={<LeadsPage />} />
         </Routes>
         </Router>
       </ErrorBoundary>

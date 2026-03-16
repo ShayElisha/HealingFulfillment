@@ -15,6 +15,7 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
     { id: 'customers', label: `לקוחות (${customersCount || 0})`, icon: '👥', route: '/customers' },
     { id: 'bookings', label: `פגישות (${bookingsCount || 0})`, icon: '📅', route: '/bookings' },
     { id: 'contacts', label: `פניות (${contactsCount || 0})`, icon: '📧', route: '/contacts' },
+    { id: 'leads', label: 'לידים', icon: '📋', route: '/leads' },
     { id: 'messages', label: 'הודעות', icon: '💬', route: '/messages' },
     { id: 'reviews', label: 'ביקורות', icon: '⭐', route: '/reviews' },
   ]
@@ -70,6 +71,9 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
     if (location.pathname === '/contacts') {
       return 'contacts'
     }
+    if (location.pathname === '/leads') {
+      return 'leads'
+    }
     if (location.pathname === '/messages') {
       return 'messages'
     }
@@ -88,12 +92,15 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
   const currentActiveTab = getActiveTab()
 
   return (
-    <nav className="bg-white border-b border-neutral-200 shadow-sm sticky top-0 z-50 w-full">
+    <nav className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 shadow-soft sticky top-0 z-50 w-full">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
-            <h1 className="text-2xl font-serif font-bold text-primary-600">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft-lg">
+              <span className="text-white text-lg">📊</span>
+            </div>
+            <h1 className="text-xl font-serif font-semibold text-neutral-800">
               לוח בקרה
             </h1>
           </div>
@@ -104,13 +111,13 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
+                className={`px-4 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 text-sm ${
                   currentActiveTab === tab.id
-                    ? 'bg-primary-50 text-primary-600'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-primary-600'
+                    ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
+                    : 'text-neutral-600 hover:bg-neutral-50 hover:text-primary-600'
                 }`}
               >
-                <span>{tab.icon}</span>
+                <span className="text-base">{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -142,19 +149,19 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-neutral-200">
+          <div className="md:hidden py-4 border-t border-neutral-200/60 bg-neutral-50/50">
             <div className="space-y-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabClick(tab)}
-                  className={`w-full text-right px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  className={`w-full text-right px-4 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${
                     currentActiveTab === tab.id
-                      ? 'bg-primary-50 text-primary-600'
-                      : 'text-neutral-700 hover:bg-neutral-100'
+                      ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
+                      : 'text-neutral-700 hover:bg-white hover:text-primary-600'
                   }`}
                 >
-                  <span>{tab.icon}</span>
+                  <span className="text-lg">{tab.icon}</span>
                   <span>{tab.label}</span>
                 </button>
               ))}

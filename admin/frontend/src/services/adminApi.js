@@ -108,6 +108,10 @@ export const contactService = {
     const response = await api.get('/contact')
     return response.data
   },
+  markAsRead: async (id) => {
+    const response = await api.put(`/contact/${id}/read`)
+    return response.data
+  },
 }
 
 export const messageService = {
@@ -136,6 +140,21 @@ export const reviewService = {
   },
   updateStatus: async (id, status) => {
     const response = await api.put(`/reviews/admin/${id}/status`, { status })
+    return response.data
+  },
+}
+
+export const leadService = {
+  getAll: async () => {
+    const response = await api.get('/leads')
+    return response.data
+  },
+  getById: async (id) => {
+    const response = await api.get(`/leads/${id}`)
+    return response.data
+  },
+  updateStatus: async (id, status, adminNotes) => {
+    const response = await api.put(`/leads/${id}/status`, { status, adminNotes })
     return response.data
   },
 }
