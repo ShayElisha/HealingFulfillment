@@ -92,6 +92,7 @@ transactionSchema.index({ date: -1 })
 transactionSchema.index({ type: 1, date: -1 })
 transactionSchema.index({ category: 1 })
 transactionSchema.index({ customer: 1 })
+transactionSchema.index({ purchase: 1 }) // Index for checking if transaction exists for purchase
 
 // Virtual for formatted amount
 transactionSchema.virtual('formattedAmount').get(function() {

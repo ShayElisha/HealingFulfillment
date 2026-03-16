@@ -3,6 +3,7 @@ import Category from '../models/Category.js'
 import Course from '../models/Course.js'
 import Purchase from '../models/Purchase.js'
 import Booking from '../models/Booking.js'
+import Transaction from '../models/Transaction.js'
 
 const router = express.Router()
 
@@ -305,15 +306,63 @@ router.get('/purchases', async (req, res, next) => {
 router.put('/purchases/:id/status', async (req, res, next) => {
   try {
     const { status } = req.body
+    
+    // Get the purchase before updating to check previous status
+    const oldPurchase = await Purchase.findById(req.params.id)
+    if (!oldPurchase) {
+      return res.status(404).json({ message: 'Purchase not found' })
+    }
+    
     const purchase = await Purchase.findByIdAndUpdate(
       req.params.id,
       { status },
       { new: true, runValidators: true }
-    ).populate('course', 'title price')
+    ).populate('course', 'title price').populate('customer', 'name email')
     
     if (!purchase) {
       return res.status(404).json({ message: 'Purchase not found' })
     }
+    
+    // If status changed to 'completed' and wasn't completed before, create income transaction
+    if (status === 'completed' && oldPurchase.status !== 'completed') {
+      try {
+        // Check if transaction already exists for this purchase
+        const existingTransaction = await Transaction.findOne({ purchase: purchase._id })
+        
+        if (!existingTransaction) {
+          // Map payment method from purchase to transaction format
+          const paymentMethodMap = {
+            'credit_card': 'credit_card',
+            'bank_transfer': 'bank_transfer',
+            'paypal': 'bank_transfer', // PayPal is similar to bank transfer
+            'other': 'other'
+          }
+          
+          const transaction = new Transaction({
+            type: 'income',
+            category: 'course_sales',
+            amount: purchase.price,
+            description: `רכישת מסלול: ${purchase.course?.title || 'מסלול'}`,
+            date: new Date(),
+            paymentMethod: paymentMethodMap[purchase.paymentMethod] || 'other',
+            customer: purchase.customer?._id || purchase.customer || null,
+            purchase: purchase._id,
+            notes: `נוצר אוטומטית מרכישה #${purchase._id}`
+          })
+          
+          await transaction.save()
+          console.log(`✅ Created income transaction for purchase ${purchase._id}: ₪${purchase.price}`)
+        } else {
+          console.log(`ℹ️ Transaction already exists for purchase ${purchase._id}`)
+        }
+      } catch (transactionError) {
+        // Log error but don't fail the purchase update
+        console.error('Error creating transaction for purchase:', transactionError)
+      }
+    }
+    
+    // If status changed from 'completed' to something else, optionally delete the transaction
+    // (or you might want to keep it for historical records)
     
     res.json({
       message: 'Purchase status updated successfully',
