@@ -4,15 +4,41 @@ import axios from 'axios'
 // In development, vite proxy will handle /api requests
 // In production (Vercel), use /api which will be rewritten to /api/index.js
 const getApiUrl = () => {
-  // If VITE_API_URL is explicitly set, use it (highest priority)
-  if (import.meta.env.VITE_API_URL) {
-    console.log('Using VITE_API_URL:', import.meta.env.VITE_API_URL)
-    return import.meta.env.VITE_API_URL
-  }
-  
   // Check if we're in production
   const isProduction = import.meta.env.PROD || import.meta.env.MODE === 'production'
   const isDevelopment = import.meta.env.DEV || import.meta.env.MODE === 'development'
+  
+  // If VITE_API_URL is explicitly set, check if it's the same domain
+  if (import.meta.env.VITE_API_URL) {
+    const viteApiUrl = import.meta.env.VITE_API_URL.trim()
+    
+    // If it's a full URL, check if it's the same domain as current page
+    if (viteApiUrl.startsWith('http://') || viteApiUrl.startsWith('https://')) {
+      // In browser, check if it's same origin
+      if (typeof window !== 'undefined') {
+        try {
+          const viteUrl = new URL(viteApiUrl)
+          const currentUrl = new URL(window.location.href)
+          
+          // If same origin, use relative path /api instead
+          if (viteUrl.origin === currentUrl.origin) {
+            console.log('VITE_API_URL is same origin, using /api instead')
+            return '/api'
+          }
+        } catch (e) {
+          // If URL parsing fails, fall through to use the provided URL
+        }
+      }
+      
+      // Different origin or server-side, use the full URL
+      console.log('Using VITE_API_URL (different origin):', viteApiUrl)
+      return viteApiUrl.endsWith('/') ? viteApiUrl.slice(0, -1) : viteApiUrl
+    }
+    
+    // Relative path - use as is
+    console.log('Using VITE_API_URL (relative):', viteApiUrl)
+    return viteApiUrl
+  }
   
   // In development, use proxy
   if (isDevelopment) {
