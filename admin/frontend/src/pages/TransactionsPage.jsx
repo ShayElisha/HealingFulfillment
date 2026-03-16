@@ -108,11 +108,22 @@ function TransactionsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Prepare data for API - convert amount to number and handle empty customer
+      const submitData = {
+        ...formData,
+        amount: parseFloat(formData.amount) || 0,
+        customer: formData.customer && formData.customer.trim() !== '' ? formData.customer : null,
+        reference: formData.reference && formData.reference.trim() !== '' ? formData.reference : undefined,
+        notes: formData.notes && formData.notes.trim() !== '' ? formData.notes : undefined
+      }
+      
+      console.log('📤 Submitting transaction data:', submitData)
+      
       if (editingTransaction) {
-        await transactionService.update(editingTransaction._id, formData)
+        await transactionService.update(editingTransaction._id, submitData)
         toast.success('רשומה עודכנה בהצלחה')
       } else {
-        await transactionService.create(formData)
+        await transactionService.create(submitData)
         toast.success('רשומה נוצרה בהצלחה')
       }
       setShowForm(false)
@@ -130,8 +141,21 @@ function TransactionsPage() {
       })
       loadData()
     } catch (error) {
-      console.error('Error saving transaction:', error)
-      toast.error(`שגיאה בשמירת הרשומה: ${error.response?.data?.message || error.message}`)
+      console.error('❌ Error saving transaction:', error)
+      console.error('❌ Error response:', error.response?.data)
+      
+      // Show detailed error message
+      let errorMessage = 'שגיאה בשמירת הרשומה'
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      }
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        errorMessage += ': ' + error.response.data.errors.join(', ')
+      } else if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
+        errorMessage += ': ' + error.response.data.details.map(d => d.message).join(', ')
+      }
+      
+      toast.error(errorMessage)
     }
   }
 

@@ -165,10 +165,24 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/transactions - Create new transaction
 router.post('/', async (req, res, next) => {
   try {
+    console.log('📥 Creating transaction with data:', req.body)
+    
+    // Clean and prepare transaction data
     const transactionData = {
-      ...req.body,
-      date: req.body.date ? new Date(req.body.date) : new Date()
+      type: req.body.type,
+      category: req.body.category,
+      amount: typeof req.body.amount === 'string' ? parseFloat(req.body.amount) : req.body.amount,
+      description: req.body.description,
+      date: req.body.date ? new Date(req.body.date) : new Date(),
+      paymentMethod: req.body.paymentMethod || 'bank_transfer',
+      reference: req.body.reference || undefined,
+      customer: req.body.customer && req.body.customer.trim() !== '' ? req.body.customer : null,
+      purchase: req.body.purchase && req.body.purchase.trim() !== '' ? req.body.purchase : null,
+      notes: req.body.notes || undefined,
+      createdBy: req.body.createdBy || 'admin'
     }
+    
+    console.log('📥 Processed transaction data:', transactionData)
     
     const transaction = new Transaction(transactionData)
     await transaction.save()
@@ -183,10 +197,17 @@ router.post('/', async (req, res, next) => {
       data: populatedTransaction
     })
   } catch (error) {
+    console.error('❌ Error creating transaction:', error)
     if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(e => ({
+        field: e.path,
+        message: e.message
+      }))
+      console.error('❌ Validation errors:', validationErrors)
       return res.status(400).json({
         message: 'Validation error',
-        errors: Object.values(error.errors).map(e => e.message)
+        errors: validationErrors.map(e => e.message),
+        details: validationErrors
       })
     }
     next(error)
