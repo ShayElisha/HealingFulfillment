@@ -642,16 +642,19 @@ function AdminPage() {
       />
 
       {/* Main Content */}
-      <div className="min-h-screen bg-neutral-50">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
           {/* Categories Tab */}
           {activeTab === 'categories' && (
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-serif font-bold text-neutral-900">
-                  טיפולים ({categories.length})
-                </h2>
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-serif font-semibold text-neutral-900 mb-1">
+                    טיפולים
+                  </h2>
+                  <p className="text-neutral-600 text-sm">{categories.length} טיפולים זמינים</p>
+                </div>
                 <Button
                   onClick={() => {
                     setEditingCategory(null)
@@ -679,29 +682,29 @@ function AdminPage() {
               </div>
 
               {showCategoryForm && (
-                <Card className="mb-8">
-                  <h3 className="text-xl font-semibold mb-4">
+                <Card className="mb-8 border-2 border-primary-100">
+                  <h3 className="text-2xl font-serif font-semibold mb-6 text-neutral-900">
                     {editingCategory ? 'ערוך טיפול' : 'טיפול חדש'}
                   </h3>
                   <form onSubmit={handleCategorySubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">שם הטיפול *</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">שם הטיפול *</label>
                       <input
                         type="text"
                         required
                         value={categoryForm.name}
                         onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                         placeholder="לדוגמה: טיפול בחרדות"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">תיאור</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">תיאור</label>
                       <textarea
                         value={categoryForm.description}
                         onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
                         rows="3"
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white resize-none"
                         placeholder="תיאור כללי של הטיפול"
                       />
                     </div>
@@ -1035,29 +1038,33 @@ function AdminPage() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {(Array.isArray(categories) ? categories : []).map((category) => (
-                    <Card key={category._id}>
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-xl font-semibold">{category.name}</h3>
-                        <span className={`px-2 py-1 text-xs rounded ${category.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                    <Card key={category._id} className="hover:shadow-soft-lg transition-all duration-200">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-xl font-serif font-semibold text-neutral-900">{category.name}</h3>
+                        <span className={`px-3 py-1 text-xs rounded-full font-medium ${
+                          category.isActive 
+                            ? 'bg-green-50 text-green-700 border border-green-200' 
+                            : 'bg-neutral-100 text-neutral-600 border border-neutral-200'
+                        }`}>
                           {category.isActive ? 'פעיל' : 'לא פעיל'}
                         </span>
                       </div>
                       {category.description && (
-                        <p className="text-neutral-600 text-sm mb-3">{category.description}</p>
+                        <p className="text-neutral-600 text-sm mb-3 leading-relaxed">{category.description}</p>
                       )}
-                      <p className="text-xs text-neutral-500 mb-4">{category.purchaseCTA}</p>
-                      <div className="flex gap-2">
+                      <p className="text-xs text-neutral-500 mb-4 italic">{category.purchaseCTA}</p>
+                      <div className="flex gap-2 pt-4 border-t border-neutral-100">
                         <Button
                           variant="secondary"
                           onClick={() => handleEditCategory(category)}
-                          className="text-sm px-4 py-2"
+                          className="text-sm px-4 py-2 flex-1"
                         >
                           ערוך
                         </Button>
                         <Button
                           variant="soft"
                           onClick={() => handleDeleteCategory(category._id)}
-                          className="text-sm px-4 py-2"
+                          className="text-sm px-4 py-2 flex-1"
                         >
                           מחק
                         </Button>
@@ -1072,10 +1079,13 @@ function AdminPage() {
           {/* Courses Tab */}
           {activeTab === 'courses' && (
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-serif font-bold text-neutral-900">
-                  מסלולים ({courses.length})
-                </h2>
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-3xl font-serif font-semibold text-neutral-900 mb-1">
+                    מסלולים
+                  </h2>
+                  <p className="text-neutral-600 text-sm">{courses.length} מסלולים זמינים</p>
+                </div>
                 <Button
                   onClick={() => {
                     setEditingCourse(null)
@@ -1095,49 +1105,49 @@ function AdminPage() {
               </div>
 
               {showCourseForm && (
-                <Card className="mb-8">
-                  <h3 className="text-xl font-semibold mb-4">
+                <Card className="mb-8 border-2 border-primary-100">
+                  <h3 className="text-2xl font-serif font-semibold mb-6 text-neutral-900">
                     {editingCourse ? 'ערוך מסלול' : 'מסלול חדש'}
                   </h3>
                   <form onSubmit={handleCourseSubmit} className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">כותרת המסלול *</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">כותרת המסלול *</label>
                       <input
                         type="text"
                         required
                         value={courseForm.title}
                         onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">תיאור</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">תיאור</label>
                       <textarea
                         value={courseForm.description}
                         onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
                         rows="3"
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white resize-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">מחיר (₪)</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">מחיר (₪)</label>
                       <input
                         type="number"
                         min="0"
                         value={courseForm.price}
                         onChange={(e) => setCourseForm({ ...courseForm, price: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">כמות מפגשים *</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">כמות מפגשים *</label>
                       <input
                         type="number"
                         min="1"
                         required
                         value={courseForm.sessionsCount}
                         onChange={(e) => setCourseForm({ ...courseForm, sessionsCount: parseInt(e.target.value) || 1 })}
-                        className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
                       <p className="text-xs text-neutral-500 mt-1">מספר המפגשים במסלול</p>
                     </div>
@@ -1193,42 +1203,43 @@ function AdminPage() {
                       return null
                     }
                     return (
-                    <Card key={course._id}>
-                      <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-xl font-semibold">{course.title}</h3>
-                        <span className={`px-2 py-1 text-xs rounded ${course.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                          {course.isActive ? 'פעיל' : 'לא פעיל'}
-                        </span>
-                      </div>
-                      {course.description && (
-                        <p className="text-neutral-600 text-sm mb-3 line-clamp-2">{course.description}</p>
-                      )}
-                      {course.sessionsCount && (
-                        <p className="text-xs text-neutral-500 mb-2">
-                          {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
-                        </p>
-                      )}
-                      {course.price > 0 && (
-                        <p className="text-lg font-bold text-primary-600 mb-3">₪{course.price}</p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleEditCourse(course)}
-                          className="text-sm px-4 py-2"
-                        >
-                          ערוך
-                        </Button>
-                        <Button
-                          variant="soft"
-                          onClick={() => handleDeleteCourse(course._id)}
-                          className="text-sm px-4 py-2"
-                        >
-                          מחק
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+                      <Card key={course._id}>
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="text-xl font-semibold">{course.title}</h3>
+                          <span className={`px-2 py-1 text-xs rounded ${course.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                            {course.isActive ? 'פעיל' : 'לא פעיל'}
+                          </span>
+                        </div>
+                        {course.description && (
+                          <p className="text-neutral-600 text-sm mb-3 line-clamp-2">{course.description}</p>
+                        )}
+                        {course.sessionsCount && (
+                          <p className="text-xs text-neutral-500 mb-2">
+                            {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
+                          </p>
+                        )}
+                        {course.price > 0 && (
+                          <p className="text-lg font-bold text-primary-600 mb-3">₪{course.price}</p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleEditCourse(course)}
+                            className="text-sm px-4 py-2"
+                          >
+                            ערוך
+                          </Button>
+                          <Button
+                            variant="soft"
+                            onClick={() => handleDeleteCourse(course._id)}
+                            className="text-sm px-4 py-2"
+                          >
+                            מחק
+                          </Button>
+                        </div>
+                      </Card>
+                    )
+                  })}
                 </div>
               )}
             </div>
