@@ -72,7 +72,11 @@ function DashboardPage() {
         transactionService.getStats(dateRange.startDate || dateRange.endDate ? {
           startDate: dateRange.startDate,
           endDate: dateRange.endDate
-        } : {}).catch(() => ({ data: { data: { totalIncome: 0, totalExpense: 0, balance: 0 } } }))
+        } : {}).catch((err) => {
+          console.error('❌ Error fetching transaction stats:', err)
+          console.error('❌ Error details:', err.response?.data || err.message)
+          return { data: { totalIncome: 0, totalExpense: 0, balance: 0 } }
+        })
       ])
 
       let customers = customersRes?.data || []
@@ -80,6 +84,13 @@ function DashboardPage() {
       let purchases = purchasesRes?.data || []
       let reviewsData = reviewsRes?.data || []
       let contacts = contactsRes?.data || []
+      
+      // Debug transaction stats
+      console.log('📊 Dashboard - Transaction Stats Response:', transactionsStatsRes)
+      console.log('📊 Dashboard - Transaction Stats Data:', transactionsStatsRes?.data)
+      console.log('📊 Dashboard - Total Income:', transactionsStatsRes?.data?.totalIncome)
+      console.log('📊 Dashboard - Total Expense:', transactionsStatsRes?.data?.totalExpense)
+      console.log('📊 Dashboard - Balance:', transactionsStatsRes?.data?.balance)
       
       // Filter by date range if selected
       if (dateRange.startDate || dateRange.endDate) {
@@ -234,9 +245,9 @@ function DashboardPage() {
           unread: contacts.filter(c => !c.isRead).length
         },
         transactions: {
-          totalIncome: transactionsStatsRes?.data?.data?.totalIncome || 0,
-          totalExpense: transactionsStatsRes?.data?.data?.totalExpense || 0,
-          balance: transactionsStatsRes?.data?.data?.balance || 0
+          totalIncome: transactionsStatsRes?.data?.totalIncome || 0,
+          totalExpense: transactionsStatsRes?.data?.totalExpense || 0,
+          balance: transactionsStatsRes?.data?.balance || 0
         }
       })
     } catch (error) {
