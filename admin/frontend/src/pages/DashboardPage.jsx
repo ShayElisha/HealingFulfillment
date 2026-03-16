@@ -494,6 +494,42 @@ function DashboardPage() {
             </div>
           ) : (
             <>
+              {/* Financial Balance Card */}
+              <div className="mb-8">
+                <Card className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 border-blue-200 shadow-soft-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-semibold text-neutral-900">מאזן תזרימי</h2>
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate('/transactions')}
+                      className="text-sm"
+                    >
+                      צפה בכל הרשומות →
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="text-center p-4 bg-green-50 rounded-xl">
+                      <div className="text-3xl font-bold text-green-600 mb-1">
+                        ₪{stats.transactions.totalIncome.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-neutral-600 font-medium">סה"כ הכנסות</div>
+                    </div>
+                    <div className="text-center p-4 bg-red-50 rounded-xl">
+                      <div className="text-3xl font-bold text-red-600 mb-1">
+                        ₪{stats.transactions.totalExpense.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-neutral-600 font-medium">סה"כ הוצאות</div>
+                    </div>
+                    <div className={`text-center p-4 rounded-xl ${stats.transactions.balance >= 0 ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                      <div className={`text-3xl font-bold mb-1 ${stats.transactions.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        ₪{stats.transactions.balance.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-neutral-600 font-medium">מאזן תזרימי</div>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
               {/* Main Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard
