@@ -99,7 +99,7 @@ function MessagesPage() {
     }
     
     if (formData.channels.length === 0) {
-      toast.error('אנא בחר לפחות ערוץ אחד (מערכת, אימייל או וואטסאפ)')
+      toast.error('אנא בחר לפחות ערוץ אחד (מערכת או אימייל)')
       return
     }
 
@@ -129,22 +129,22 @@ function MessagesPage() {
   return (
     <>
       <Navbar activeTab="messages" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-neutral-50 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
           {/* Header */}
           <div className="mb-8">
             <button
               onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
+              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← חזור לדף הראשי
             </button>
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
+                <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
                   ניהול הודעות
                 </h1>
-                <p className="text-neutral-600">שליחת הודעות ללקוחות במייל ו/או וואטסאפ</p>
+                <p className="text-neutral-600">שליחת הודעות ללקוחות במייל או במערכת</p>
               </div>
               <Button
                 onClick={() => setShowSendForm(!showSendForm)}
@@ -157,8 +157,8 @@ function MessagesPage() {
 
           {/* Send Form */}
           {showSendForm && (
-            <Card className="mb-8">
-              <h2 className="text-2xl font-bold text-neutral-900 mb-6">שלח הודעה חדשה</h2>
+            <Card className="mb-8 border-2 border-primary-100">
+              <h2 className="text-2xl font-serif font-semibold text-neutral-900 mb-6">שלח הודעה חדשה</h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Recipients Selection */}
                 <div>
@@ -174,17 +174,17 @@ function MessagesPage() {
                       {selectedCustomers.length === customers.length ? 'בטל בחירה' : 'בחר הכל'}
                     </button>
                   </div>
-                  <div className="max-h-60 overflow-y-auto border border-neutral-300 rounded-lg p-4 space-y-2">
+                  <div className="max-h-60 overflow-y-auto border border-neutral-200 rounded-xl p-4 space-y-2 bg-neutral-50/30">
                     {customers.map(customer => (
                       <label
                         key={customer._id}
-                        className="flex items-center gap-3 p-2 hover:bg-neutral-50 rounded cursor-pointer"
+                        className="flex items-center gap-3 p-3 hover:bg-white rounded-xl cursor-pointer transition-all duration-150 border border-transparent hover:border-neutral-200"
                       >
                         <input
                           type="checkbox"
                           checked={selectedCustomers.includes(customer._id)}
                           onChange={() => handleCustomerToggle(customer._id)}
-                          className="w-5 h-5 text-primary-600 rounded"
+                          className="w-5 h-5 text-primary-600 rounded border-neutral-300 focus:ring-2 focus:ring-primary-500"
                         />
                         <div className="flex-1">
                           <div className="font-medium text-neutral-900">{customer.name}</div>
@@ -222,15 +222,6 @@ function MessagesPage() {
                       />
                       <span className="text-neutral-700 font-medium">📧 אימייל</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer p-3 border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData.channels.includes('whatsapp')}
-                        onChange={() => handleChannelToggle('whatsapp')}
-                        className="w-5 h-5 text-primary-600 rounded"
-                      />
-                      <span className="text-neutral-700 font-medium">💬 וואטסאפ</span>
-                    </label>
                   </div>
                   <p className="text-sm text-neutral-500 mt-2">
                     ניתן לבחור כמה ערוצים בו-זמנית
@@ -247,7 +238,7 @@ function MessagesPage() {
                     id="subject"
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white shadow-soft"
                     placeholder="לדוגמה: תזכורת לפגישה"
                     required
                   />
@@ -263,7 +254,7 @@ function MessagesPage() {
                     value={formData.content}
                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                     rows="8"
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2.5 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white resize-none shadow-soft"
                     placeholder="כתוב את תוכן ההודעה כאן..."
                     required
                   />
@@ -295,7 +286,7 @@ function MessagesPage() {
 
           {/* Messages History */}
           <div>
-            <h2 className="text-2xl font-bold text-neutral-900 mb-6">היסטוריית הודעות</h2>
+            <h2 className="text-2xl font-serif font-semibold text-neutral-900 mb-6">היסטוריית הודעות</h2>
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-neutral-600">טוען הודעות...</p>
@@ -307,19 +298,19 @@ function MessagesPage() {
             ) : (
               <div className="space-y-4">
                 {messages.map(message => (
-                  <Card key={message._id}>
+                  <Card key={message._id} className="hover:shadow-soft-lg transition-all duration-200">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-neutral-900">
+                          <h3 className="text-lg font-serif font-semibold text-neutral-900">
                             {message.subject}
                           </h3>
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            message.status === 'sent' ? 'bg-green-100 text-green-700' :
-                            message.status === 'failed' ? 'bg-red-100 text-red-700' :
-                            message.status === 'partially_sent' ? 'bg-yellow-100 text-yellow-700' :
-                            message.status === 'sending' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                            message.status === 'sent' ? 'bg-green-50 text-green-700 border-green-200' :
+                            message.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                            message.status === 'partially_sent' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            message.status === 'sending' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-neutral-100 text-neutral-600 border-neutral-200'
                           }`}>
                             {message.status === 'sent' ? 'נשלח' :
                              message.status === 'failed' ? 'נכשל' :
@@ -330,47 +321,9 @@ function MessagesPage() {
                         </div>
                         <p className="text-neutral-600 mb-3">{message.content}</p>
                         
-                        {/* WhatsApp Links */}
-                        {message.channels.includes('whatsapp') && message.sendResults && (
-                          <div className="mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                            <p className="text-sm font-medium text-green-700 mb-2">💬 לינקי וואטסאפ:</p>
-                            <div className="space-y-2">
-                              {message.sendResults
-                                .filter(result => result.channel === 'whatsapp' && result.whatsappLink)
-                                .map((result, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <a
-                                      href={result.whatsappLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-sm text-green-600 hover:text-green-800 underline break-all"
-                                    >
-                                      {result.whatsappLink}
-                                    </a>
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(result.whatsappLink)
-                                        toast.success('לינק הועתק ללוח!')
-                                      }}
-                                      className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200"
-                                    >
-                                      העתק
-                                    </button>
-                                  </div>
-                                ))}
-                            </div>
-                            {message.sendResults.some(r => r.channel === 'whatsapp' && r.note) && (
-                              <p className="text-xs text-green-600 mt-2 italic">
-                                {message.sendResults.find(r => r.channel === 'whatsapp' && r.note)?.note}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        
                         <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
                           {message.channels.includes('system') && <span>💬 מערכת</span>}
                           {message.channels.includes('email') && <span>📧 אימייל</span>}
-                          {message.channels.includes('whatsapp') && <span>💬 וואטסאפ</span>}
                           <span>👥 {message.recipients?.length || 0} נמענים</span>
                           <span>📅 {new Date(message.createdAt).toLocaleDateString('he-IL')}</span>
                         </div>

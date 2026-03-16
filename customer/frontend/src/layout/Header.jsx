@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import CategoriesDropdown from '../components/CategoriesDropdown'
+import QuestionnaireModal from '../components/QuestionnaireModal'
 import { usePurchase } from '../context/PurchaseContext'
 import { useAuth } from '../context/AuthContext'
 import logoImage from '../assets/IMG_1562-Photoroom.png'
@@ -9,6 +10,7 @@ import logoImage from '../assets/IMG_1562-Photoroom.png'
 function Header({ isScrolled }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false)
+  const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false)
   const location = useLocation()
   const { openPurchaseModal } = usePurchase()
   const { isAuthenticated } = useAuth()
@@ -34,16 +36,24 @@ function Header({ isScrolled }) {
       <nav className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-reverse space-x-3">
-            <img 
-              src={logoImage} 
-              alt="יניב תנעמי" 
-              className="h-12 md:h-14 w-auto object-contain"
-            />
-            <div className="text-xl md:text-2xl font-serif font-bold text-primary-600">
-              יניב תנעמי
-            </div>
-          </Link>
+          <div className="flex flex-col items-center">
+            <Link to="/" className="flex items-center space-x-reverse space-x-3">
+              <img 
+                src={logoImage} 
+                alt="יניב תנעמי" 
+                className="h-12 md:h-14 w-auto object-contain"
+              />
+              <div className="text-xl md:text-2xl font-serif font-bold text-primary-600">
+                יניב תנעמי
+              </div>
+            </Link>
+            <button
+              onClick={() => setIsQuestionnaireOpen(true)}
+              className="mt-2 text-xs md:text-sm px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors font-medium shadow-sm"
+            >
+              שאלון התאמה
+            </button>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-reverse space-x-8">
@@ -151,7 +161,7 @@ function Header({ isScrolled }) {
               transition={{ duration: 0.3 }}
               className="md:hidden overflow-hidden"
             >
-              <div className="py-4 space-y-2 border-t border-neutral-200 mt-4">
+              <div className="py-4 space-y-2 border-t border-neutral-200 mt-4 bg-white/98 backdrop-blur-md rounded-b-xl shadow-lg">
                 {navItems.map((item) => (
                   <Link
                     key={item.path}
@@ -227,6 +237,7 @@ function Header({ isScrolled }) {
           )}
         </AnimatePresence>
       </nav>
+      <QuestionnaireModal isOpen={isQuestionnaireOpen} onClose={() => setIsQuestionnaireOpen(false)} />
     </header>
   )
 }

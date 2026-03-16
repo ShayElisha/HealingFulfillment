@@ -56,37 +56,39 @@ function ReviewsPage() {
   return (
     <>
       <Navbar activeTab="reviews" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} customersCount={0} contactsCount={0} />
-      <div className="min-h-screen bg-neutral-50 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
           {/* Header */}
           <div className="mb-8">
             <button
               onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
+              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← חזור לדף הראשי
             </button>
-            <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-              ניהול ביקורות
-            </h1>
-            <p className="text-neutral-600">אשר או דחה ביקורות לקוחות</p>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
+                ניהול ביקורות
+              </h1>
+              <p className="text-neutral-600">אשר או דחה ביקורות לקוחות</p>
+            </div>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-primary-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">סה"כ ביקורות</h3>
               <p className="text-2xl font-bold text-primary-600">{stats.total}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">ממתינות לאישור</h3>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-green-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">מאושרות</h3>
               <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-red-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">נדחות</h3>
               <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
             </Card>
@@ -98,7 +100,7 @@ function ReviewsPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-neutral-300 rounded-lg"
+              className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
             >
               <option value="all">הכל</option>
               <option value="pending">ממתין לאישור</option>
@@ -121,17 +123,17 @@ function ReviewsPage() {
           ) : (
             <div className="space-y-4">
               {filteredReviews.map((review) => (
-                <Card key={review._id}>
+                <Card key={review._id} className="hover:shadow-soft-lg transition-all duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-lg font-semibold text-neutral-900">
+                        <h3 className="text-lg font-serif font-semibold text-neutral-900">
                           {review.customerName || review.customer?.name || 'לקוח'}
                         </h3>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          review.status === 'approved' ? 'bg-green-100 text-green-700' :
-                          review.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                          'bg-yellow-100 text-yellow-700'
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                          review.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                          review.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
                           {review.status === 'approved' ? 'מאושר' :
                            review.status === 'rejected' ? 'נדחה' :

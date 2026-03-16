@@ -189,20 +189,22 @@ function BookingsPage() {
   return (
     <>
       <Navbar activeTab="bookings" onTabChange={() => {}} purchasesCount={0} bookingsCount={bookings.length} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-neutral-50 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
           {/* Header */}
           <div className="mb-8">
             <button
               onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
+              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← חזור לדף הראשי
             </button>
-            <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-              ניהול פגישות
-            </h1>
-            <p className="text-neutral-600">כל הפגישות והזמנות</p>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
+                ניהול פגישות
+              </h1>
+              <p className="text-neutral-600">כל הפגישות והזמנות</p>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -212,10 +214,10 @@ function BookingsPage() {
                 setActiveTab('intro')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2 font-medium transition-colors ${
+              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
                 activeTab === 'intro'
-                  ? 'border-b-2 border-primary-500 text-primary-600'
-                  : 'text-neutral-600 hover:text-primary-600'
+                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
+                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
               }`}
             >
               פגישות היכרות ({bookings.filter(b => b.isIntroMeeting && b.status !== 'completed').length})
@@ -225,10 +227,10 @@ function BookingsPage() {
                 setActiveTab('regular')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2 font-medium transition-colors ${
+              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
                 activeTab === 'regular'
-                  ? 'border-b-2 border-primary-500 text-primary-600'
-                  : 'text-neutral-600 hover:text-primary-600'
+                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
+                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
               }`}
             >
               פגישות רגילות ({bookings.filter(b => !b.isIntroMeeting && b.status !== 'completed').length})
@@ -238,10 +240,10 @@ function BookingsPage() {
                 setActiveTab('history')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2 font-medium transition-colors ${
+              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
                 activeTab === 'history'
-                  ? 'border-b-2 border-primary-500 text-primary-600'
-                  : 'text-neutral-600 hover:text-primary-600'
+                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
+                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
               }`}
             >
               היסטוריית פגישות ({stats.completed})
@@ -249,24 +251,24 @@ function BookingsPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <Card className="bg-gradient-to-br from-primary-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">סה"כ פגישות</h3>
               <p className="text-2xl font-bold text-primary-600">{stats.total}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">ממתינות</h3>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-green-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">מאושרות</h3>
               <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">בוצעו</h3>
               <p className="text-2xl font-bold text-blue-600">{stats.completed}</p>
             </Card>
-            <Card>
+            <Card className="bg-gradient-to-br from-red-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">בוטלו</h3>
               <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
             </Card>
@@ -280,7 +282,7 @@ function BookingsPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 border border-neutral-300 rounded-lg"
+                  className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
                 >
                   <option value="all">הכל</option>
                   <option value="pending">ממתין</option>
@@ -293,7 +295,7 @@ function BookingsPage() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="px-4 py-2 border border-neutral-300 rounded-lg"
+                  className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
                 >
                   <option value="all">הכל</option>
                   <option value="frontend">פרונטאלי</option>
@@ -335,11 +337,11 @@ function BookingsPage() {
               {filteredBookings.map((booking) => {
                 const customer = getCustomerForBooking(booking)
                 return (
-                  <Card key={booking._id}>
+                  <Card key={booking._id} className="hover:shadow-soft-lg transition-all duration-200">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-lg font-semibold text-neutral-900">
+                          <h3 className="text-lg font-serif font-semibold text-neutral-900">
                             {booking.name}
                           </h3>
                           {customer && (
@@ -474,11 +476,11 @@ function BookingsPage() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 items-end ml-4">
-                        <span className={`px-3 py-1 text-xs rounded-full whitespace-nowrap ${
-                          booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                          booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                          booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-yellow-100 text-yellow-700'
+                        <span className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium border ${
+                          booking.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :
+                          booking.status === 'completed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          booking.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
+                          'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
                           {booking.status === 'confirmed' ? 'אושר' :
                            booking.status === 'completed' ? 'בוצע' :
@@ -488,7 +490,7 @@ function BookingsPage() {
                         <select
                           value={booking.status}
                           onChange={(e) => handleStatusChange(booking, e.target.value)}
-                          className="text-xs px-2 py-1 border border-neutral-300 rounded"
+                          className="text-xs px-3 py-1.5 border border-neutral-200 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
                         >
                           <option value="pending">ממתין</option>
                           <option value="confirmed">אושר</option>
@@ -516,20 +518,20 @@ function BookingsPage() {
       {/* Session Summary Modal */}
       {showSummaryModal && summaryBooking && (
         <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={handleCancelSummary}
         >
           <div 
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-soft-xl border border-neutral-100"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-neutral-200 flex justify-between items-center">
-              <h2 className="text-2xl font-serif font-bold text-neutral-900">
+            <div className="p-6 border-b border-neutral-200/60 bg-gradient-to-r from-primary-50/30 to-white flex justify-between items-center">
+              <h2 className="text-2xl font-serif font-semibold text-neutral-900">
                 {summaryBooking?.sessionSummary ? 'ערוך סיכום פגישה' : 'הוסף סיכום פגישה'}
               </h2>
               <button
                 onClick={handleCancelSummary}
-                className="text-neutral-400 hover:text-neutral-600 text-2xl"
+                className="text-neutral-400 hover:text-neutral-600 text-2xl transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100"
               >
                 ✕
               </button>
@@ -560,7 +562,7 @@ function BookingsPage() {
                   value={sessionSummary}
                   onChange={(e) => setSessionSummary(e.target.value)}
                   rows="10"
-                  className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none bg-white transition-all duration-200"
                   placeholder="תאר את מה שקרה בפגישה, נושאים שדוברו, התקדמות, המלצות להמשך..."
                   required
                 />
@@ -570,17 +572,17 @@ function BookingsPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-neutral-200 flex gap-4">
+            <div className="p-6 border-t border-neutral-200/60 bg-neutral-50/30 flex gap-4">
               <button
                 onClick={handleCancelSummary}
-                className="flex-1 px-4 py-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 transition-colors"
+                className="flex-1 px-4 py-2.5 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all duration-200 border border-neutral-200 shadow-soft font-medium"
               >
                 ביטול
               </button>
               <button
                 onClick={handleSaveSummary}
                 disabled={!sessionSummary.trim()}
-                className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-200 disabled:bg-neutral-300 disabled:cursor-not-allowed shadow-soft-lg font-medium"
               >
                 שמור סיכום
               </button>

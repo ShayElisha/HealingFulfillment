@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Admin Service Frontend - Healing Fulfillment",
   "scripts": {
-    "dev": "vite --port 3001",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "npx vite --port 3001",
+    "build": "npx vite build",
+    "preview": "npx vite preview"
   },
   "dependencies": {
     "axios": "^1.6.2",

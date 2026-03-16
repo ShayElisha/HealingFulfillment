@@ -54,9 +54,9 @@ function HomePage() {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20" style={{ zIndex: 10, position: 'relative' }}>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50" style={{ zIndex: 0 }}></div>
-        <div className="container-custom relative" style={{ zIndex: 1 }}>
+      <section className="relative min-h-screen flex items-center justify-center pt-20">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50"></div>
+        <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.2}>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight">

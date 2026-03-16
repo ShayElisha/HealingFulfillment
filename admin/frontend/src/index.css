@@ -8,33 +8,39 @@
   }
   
   body {
-    @apply bg-neutral-50 text-neutral-900 font-sans;
-    font-family: 'Rubik', system-ui, sans-serif;
+    @apply bg-gradient-to-br from-neutral-50 via-white to-neutral-50 text-neutral-800 font-sans;
+    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
     direction: rtl;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
-    font-family: 'Cormorant Garamond', serif;
+    @apply font-serif text-neutral-900;
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-500 text-white px-6 py-3 rounded-xl font-medium 
-           transition-all duration-300 hover:bg-primary-600 
-           hover:shadow-soft-lg active:scale-95;
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-3 rounded-xl font-medium 
+           transition-all duration-200 hover:from-primary-600 hover:to-primary-700 
+           hover:shadow-soft-lg active:scale-[0.98] shadow-soft;
   }
   
   .btn-secondary {
     @apply bg-white text-primary-600 px-6 py-3 rounded-xl font-medium 
-           border-2 border-primary-500 transition-all duration-300 
-           hover:bg-primary-50 active:scale-95;
+           border border-primary-200 transition-all duration-200 
+           hover:bg-primary-50 hover:border-primary-300 active:scale-[0.98] shadow-soft;
   }
   
   .btn-soft {
-    @apply bg-neutral-100 text-neutral-700 px-6 py-3 rounded-xl font-medium 
-           transition-all duration-300 hover:bg-neutral-200 active:scale-95;
+    @apply bg-neutral-50 text-neutral-700 px-6 py-3 rounded-xl font-medium 
+           transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-900 
+           active:scale-[0.98] border border-neutral-200;
   }
   
   .section-padding {
@@ -47,7 +53,7 @@
   
   .card-soft {
     @apply bg-white rounded-2xl shadow-soft p-6 md:p-8 
-           transition-all duration-300 hover:shadow-soft-lg;
+           transition-all duration-200 hover:shadow-soft-lg border border-neutral-100;
   }
 }
 

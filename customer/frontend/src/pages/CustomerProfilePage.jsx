@@ -538,10 +538,8 @@ function CustomerProfilePage() {
                         <div className="flex flex-wrap gap-4 text-sm text-neutral-500">
                           <span>
                             {message.channels.includes('system') && '💬 מערכת'}
-                            {message.channels.includes('system') && (message.channels.includes('email') || message.channels.includes('whatsapp')) && ' • '}
+                            {message.channels.includes('system') && message.channels.includes('email') && ' • '}
                             {message.channels.includes('email') && '📧 אימייל'}
-                            {message.channels.includes('email') && message.channels.includes('whatsapp') && ' • '}
-                            {message.channels.includes('whatsapp') && '💬 וואטסאפ'}
                           </span>
                           <span>📅 {new Date(message.createdAt).toLocaleDateString('he-IL', {
                             year: 'numeric',

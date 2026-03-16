@@ -16,6 +16,7 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
     { id: 'bookings', label: `פגישות (${bookingsCount || 0})`, icon: '📅', route: '/bookings' },
     { id: 'contacts', label: `פניות (${contactsCount || 0})`, icon: '📧', route: '/contacts' },
     { id: 'leads', label: 'לידים', icon: '📋', route: '/leads' },
+    { id: 'transactions', label: 'הכנסות והוצאות', icon: '💰', route: '/transactions' },
     { id: 'messages', label: 'הודעות', icon: '💬', route: '/messages' },
     { id: 'reviews', label: 'ביקורות', icon: '⭐', route: '/reviews' },
   ]
@@ -73,6 +74,9 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
     }
     if (location.pathname === '/leads') {
       return 'leads'
+    }
+    if (location.pathname === '/transactions') {
+      return 'transactions'
     }
     if (location.pathname === '/messages') {
       return 'messages'

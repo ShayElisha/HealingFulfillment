@@ -48,19 +48,21 @@ function CustomersPage() {
   return (
     <>
       <Navbar activeTab="customers" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-neutral-50 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="mb-8">
             <button
               onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
+              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
             >
               ← חזור לדף הראשי
             </button>
-            <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-              לקוחות
-            </h1>
-            <p className="text-neutral-600">כל הלקוחות שרכשו מסלולים</p>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
+                לקוחות
+              </h1>
+              <p className="text-neutral-600">כל הלקוחות שרכשו מסלולים</p>
+            </div>
           </div>
 
           {loading ? (
@@ -74,34 +76,34 @@ function CustomersPage() {
           ) : (
             <div className="space-y-4">
               {customers.map((customer) => (
-                <Card key={customer._id}>
+                <Card key={customer._id} className="hover:shadow-soft-lg transition-all duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                      <h3 className="text-lg font-serif font-semibold text-neutral-900 mb-3">
                         {customer.name}
                       </h3>
-                      <div className="space-y-1 text-sm text-neutral-600">
-                        <p>📧 {customer.email}</p>
-                        <p>📞 {customer.phone}</p>
-                        <div className="grid grid-cols-2 gap-4 mt-3">
-                          <div>
-                            <p className="text-xs text-neutral-500">פגישות</p>
-                            <p className="font-semibold">{customer.stats?.totalSessions || 0}</p>
+                      <div className="space-y-2 text-sm text-neutral-600 mb-4">
+                        <p className="flex items-center gap-2">📧 {customer.email}</p>
+                        <p className="flex items-center gap-2">📞 {customer.phone}</p>
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-neutral-100">
+                          <div className="bg-neutral-50 rounded-lg p-3">
+                            <p className="text-xs text-neutral-500 mb-1">פגישות</p>
+                            <p className="font-semibold text-neutral-900">{customer.stats?.totalSessions || 0}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-neutral-500">רכישות</p>
-                            <p className="font-semibold">{customer.purchases?.length || 0}</p>
+                          <div className="bg-neutral-50 rounded-lg p-3">
+                            <p className="text-xs text-neutral-500 mb-1">רכישות</p>
+                            <p className="font-semibold text-neutral-900">{customer.purchases?.length || 0}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-neutral-500">סה"כ הוצאה</p>
-                            <p className="font-semibold">₪{customer.stats?.totalSpent || 0}</p>
+                          <div className="bg-neutral-50 rounded-lg p-3">
+                            <p className="text-xs text-neutral-500 mb-1">סה"כ הוצאה</p>
+                            <p className="font-semibold text-primary-600">₪{customer.stats?.totalSpent || 0}</p>
                           </div>
-                          <div>
-                            <p className="text-xs text-neutral-500">קבצים</p>
-                            <p className="font-semibold">{customer.files?.length || 0}</p>
+                          <div className="bg-neutral-50 rounded-lg p-3">
+                            <p className="text-xs text-neutral-500 mb-1">קבצים</p>
+                            <p className="font-semibold text-neutral-900">{customer.files?.length || 0}</p>
                           </div>
                         </div>
-                        <p className="text-xs text-neutral-400 mt-2">
+                        <p className="text-xs text-neutral-400 mt-3">
                           נרשם ב: {new Date(customer.createdAt).toLocaleDateString('he-IL', {
                             year: 'numeric',
                             month: 'long',
@@ -110,7 +112,7 @@ function CustomersPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2 items-end">
+                    <div className="flex flex-col gap-2 items-end ml-4">
                       <Button
                         onClick={() => navigate(`/customer/${customer._id}`)}
                         variant="primary"
@@ -118,10 +120,10 @@ function CustomersPage() {
                       >
                         פתח תיק לקוח
                       </Button>
-                      <span className={`px-3 py-1 text-xs rounded-full ${
-                        customer.status === 'active' ? 'bg-green-100 text-green-700' :
-                        customer.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                        'bg-neutral-100 text-neutral-700'
+                      <span className={`px-3 py-1 text-xs rounded-full font-medium border ${
+                        customer.status === 'active' ? 'bg-green-50 text-green-700 border-green-200' :
+                        customer.status === 'completed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        'bg-neutral-100 text-neutral-600 border-neutral-200'
                       }`}>
                         {customer.status === 'active' ? 'פעיל' :
                          customer.status === 'completed' ? 'הושלם' :

@@ -20,6 +20,33 @@ router.get('/', async (req, res, next) => {
   }
 })
 
+// PUT /api/contact/:id/read - Mark contact as read
+router.put('/:id/read', async (req, res, next) => {
+  try {
+    const contact = await Contact.findByIdAndUpdate(
+      req.params.id,
+      { 
+        isRead: true,
+        readAt: new Date()
+      },
+      { new: true }
+    )
+    
+    if (!contact) {
+      return res.status(404).json({
+        message: 'Contact not found'
+      })
+    }
+    
+    res.json({
+      message: 'Contact marked as read',
+      data: contact
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // POST /api/contact
 router.post('/', validateContact, async (req, res, next) => {
   try {

@@ -16,6 +16,7 @@ import coursesRoutes from './routes/courses.js'
 import categoriesRoutes from './routes/categories.js'
 import purchasesRoutes from './routes/purchases.js'
 import messagesRoutes from './routes/messages.js'
+import leadsRoutes from './routes/leads.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -106,6 +107,7 @@ app.use('/api/courses', coursesRoutes)
 app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
 app.use('/api/messages', messagesRoutes)
+app.use('/api/leads', leadsRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

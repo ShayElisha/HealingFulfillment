@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { categoryService, courseService, purchaseService, bookingService, contactService, reviewService } from '../services/adminApi'
+import { categoryService, courseService, purchaseService, bookingService, contactService, reviewService, transactionService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -21,14 +21,25 @@ function DashboardPage() {
     bookings: { total: 0, pending: 0, confirmed: 0, completed: 0, upcoming: [] },
     purchases: { total: 0, pending: 0, completed: 0, revenue: 0 },
     reviews: { total: 0, pending: 0, approved: 0, averageRating: 0 },
-    contacts: { total: 0, unread: 0 }
+    contacts: { total: 0, unread: 0 },
+    transactions: { totalIncome: 0, totalExpense: 0, balance: 0 }
   })
 
   useEffect(() => {
     loadDashboardData()
     // Refresh data every 30 seconds
     const interval = setInterval(loadDashboardData, 30000)
-    return () => clearInterval(interval)
+    
+    // Refresh data when window gains focus (user returns to tab)
+    const handleFocus = () => {
+      loadDashboardData()
+    }
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [dateRange])
 
   // Close date picker when clicking outside
@@ -50,13 +61,18 @@ function DashboardPage() {
         bookingsRes,
         purchasesRes,
         reviewsRes,
-        contactsRes
+        contactsRes,
+        transactionsStatsRes
       ] = await Promise.all([
         customerService.getAll(),
         bookingService.getAll(),
         purchaseService.getAll(),
         reviewService.getAll(),
-        contactService.getAll()
+        contactService.getAll(),
+        transactionService.getStats(dateRange.startDate || dateRange.endDate ? {
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        } : {}).catch(() => ({ data: { data: { totalIncome: 0, totalExpense: 0, balance: 0 } } }))
       ])
 
       let customers = customersRes?.data || []
@@ -215,7 +231,12 @@ function DashboardPage() {
         },
         contacts: {
           total: contacts.length,
-          unread: contacts.filter(c => !c.read || c.read === false).length
+          unread: contacts.filter(c => !c.isRead).length
+        },
+        transactions: {
+          totalIncome: transactionsStatsRes?.data?.data?.totalIncome || 0,
+          totalExpense: transactionsStatsRes?.data?.data?.totalExpense || 0,
+          balance: transactionsStatsRes?.data?.data?.balance || 0
         }
       })
     } catch (error) {
@@ -229,27 +250,27 @@ function DashboardPage() {
 
   const StatCard = ({ title, value, subtitle, icon, gradient, trend, trendValue, onClick }) => (
     <div 
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer border border-white/20`}
+      className={`relative overflow-hidden rounded-2xl bg-white p-6 shadow-soft hover:shadow-soft-lg transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer border border-neutral-100 group`}
       onClick={onClick}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+      <div className={`absolute top-0 right-0 w-32 h-32 ${gradient} opacity-5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:opacity-10 transition-opacity duration-300`}></div>
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+          <div className={`p-3 ${gradient} rounded-xl shadow-soft-md group-hover:scale-110 transition-transform duration-200`}>
             <span className="text-2xl">{icon}</span>
           </div>
           {trend && (
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-              trendValue >= 0 ? 'bg-green-500/20 text-green-700' : 'bg-red-500/20 text-red-700'
+            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              trendValue >= 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               <span>{trendValue >= 0 ? '↑' : '↓'}</span>
               <span>{Math.abs(trendValue)}%</span>
             </div>
           )}
         </div>
-        <h3 className="text-sm font-medium text-white/80 mb-1">{title}</h3>
-        <p className="text-3xl font-bold text-white mb-1">{value}</p>
-        {subtitle && <p className="text-xs text-white/70">{subtitle}</p>}
+        <h3 className="text-sm font-medium text-neutral-600 mb-1">{title}</h3>
+        <p className="text-3xl font-bold text-neutral-900 mb-1">{value}</p>
+        {subtitle && <p className="text-xs text-neutral-500 mt-1">{subtitle}</p>}
       </div>
     </div>
   )
@@ -274,21 +295,21 @@ function DashboardPage() {
       <Navbar activeTab="dashboard" onTabChange={() => {}} purchasesCount={stats.purchases.pending} bookingsCount={stats.bookings.pending} customersCount={stats.customers.total} contactsCount={stats.contacts.unread} />
       <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 text-white shadow-xl">
+        <div className="bg-gradient-to-br from-primary-50 via-white to-primary-50/30 border-b border-neutral-200/60 shadow-soft">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <h1 className="text-4xl font-serif font-bold mb-2">לוח בקרה</h1>
-                <p className="text-primary-100 text-lg">סקירה כללית של המערכת</p>
+                <h1 className="text-3xl md:text-4xl font-serif font-semibold mb-2 text-neutral-900">לוח בקרה</h1>
+                <p className="text-neutral-600 text-base">סקירה כללית של המערכת</p>
               </div>
               <div className="flex items-center gap-4">
                 {/* Date Range Picker */}
                 <div className="relative date-picker-container">
                   <button
                     onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 border border-white/30"
+                    className="bg-white hover:bg-neutral-50 backdrop-blur-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200 border border-neutral-200 shadow-soft text-neutral-700 hover:text-neutral-900"
                   >
-                    <span className="text-lg">📅</span>
+                    <span className="text-base">📅</span>
                     <span className="text-sm font-medium">
                       {dateRange.startDate || dateRange.endDate 
                         ? `${dateRange.startDate ? new Date(dateRange.startDate).toLocaleDateString('he-IL') : 'תחילת טווח'} - ${dateRange.endDate ? new Date(dateRange.endDate).toLocaleDateString('he-IL') : 'סוף טווח'}`
@@ -301,7 +322,7 @@ function DashboardPage() {
                           setDateRange({ startDate: null, endDate: null })
                           setShowDatePicker(false)
                         }}
-                        className="text-white/80 hover:text-white ml-2"
+                        className="text-neutral-400 hover:text-neutral-600 ml-2"
                       >
                         ✕
                       </button>
@@ -430,8 +451,8 @@ function DashboardPage() {
                 </div>
                 
                 <div className="text-right">
-                  <p className="text-sm text-primary-200 mb-1">תאריך עדכון אחרון</p>
-                  <p className="text-lg font-semibold">{new Date().toLocaleDateString('he-IL', { 
+                  <p className="text-sm text-neutral-500 mb-1">תאריך עדכון אחרון</p>
+                  <p className="text-base font-medium text-neutral-700">{new Date().toLocaleDateString('he-IL', { 
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 
@@ -445,10 +466,10 @@ function DashboardPage() {
             
             {/* Date Range Indicator */}
             {(dateRange.startDate || dateRange.endDate) && (
-              <div className="mt-4 pt-4 border-t border-white/20">
-                <div className="flex items-center gap-2 text-primary-100">
+              <div className="mt-4 pt-4 border-t border-neutral-200/60">
+                <div className="flex items-center gap-2 text-neutral-600">
                   <span className="text-sm">📊 נתונים מוצגים עבור:</span>
-                  <span className="text-sm font-semibold">
+                  <span className="text-sm font-medium text-neutral-700">
                     {dateRange.startDate 
                       ? new Date(dateRange.startDate).toLocaleDateString('he-IL')
                       : 'כל התאריכים'}
@@ -480,7 +501,7 @@ function DashboardPage() {
                   value={stats.customers.total}
                   subtitle={`${stats.customers.active} פעילים • ${stats.customers.new} חדשים השבוע`}
                   icon="👥"
-                  gradient="from-blue-500 via-blue-600 to-blue-700"
+                  gradient="bg-blue-50"
                   onClick={() => navigate('/customers')}
                 />
                 <StatCard
@@ -488,7 +509,7 @@ function DashboardPage() {
                   value={stats.bookings.total}
                   subtitle={`${stats.bookings.pending} ממתינות • ${stats.bookings.confirmed} מאושרות`}
                   icon="📅"
-                  gradient="from-green-500 via-green-600 to-green-700"
+                  gradient="bg-emerald-50"
                   onClick={() => navigate('/bookings')}
                 />
                 <StatCard
@@ -496,7 +517,7 @@ function DashboardPage() {
                   value={`₪${stats.purchases.revenue.toLocaleString()}`}
                   subtitle={`${stats.purchases.completed} רכישות הושלמו${dateRange.startDate || dateRange.endDate ? ' בטווח הנבחר' : ''}`}
                   icon="💰"
-                  gradient="from-purple-500 via-purple-600 to-purple-700"
+                  gradient="bg-violet-50"
                   trend={!dateRange.startDate && !dateRange.endDate}
                   trendValue={stats.purchases.revenueGrowth}
                   onClick={() => navigate('/')}
@@ -506,21 +527,21 @@ function DashboardPage() {
                   value={stats.reviews.total}
                   subtitle={`${stats.reviews.pending} ממתינות • ⭐ ${stats.reviews.averageRating || 0}`}
                   icon="⭐"
-                  gradient="from-yellow-500 via-yellow-600 to-yellow-700"
+                  gradient="bg-amber-50"
                   onClick={() => navigate('/reviews')}
                 />
               </div>
 
               {/* Secondary Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="bg-white border-l-4 border-blue-500 shadow-md hover:shadow-lg transition-shadow">
+                <Card className="bg-white border-l-4 border-blue-200 shadow-soft hover:shadow-soft-lg transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-neutral-600 mb-1">פניות יצירת קשר</p>
                       <p className="text-2xl font-bold text-neutral-900">{stats.contacts.total}</p>
-                      <p className="text-xs text-red-600 mt-1">{stats.contacts.unread} לא נקראו</p>
+                      <p className="text-xs text-red-600 mt-1 font-medium">{stats.contacts.unread} לא נקראו</p>
                     </div>
-                    <div className="p-4 bg-blue-50 rounded-full">
+                    <div className="p-4 bg-blue-50 rounded-xl shadow-soft">
                       <span className="text-3xl">📧</span>
                     </div>
                   </div>
@@ -533,51 +554,51 @@ function DashboardPage() {
                   </Button>
                 </Card>
 
-                <Card className="bg-white border-l-4 border-green-500 shadow-md hover:shadow-lg transition-shadow">
+                <Card className="bg-white border-l-4 border-green-200 shadow-soft hover:shadow-soft-md transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-neutral-600 mb-1">סטטוס פגישות</p>
-                      <div className="space-y-1 mt-2">
+                      <div className="space-y-1.5 mt-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">ממתינות</span>
-                          <span className="font-bold text-yellow-600">{stats.bookings.pending}</span>
+                          <span className="font-semibold text-amber-600">{stats.bookings.pending}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">מאושרות</span>
-                          <span className="font-bold text-green-600">{stats.bookings.confirmed}</span>
+                          <span className="font-semibold text-green-600">{stats.bookings.confirmed}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">הושלמו</span>
-                          <span className="font-bold text-blue-600">{stats.bookings.completed}</span>
+                          <span className="font-semibold text-blue-600">{stats.bookings.completed}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-full">
+                    <div className="p-4 bg-green-50 rounded-xl shadow-soft">
                       <span className="text-3xl">📊</span>
                     </div>
                   </div>
                 </Card>
 
-                <Card className="bg-white border-l-4 border-purple-500 shadow-md hover:shadow-lg transition-shadow">
+                <Card className="bg-white border-l-4 border-purple-200 shadow-soft hover:shadow-soft-md transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-neutral-600 mb-1">סטטוס רכישות</p>
-                      <div className="space-y-1 mt-2">
+                      <div className="space-y-1.5 mt-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">ממתינות</span>
-                          <span className="font-bold text-yellow-600">{stats.purchases.pending}</span>
+                          <span className="font-semibold text-amber-600">{stats.purchases.pending}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">הושלמו</span>
-                          <span className="font-bold text-green-600">{stats.purchases.completed}</span>
+                          <span className="font-semibold text-green-600">{stats.purchases.completed}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-neutral-600">סה"כ הכנסות</span>
-                          <span className="font-bold text-primary-600">₪{stats.purchases.revenue.toLocaleString()}</span>
+                          <span className="font-semibold text-primary-600">₪{stats.purchases.revenue.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="p-4 bg-purple-50 rounded-full">
+                    <div className="p-4 bg-purple-50 rounded-xl shadow-soft">
                       <span className="text-3xl">💳</span>
                     </div>
                   </div>
@@ -587,10 +608,10 @@ function DashboardPage() {
               {/* Main Content Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 {/* Upcoming Bookings */}
-                <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-                  <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-200">
+                <Card className="bg-white shadow-soft hover:shadow-soft-lg transition-all duration-200">
+                  <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-200/60">
                     <div>
-                      <h2 className="text-xl font-bold text-neutral-900">פגישות קרובות</h2>
+                      <h2 className="text-xl font-serif font-semibold text-neutral-900">פגישות קרובות</h2>
                       <p className="text-sm text-neutral-600 mt-1">7 הימים הבאים</p>
                     </div>
                     <Button
@@ -611,7 +632,7 @@ function DashboardPage() {
                       {stats.bookings.upcoming.map((booking, index) => (
                         <div
                           key={booking._id}
-                          className="p-4 bg-gradient-to-r from-neutral-50 to-white rounded-xl hover:from-primary-50 hover:to-primary-50 cursor-pointer transition-all duration-300 border border-neutral-200 hover:border-primary-300 hover:shadow-md transform hover:-translate-y-0.5"
+                          className="p-4 bg-gradient-to-r from-neutral-50 to-white rounded-xl hover:from-primary-50/50 hover:to-primary-50/30 cursor-pointer transition-all duration-200 border border-neutral-200 hover:border-primary-200 hover:shadow-soft transform hover:-translate-y-0.5"
                           onClick={() => navigate('/bookings')}
                         >
                           <div className="flex justify-between items-start">
@@ -651,10 +672,10 @@ function DashboardPage() {
                 </Card>
 
                 {/* Pending Reviews */}
-                <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-                  <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-200">
+                <Card className="bg-white shadow-soft hover:shadow-soft-lg transition-all duration-200">
+                  <div className="flex justify-between items-center mb-6 pb-4 border-b border-neutral-200/60">
                     <div>
-                      <h2 className="text-xl font-bold text-neutral-900">ביקורות ממתינות</h2>
+                      <h2 className="text-xl font-serif font-semibold text-neutral-900">ביקורות ממתינות</h2>
                       <p className="text-sm text-neutral-600 mt-1">{stats.reviews.pending} ממתינות לאישור</p>
                     </div>
                     <Button
@@ -675,7 +696,7 @@ function DashboardPage() {
                       {reviews.filter(r => r.status === 'pending').slice(0, 3).map((review) => (
                         <div
                           key={review._id}
-                          className="p-4 bg-gradient-to-r from-neutral-50 to-white rounded-xl hover:from-yellow-50 hover:to-yellow-50 cursor-pointer transition-all duration-300 border border-neutral-200 hover:border-yellow-300 hover:shadow-md transform hover:-translate-y-0.5"
+                          className="p-4 bg-gradient-to-r from-neutral-50 to-white rounded-xl hover:from-amber-50/50 hover:to-amber-50/30 cursor-pointer transition-all duration-200 border border-neutral-200 hover:border-amber-200 hover:shadow-soft transform hover:-translate-y-0.5"
                           onClick={() => navigate('/reviews')}
                         >
                           <div className="flex justify-between items-start">
@@ -703,40 +724,40 @@ function DashboardPage() {
               </div>
 
               {/* Quick Actions */}
-              <Card className="bg-gradient-to-r from-primary-50 to-primary-100 border-primary-200 shadow-lg">
-                <h2 className="text-xl font-bold text-neutral-900 mb-4">פעולות מהירות</h2>
+              <Card className="bg-gradient-to-br from-primary-50/50 via-white to-primary-50/30 border border-primary-100 shadow-soft">
+                <h2 className="text-xl font-semibold text-neutral-900 mb-4">פעולות מהירות</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button
                     onClick={() => navigate('/admin?tab=categories')}
-                    variant="primary"
-                    className="flex flex-col items-center gap-2 py-4"
+                    variant="secondary"
+                    className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
                     <span className="text-2xl">💆</span>
-                    <span>ניהול טיפולים</span>
+                    <span className="text-sm">ניהול טיפולים</span>
                   </Button>
                   <Button
                     onClick={() => navigate('/admin?tab=courses')}
-                    variant="primary"
-                    className="flex flex-col items-center gap-2 py-4"
+                    variant="secondary"
+                    className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
                     <span className="text-2xl">📚</span>
-                    <span>ניהול מסלולים</span>
+                    <span className="text-sm">ניהול מסלולים</span>
                   </Button>
                   <Button
                     onClick={() => navigate('/admin?tab=new-booking')}
-                    variant="primary"
-                    className="flex flex-col items-center gap-2 py-4"
+                    variant="secondary"
+                    className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
                     <span className="text-2xl">➕</span>
-                    <span>צור פגישה</span>
+                    <span className="text-sm">צור פגישה</span>
                   </Button>
                   <Button
                     onClick={() => navigate('/messages')}
-                    variant="primary"
-                    className="flex flex-col items-center gap-2 py-4"
+                    variant="secondary"
+                    className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
                     <span className="text-2xl">💬</span>
-                    <span>שלח הודעה</span>
+                    <span className="text-sm">שלח הודעה</span>
                   </Button>
                   </div>
                 </Card>

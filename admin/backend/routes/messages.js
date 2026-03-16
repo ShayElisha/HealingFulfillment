@@ -48,7 +48,7 @@ router.post('/', async (req, res, next) => {
     }
 
     // Validate channels
-    const validChannels = ['email', 'whatsapp', 'system']
+    const validChannels = ['email', 'system']
     const invalidChannels = channels.filter(ch => !validChannels.includes(ch))
     if (invalidChannels.length > 0) {
       return res.status(400).json({ message: `Invalid channels: ${invalidChannels.join(', ')}` })
@@ -168,44 +168,6 @@ async function sendMessagesAsync(message, recipients, channels) {
           } else {
             result.status = 'failed'
             result.error = 'No email address'
-            failCount++
-          }
-        } else if (channel === 'whatsapp') {
-          // WhatsApp integration - creates WhatsApp link
-          if (recipient.phone) {
-            try {
-              // Format phone number (remove any non-digit characters and add country code if needed)
-              let phoneNumber = recipient.phone.replace(/\D/g, '') // Remove non-digits
-              
-              // If phone doesn't start with country code, assume it's Israeli (972)
-              if (!phoneNumber.startsWith('972') && phoneNumber.length === 9) {
-                phoneNumber = '972' + phoneNumber
-              } else if (phoneNumber.startsWith('0')) {
-                // Replace leading 0 with country code
-                phoneNumber = '972' + phoneNumber.substring(1)
-              }
-              
-              // Encode message content
-              const encodedMessage = encodeURIComponent(`${message.subject}\n\n${message.content}`)
-              
-              // Create WhatsApp link
-              const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-              
-              // Store the link in the result
-              result.whatsappLink = whatsappLink
-            result.status = 'sent'
-            result.sentAt = new Date()
-              result.note = 'WhatsApp link generated. Click the link to send manually.'
-            successCount++
-              console.log(`WhatsApp link for ${recipient.name} (${recipient.phone}): ${whatsappLink}`)
-            } catch (error) {
-              result.status = 'failed'
-              result.error = error.message || 'Failed to generate WhatsApp link'
-              failCount++
-            }
-          } else {
-            result.status = 'failed'
-            result.error = 'No phone number'
             failCount++
           }
         } else if (channel === 'system') {

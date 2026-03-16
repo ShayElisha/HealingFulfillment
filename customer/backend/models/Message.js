@@ -25,7 +25,7 @@ const messageSchema = new mongoose.Schema({
   // ערוצי שליחה
   channels: [{
     type: String,
-    enum: ['email', 'whatsapp', 'system'],
+    enum: ['email', 'system'],
     required: true
   }],
   
@@ -44,7 +44,7 @@ const messageSchema = new mongoose.Schema({
     },
     channel: {
       type: String,
-      enum: ['email', 'whatsapp', 'system']
+      enum: ['email', 'system']
     },
     status: {
       type: String,
@@ -54,9 +54,6 @@ const messageSchema = new mongoose.Schema({
       type: String
     },
     note: {
-      type: String
-    },
-    whatsappLink: {
       type: String
     },
     sid: {
