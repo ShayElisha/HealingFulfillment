@@ -93,19 +93,24 @@ function CoursesPage() {
                     </div>
                   )}
                   {course.price > 0 && (() => {
-                    // Calculate original price from discount if originalPrice is not set
-                    let originalPrice = course.originalPrice
-                    let discountPercent = 0
+                    // price is the full price, discounted price is calculated from it
+                    let originalPrice = course.originalPrice || course.price
+                    let discountPercent = course.discount || 0
+                    let discountedPrice = course.price
                     
                     if (course.discount && course.discount > 0) {
                       discountPercent = course.discount
-                      if (!originalPrice || originalPrice === 0) {
-                        // Calculate original price: price = originalPrice * (1 - discount/100)
-                        originalPrice = Math.round(course.price / (1 - course.discount / 100))
-                      }
+                      // Calculate discounted price: discountedPrice = price * (1 - discount/100)
+                      discountedPrice = Math.round(course.price * (1 - course.discount / 100))
+                      originalPrice = course.price
+                    } else if (course.originalPrice && course.originalPrice > course.price) {
+                      // If originalPrice is set and greater than price, use it
+                      originalPrice = course.originalPrice
+                      discountedPrice = course.price
+                      discountPercent = Math.round(((originalPrice - course.price) / originalPrice) * 100)
                     }
                     
-                    const hasDiscount = originalPrice && originalPrice > course.price
+                    const hasDiscount = discountPercent > 0 && originalPrice > discountedPrice
                     
                     return (
                       <div className="mb-4">
@@ -116,11 +121,11 @@ function CoursesPage() {
                                 ₪{originalPrice}
                               </span>
                               <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                {discountPercent > 0 ? discountPercent : Math.round(((originalPrice - course.price) / originalPrice) * 100)}% הנחה
+                                {discountPercent}% הנחה
                               </span>
                             </div>
                             <span className="text-2xl font-bold text-primary-600">
-                              ₪{course.price}
+                              ₪{discountedPrice}
                             </span>
                           </div>
                         ) : (
