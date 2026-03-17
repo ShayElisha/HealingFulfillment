@@ -19,6 +19,9 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "ignore": [
+    "api/node_modules/**"
   ]
 }
 
