@@ -1239,16 +1239,11 @@ function AdminPage() {
                         )}
                         {course.price > 0 && (
                           <div className="mb-3">
-                            <p className="text-lg font-bold text-green-600">₪{course.price}</p>
+                            <p className="text-lg font-bold text-primary-600">₪{course.price}</p>
                             {course.discount > 0 && (
-                              <>
-                                <p className="text-sm text-neutral-400 line-through mt-1">
-                                  ₪{Math.round(course.price * (1 - course.discount / 100))}
-                                </p>
-                                <p className="text-sm text-red-600 font-medium mt-1">
-                                  {course.discount}% הנחה
-                                </p>
-                              </>
+                              <p className="text-sm text-red-600 font-medium mt-1">
+                                {course.discount}% הנחה
+                              </p>
                             )}
                           </div>
                         )}
