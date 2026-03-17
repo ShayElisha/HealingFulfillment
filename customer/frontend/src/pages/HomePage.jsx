@@ -60,7 +60,7 @@ function HomePage() {
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.1}>
-              <div className="flex justify-center mb-10 mt-[120px]">
+              <div className="flex justify-center mb-10 mt-[250px]">
                 <div className="relative">
                   {/* Rotating dark glowing element around the ring */}
                   <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full animate-spin-slow pointer-events-none">
