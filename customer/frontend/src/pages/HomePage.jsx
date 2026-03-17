@@ -8,7 +8,7 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
-import yanivImage from '../assets/yaniv.PNG'
+import yanivImage from '../assets/yaniv.png'
 
 function HomePage() {
   const { openPurchaseModal } = usePurchase()
