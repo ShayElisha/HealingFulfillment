@@ -109,18 +109,43 @@ function HomePage() {
             </AnimatedSection>
           </div>
         </div>
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <svg
-            className="w-6 h-6 text-neutral-400"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
+          {/* Speech bubble with text */}
+          <div className="relative mb-4 animate-bounce">
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-200 px-6 py-4 max-w-xs md:max-w-sm">
+              <p className="text-sm md:text-base text-neutral-700 text-center leading-relaxed font-medium">
+                אתה מרגיש תקוע? אתה חושב שהכל חשוך? תבדוק אם אחד הדברים פה מתאים לך?
+              </p>
+            </div>
+            {/* Arrow pointing down */}
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+              <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white"></div>
+            </div>
+          </div>
+          
+          {/* Scroll down arrow */}
+          <button
+            onClick={() => {
+              const treatmentsSection = document.getElementById('treatments')
+              if (treatmentsSection) {
+                treatmentsSection.scrollIntoView({ behavior: 'smooth' })
+              }
+            }}
+            className="cursor-pointer hover:scale-110 transition-transform duration-300"
+            aria-label="גלול לרשימת טיפולים"
           >
-            <path d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
+            <svg
+              className="w-6 h-6 text-neutral-400 hover:text-primary-600 transition-colors"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
         </div>
       </section>
 
