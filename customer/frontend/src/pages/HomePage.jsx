@@ -55,71 +55,71 @@ function HomePage() {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20">
+      <section className="relative min-h-screen flex items-center justify-center pt-16 sm:pt-20 pb-32 sm:pb-24">
 <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50"></div>
-        <div className="container-custom relative z-10">
+        <div className="container-custom relative z-10 px-3 sm:px-4">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.1}>
-              <div className="flex justify-center mb-16">
+              <div className="flex justify-center mb-8 sm:mb-12 md:mb-16">
                 <div className="relative">
                   {/* Rotating dark glowing element around the ring */}
-                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full animate-spin-slow pointer-events-none">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                  <div className="absolute inset-0 -inset-3 sm:-inset-5 md:-inset-8 rounded-full animate-spin-slow pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
                   </div>
                   
                   {/* Rotating ring (not glowing) */}
-                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full border-[6px] md:border-[10px] border-primary-700/80 bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
+                  <div className="absolute inset-0 -inset-3 sm:-inset-5 md:-inset-8 rounded-full border-[4px] sm:border-[6px] md:border-[10px] border-primary-700/80 bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
                   
                   {/* Main image */}
                   <img 
                     src={yanivImage} 
                     alt="יניב תנעמי" 
-                    className="w-56 h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-4 border-white"
+                    className="w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-2 sm:border-4 border-white"
                   />
                 </div>
               </div>
             </AnimatedSection>
             <AnimatedSection delay={0.2}>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6 leading-tight px-2">
                 המסע שלך אל עבר{' '}
                 <span className="text-gradient">ריפוי והגשמה</span>
               </h1>
             </AnimatedSection>
             <AnimatedSection delay={0.4}>
-              <p className="text-xl md:text-2xl text-neutral-600 mb-8 leading-relaxed max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto px-3">
                 במקום בטוח ומכיל, נוכל יחד להתחיל את הדרך לשחרור מחסימות רגשיות,
                 ריפוי מטראומות והגשמה עצמית. כאן, כל צעד הוא צעד קדימה.
               </p>
             </AnimatedSection>
             <AnimatedSection delay={0.6}>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button onClick={() => openPurchaseModal()} variant="secondary" className="text-lg px-8 py-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
+                <Button onClick={() => openPurchaseModal()} variant="secondary" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
                   רכוש מסלול
                 </Button>
-                <Button to="/booking" variant="primary" className="text-lg px-8 py-4">
+                <Button to="/booking" variant="primary" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
                   קבע פגישת היכרות
                 </Button>
-                <Button to="/about" variant="soft" className="text-lg px-8 py-4">
+                <Button to="/about" variant="soft" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
                   גלה עוד עליי
                 </Button>
               </div>
             </AnimatedSection>
           </div>
         </div>
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+        <div className="absolute bottom-6 sm:bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center px-3">
           {/* Speech bubble with text */}
-          <div className="relative mb-4 animate-bounce">
-            <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-200 px-6 py-4 max-w-xs md:max-w-sm">
-              <p className="text-sm md:text-base text-neutral-700 text-center leading-relaxed font-medium">
+          <div className="relative mb-3 sm:mb-4 animate-bounce">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border-2 border-primary-200 px-4 sm:px-6 py-3 sm:py-4 max-w-[280px] sm:max-w-xs md:max-w-sm">
+              <p className="text-xs sm:text-sm md:text-base text-neutral-700 text-center leading-relaxed font-medium">
                 אתה מרגיש תקוע? אתה חושב שהכל חשוך? תבדוק אם אחד הדברים פה מתאים לך?
               </p>
             </div>
             {/* Arrow pointing down */}
             <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-              <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white"></div>
+              <div className="w-0 h-0 border-l-6 sm:border-l-8 border-r-6 sm:border-r-8 border-t-6 sm:border-t-8 border-l-transparent border-r-transparent border-t-white"></div>
             </div>
           </div>
           
@@ -135,7 +135,7 @@ function HomePage() {
             aria-label="גלול לרשימת טיפולים"
           >
             <svg
-              className="w-6 h-6 text-neutral-400 hover:text-primary-600 transition-colors"
+              className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 hover:text-primary-600 transition-colors"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -152,18 +152,18 @@ function HomePage() {
       {/* למי זה מתאים Section */}
       <Section variant="white" id="for-whom">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
               למי זה מתאים?
             </h2>
-            <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-3">
               אם אתה מרגיש שאתה תקוע, מתמודד עם חרדות או טראומות מהעבר,
               או פשוט מחפש דרך לצמוח ולהתפתח – אתה במקום הנכון.
             </p>
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
           {[
             {
               title: 'מתמודדים עם חרדות',
@@ -183,10 +183,10 @@ function HomePage() {
           ].map((item, index) => (
             <AnimatedSection key={index} delay={index * 0.2}>
               <Card>
-                <h3 className="text-2xl font-serif font-semibold text-neutral-900 mb-3">
+                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-neutral-900 mb-2 sm:mb-3">
                   {item.title}
                 </h3>
-                <p className="text-neutral-600 leading-relaxed">{item.description}</p>
+                <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">{item.description}</p>
               </Card>
             </AnimatedSection>
           ))}
@@ -196,17 +196,17 @@ function HomePage() {
       {/* סוגי טיפולים Section */}
       <Section variant="primary" id="treatments">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
               סוגי טיפולים
             </h2>
-            <p className="text-xl text-neutral-700 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg md:text-xl text-neutral-700 max-w-2xl mx-auto px-3">
               כל אדם הוא עולם בפני עצמו, ולכן כל תהליך טיפולי מותאם אישית לצרכים הייחודיים שלך.
             </p>
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
           {[
             {
               title: 'טיפול בחרדות',
@@ -235,13 +235,13 @@ function HomePage() {
           ].map((item, index) => (
             <AnimatedSection key={index} delay={index * 0.15}>
               <Card className="bg-white shadow-lg">
-                <h3 className="text-2xl font-serif font-semibold text-neutral-900 mb-3">
+                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-neutral-900 mb-2 sm:mb-3">
                   {item.title}
                 </h3>
-                <p className="text-neutral-700 leading-relaxed mb-4">{item.description}</p>
+                <p className="text-sm sm:text-base text-neutral-700 leading-relaxed mb-3 sm:mb-4">{item.description}</p>
                 <Link
                   to={item.link}
-                  className="text-primary-600 font-medium hover:text-primary-700 transition-colors inline-flex items-center"
+                  className="text-sm sm:text-base text-primary-600 font-medium hover:text-primary-700 transition-colors inline-flex items-center"
                 >
                   קרא עוד ←
                 </Link>
@@ -253,15 +253,15 @@ function HomePage() {
 
       {/* על המטפל Section */}
       <Section variant="white" id="about">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
             <AnimatedSection direction="right">
-              <div className="bg-gradient-to-br from-primary-100 to-secondary-100 rounded-3xl p-8 md:p-12 aspect-square flex items-center justify-center">
+              <div className="bg-gradient-to-br from-primary-100 to-secondary-100 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 aspect-square flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-32 h-32 bg-white rounded-full mx-auto mb-6 flex items-center justify-center text-4xl">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full mx-auto mb-4 sm:mb-6 flex items-center justify-center text-3xl sm:text-4xl">
                     🌿
                   </div>
-                  <p className="text-neutral-600 italic">
+                  <p className="text-sm sm:text-base text-neutral-600 italic">
                     "כל מסע מתחיל בצעד אחד"
                   </p>
                 </div>
@@ -269,10 +269,10 @@ function HomePage() {
             </AnimatedSection>
             <AnimatedSection direction="left">
               <div>
-                <h2 className="text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-6">
+                <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6">
                   על המסע המשותף שלנו
                 </h2>
-                <div className="space-y-4 text-lg text-neutral-700 leading-relaxed">
+                <div className="space-y-3 sm:space-y-4 text-base sm:text-lg text-neutral-700 leading-relaxed">
                   <p>
                     אני מאמין שכל אדם נושא בתוכו את היכולת לרפא, לצמוח ולהתפתח.
                     לפעמים אנחנו רק צריכים מישהו שילך איתנו בדרך, שיראה אותנו,
@@ -288,8 +288,8 @@ function HomePage() {
                     הזה – בצעדים קטנים, בקצב שלך, עם הרבה סבלנות ואמון.
                   </p>
                 </div>
-                <div className="mt-8">
-                  <Button to="/about" variant="secondary">
+                <div className="mt-6 sm:mt-8">
+                  <Button to="/about" variant="secondary" className="w-full sm:w-auto">
                     קרא עוד עליי
                   </Button>
                 </div>
@@ -302,19 +302,19 @@ function HomePage() {
       {/* ביקורות Section */}
       <Section variant="neutral" id="reviews">
         <AnimatedSection>
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
               מה אומרים
             </h2>
             {reviewStats && reviewStats.totalReviews > 0 && (
-              <div className="flex items-center justify-center gap-4 mt-4">
-                <div className="text-3xl font-bold text-primary-600">
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-3 sm:mt-4 px-3">
+                <div className="text-2xl sm:text-3xl font-bold text-primary-600">
                   {reviewStats.averageRating.toFixed(1)}
                 </div>
-                <div className="flex text-accent-500 text-2xl">
+                <div className="flex text-accent-500 text-xl sm:text-2xl">
                   {'⭐'.repeat(Math.round(reviewStats.averageRating))}
                 </div>
-                <div className="text-neutral-600">
+                <div className="text-sm sm:text-base text-neutral-600">
                   ({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'ביקורת' : 'ביקורות'})
                 </div>
               </div>
@@ -334,23 +334,23 @@ function HomePage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-6xl mx-auto px-3 sm:px-4">
             {reviews.slice(0, 6).map((review, index) => (
               <AnimatedSection key={review._id} delay={index * 0.1}>
                 <Card>
-                  <div className="mb-4">
-                    <div className="flex text-accent-500 mb-2">
+                  <div className="mb-3 sm:mb-4">
+                    <div className="flex text-accent-500 mb-2 text-lg sm:text-xl">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <span key={star}>{star <= review.rating ? '⭐' : '☆'}</span>
                       ))}
                     </div>
                   </div>
-                  <p className="text-neutral-700 leading-relaxed mb-4 italic">
+                  <p className="text-sm sm:text-base text-neutral-700 leading-relaxed mb-3 sm:mb-4 italic">
                     "{review.content}"
                   </p>
-                  <p className="text-neutral-900 font-semibold">— {review.customerName || review.customer?.name || 'לקוח'}</p>
+                  <p className="text-sm sm:text-base text-neutral-900 font-semibold">— {review.customerName || review.customer?.name || 'לקוח'}</p>
                   {review.createdAt && (
-                    <p className="text-sm text-neutral-500 mt-2">
+                    <p className="text-xs sm:text-sm text-neutral-500 mt-2">
                       {new Date(review.createdAt).toLocaleDateString('he-IL', {
                         year: 'numeric',
                         month: 'long',
@@ -367,26 +367,27 @@ function HomePage() {
 
       {/* CTA Section */}
       <Section variant="primary" id="cta">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-3xl mx-auto text-center px-3 sm:px-4">
           <AnimatedSection>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-6">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6">
               מוכן להתחיל את המסע?
             </h2>
-            <p className="text-xl text-neutral-700 mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-neutral-700 mb-6 sm:mb-8 leading-relaxed">
               פגישת ההיכרות הראשונה היא הזדמנות להכיר, להבין מה אתה מחפש,
               ולראות אם אנחנו מתאימים לעבוד יחד. ללא התחייבות, רק שיחה פתוחה
               וכנה.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={() => openPurchaseModal()} variant="primary">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+              <Button onClick={() => openPurchaseModal()} variant="primary" className="w-full sm:w-auto">
                 רכוש מסלול
               </Button>
-              <Button to="/booking" variant="primary">
+              <Button to="/booking" variant="primary" className="w-full sm:w-auto">
                 קבע פגישת היכרות
               </Button>
               <Button
                 href="https://wa.me/972501234567"
                 variant="secondary"
+                className="w-full sm:w-auto"
               >
                 שלח הודעה ב-WhatsApp
               </Button>
