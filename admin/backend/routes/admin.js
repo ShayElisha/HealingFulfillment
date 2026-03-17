@@ -245,6 +245,9 @@ router.post('/courses', async (req, res, next) => {
 // PUT /api/admin/courses/:id - Update course
 router.put('/courses/:id', async (req, res, next) => {
   try {
+    console.log('Updating course:', req.params.id)
+    console.log('Update data:', req.body)
+    
     const course = await Course.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -254,11 +257,14 @@ router.put('/courses/:id', async (req, res, next) => {
     if (!course) {
       return res.status(404).json({ message: 'Course not found' })
     }
+    
+    console.log('Course updated successfully:', course)
     res.json({
       message: 'Course updated successfully',
       data: course
     })
   } catch (error) {
+    console.error('Error updating course:', error)
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         message: 'Validation error',

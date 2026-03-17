@@ -8,7 +8,7 @@ const router = express.Router()
 router.get('/', async (req, res, next) => {
   try {
     const courses = await Course.find({ isActive: true })
-      .select('title description videos price')
+      .select('title description videos price discount sessionsCount')
       .sort({ createdAt: -1 })
     
     res.json({
