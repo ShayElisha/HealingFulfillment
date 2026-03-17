@@ -41,10 +41,10 @@ const createTransporter = () => {
     host: smtpHost,
     port: smtpPort,
     secure: smtpPort === 465, // true for 465, false for other ports
-    auth: {
+  auth: {
       user: smtpUser,
       pass: smtpPassword,
-    },
+  },
     // Additional options for better compatibility
     tls: {
       rejectUnauthorized: false // Allow self-signed certificates
@@ -171,7 +171,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     const missingVars = []
     if (!process.env.SMTP_USER) missingVars.push('SMTP_USER')
     if (!process.env.SMTP_PASSWORD) missingVars.push('SMTP_PASSWORD')
-    
+
     // בדיקה שהאימייל מוגדר
     if (missingVars.length > 0) {
       const errorMessage = `SMTP credentials missing: ${missingVars.join(', ')}`

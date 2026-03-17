@@ -23,7 +23,7 @@ export const courseService = {
   getAll: async () => {
     console.log('courseService.getAll() - Making request to /admin/courses')
     try {
-      const response = await api.get('/admin/courses')
+    const response = await api.get('/admin/courses')
       console.log('courseService.getAll() - Response received:', response)
       console.log('courseService.getAll() - Response.data:', response.data)
       console.log('courseService.getAll() - Response.data type:', typeof response.data)
@@ -32,7 +32,7 @@ export const courseService = {
       // Axios automatically parses JSON, so response.data is the parsed JSON
       // The API returns { message, data }, so response.data is { message, data }
       // We return response.data which is { message, data }
-      return response.data
+    return response.data
     } catch (error) {
       console.error('courseService.getAll() - Error:', error)
       console.error('courseService.getAll() - Error response:', error.response)

@@ -97,32 +97,34 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
 
   return (
     <nav className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 shadow-soft sticky top-0 z-50 w-full">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+      <div className="w-full px-2 sm:px-4 md:px-4 lg:px-6 xl:px-8">
+        <div className="flex justify-between items-center h-14 md:h-16">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft-lg">
-              <span className="text-white text-lg">📊</span>
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft-lg">
+              <span className="text-white text-sm md:text-lg">📊</span>
             </div>
-            <h1 className="text-xl font-serif font-semibold text-neutral-800">
+            <h1 className="text-base md:text-lg lg:text-xl font-serif font-semibold text-neutral-800">
               לוח בקרה
             </h1>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-reverse space-x-1">
+          <div className="hidden md:flex items-center space-x-reverse space-x-0.5 lg:space-x-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className={`px-4 py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 text-sm ${
+                className={`px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm ${
                   currentActiveTab === tab.id
                     ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
                     : 'text-neutral-600 hover:bg-neutral-50 hover:text-primary-600'
                 }`}
               >
-                <span className="text-base">{tab.icon}</span>
-                <span>{tab.label}</span>
+                <span className="text-sm md:text-base lg:text-base max-[1580px]:hidden">
+                  {tab.icon}
+                </span>
+                <span className="whitespace-nowrap">{tab.label}</span>
               </button>
             ))}
           </div>

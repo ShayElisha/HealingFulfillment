@@ -53,11 +53,11 @@ app.use(cors({
     if (!origin) return callback(null, true)
     
     const allowedOrigins = [
-      process.env.ADMIN_FRONTEND_URL,
-      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-      process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
-      'http://localhost:3001',
-      'http://127.0.0.1:3001'
+    process.env.ADMIN_FRONTEND_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
+    'http://localhost:3001',
+    'http://127.0.0.1:3001'
     ].filter(Boolean)
     
     // In Vercel production, allow same-origin requests (frontend and API on same domain)
@@ -103,16 +103,16 @@ const connectDB = async () => {
         socketTimeoutMS: 45000, // 45 seconds
         connectTimeoutMS: 30000, // 30 seconds
       })
-      isConnected = true
+    isConnected = true
       isConnecting = false
       connectionPromise = null
-      console.log('✅ Admin Service: Connected to MongoDB')
-    } catch (error) {
+    console.log('✅ Admin Service: Connected to MongoDB')
+  } catch (error) {
       isConnecting = false
       connectionPromise = null
-      console.error('❌ Admin Service: MongoDB connection error:', error)
-      throw error
-    }
+    console.error('❌ Admin Service: MongoDB connection error:', error)
+    throw error
+  }
   })()
   
   return connectionPromise
@@ -144,10 +144,10 @@ app.use(async (req, res, next) => {
       await connectionPromise
     } catch (error) {
       if (!res.headersSent) {
-        return res.status(500).json({ 
-          message: 'Database connection failed',
-          error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        })
+      return res.status(500).json({ 
+        message: 'Database connection failed',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
       }
       return
     }
