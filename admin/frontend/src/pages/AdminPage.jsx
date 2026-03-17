@@ -1157,21 +1157,6 @@ function AdminPage() {
                         className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
                       <p className="text-xs text-neutral-500 mt-1">הנחה באחוזים (0-100)</p>
-                      {courseForm.discount > 0 && courseForm.price > 0 && (
-                        <div className="mt-2 p-2 bg-primary-50 rounded-lg border border-primary-200">
-                          <p className="text-sm text-neutral-700">
-                            <span className="font-medium">מחיר אחרי הנחה: </span>
-                            <span className="text-lg font-bold text-primary-600">
-                              ₪{Math.round(courseForm.price * (1 - courseForm.discount / 100))}
-                            </span>
-                            {courseForm.price > 0 && (
-                              <span className="text-xs text-neutral-400 line-through mr-2">
-                                ₪{courseForm.price}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-neutral-700">כמות מפגשים *</label>
@@ -1254,20 +1239,11 @@ function AdminPage() {
                         )}
                         {course.price > 0 && (
                           <div className="mb-3">
-                            {course.discount > 0 ? (
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-lg font-bold text-primary-600">
-                                    ₪{Math.round(course.price * (1 - course.discount / 100))}
-                                  </p>
-                                  <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">
-                                    {course.discount}% הנחה
-                                  </span>
-                                </div>
-                                <p className="text-sm text-neutral-400 line-through">₪{course.price}</p>
-                              </div>
-                            ) : (
-                              <p className="text-lg font-bold text-primary-600">₪{course.price}</p>
+                            <p className="text-lg font-bold text-primary-600">₪{course.price}</p>
+                            {course.discount > 0 && (
+                              <p className="text-sm text-red-600 font-medium mt-1">
+                                {course.discount}% הנחה
+                              </p>
                             )}
                           </div>
                         )}
