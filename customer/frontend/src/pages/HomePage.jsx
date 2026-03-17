@@ -63,7 +63,7 @@ function HomePage() {
               <div className="flex justify-center mb-10">
                 <div className="relative">
                   {/* Rotating glow ring */}
-                  <div className="absolute inset-0 -inset-4 md:-inset-6 rounded-full border-4 border-primary-200/60 md:border-8 md:border-primary-300/50 animate-spin-slow pointer-events-none"></div>
+                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full border-[6px] md:border-[10px] border-primary-700/70 shadow-[0_0_40px_rgba(15,118,110,0.9)] md:shadow-[0_0_70px_rgba(15,118,110,1)] bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
                   
                   {/* Main image */}
                   <img 
