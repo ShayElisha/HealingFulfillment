@@ -116,43 +116,45 @@ function CategoryPage() {
                   טיפול מותאם אישית
                 </span>
               </div>
-              <h1 className="text-5xl md:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight tracking-tight">
+              <h1 className="text-5xl md:text-7xl font-serif font-bold text-neutral-900 mb-8 leading-tight tracking-tight">
                 {category.name}
               </h1>
-              
-              {/* Main Video - Large, between title and description */}
-              {category.videos && category.videos.length > 0 && (() => {
-                const mainVideo = category.videos[0]
-                const embedUrl = getVideoEmbedUrl(mainVideo.url)
-                return (
-                  <div className="mb-8 max-w-5xl mx-auto">
-                    {embedUrl && showMainVideo ? (
-                      <div className="aspect-video bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl">
-                        <iframe
-                          src={embedUrl}
-                          title={mainVideo.title}
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : (
-                      <div 
-                        className="relative aspect-video bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl overflow-hidden shadow-2xl cursor-pointer group hover:shadow-3xl transition-all duration-300"
-                        onClick={() => embedUrl ? setShowMainVideo(true) : window.open(mainVideo.url, '_blank')}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-24 h-24 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
-                            <span className="text-4xl text-primary-600 ml-2">▶</span>
-                          </div>
+            </div>
+            
+            {/* Main Video - Large, between title and description */}
+            {category.videos && category.videos.length > 0 && (
+              <div className="max-w-5xl mx-auto mb-8 px-4">
+                {(() => {
+                  const mainVideo = category.videos[0]
+                  const embedUrl = getVideoEmbedUrl(mainVideo.url)
+                  return embedUrl && showMainVideo ? (
+                    <div className="aspect-video bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl">
+                      <iframe
+                        src={embedUrl}
+                        title={mainVideo.title}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div 
+                      className="relative aspect-video bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl overflow-hidden shadow-2xl cursor-pointer group hover:shadow-3xl transition-all duration-300"
+                      onClick={() => embedUrl ? setShowMainVideo(true) : window.open(mainVideo.url, '_blank')}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-24 h-24 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
+                          <span className="text-4xl text-primary-600 ml-2">▶</span>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                       </div>
-                    )}
-                  </div>
-                )
-              })()}
-              
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+            
+            <div className="max-w-4xl mx-auto text-center">
               {category.description && (
                 <p className="text-xl md:text-2xl text-neutral-600 leading-relaxed max-w-3xl mx-auto font-light">
                   {category.description}
