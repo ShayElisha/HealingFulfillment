@@ -121,7 +121,7 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
                     : 'text-neutral-600 hover:bg-neutral-50 hover:text-primary-600'
                 }`}
               >
-                <span className="text-sm md:text-base lg:text-base max-[1580px]:hidden">
+                <span className="hidden navwide:inline text-sm md:text-base lg:text-base">
                   {tab.icon}
                 </span>
                 <span className="whitespace-nowrap">{tab.label}</span>
