@@ -109,7 +109,7 @@ function HomePage() {
             </AnimatedSection>
           </div>
         </div>
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2">
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
           {/* Speech bubble with text */}
           <div className="relative mb-4 animate-bounce">
             <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-200 px-6 py-4 max-w-xs md:max-w-sm">
@@ -123,7 +123,7 @@ function HomePage() {
             </div>
           </div>
           
-          {/* Scroll down arrow */}
+          {/* Scroll down arrow - centered */}
           <button
             onClick={() => {
               const treatmentsSection = document.getElementById('treatments')
@@ -131,7 +131,7 @@ function HomePage() {
                 treatmentsSection.scrollIntoView({ behavior: 'smooth' })
               }
             }}
-            className="cursor-pointer hover:scale-110 transition-transform duration-300"
+            className="cursor-pointer hover:scale-110 transition-transform duration-300 flex items-center justify-center"
             aria-label="גלול לרשימת טיפולים"
           >
             <svg
