@@ -8,6 +8,7 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
+import yanivImage from '../assets/yaniv.PNG'
 
 function HomePage() {
   const { openPurchaseModal } = usePurchase()
@@ -55,9 +56,21 @@ function HomePage() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center pt-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50"></div>
+<div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50"></div>
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
+            <AnimatedSection delay={0.1}>
+              <div className="flex justify-center mb-8">
+                <div className="relative">
+                  <img 
+                    src={yanivImage} 
+                    alt="יניב תנעמי" 
+                    className="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover shadow-2xl border-4 border-white ring-4 ring-primary-100"
+                  />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500/20 to-transparent"></div>
+                </div>
+              </div>
+            </AnimatedSection>
             <AnimatedSection delay={0.2}>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight">
                 המסע שלך אל עבר{' '}
