@@ -1238,7 +1238,23 @@ function AdminPage() {
                           </p>
                         )}
                         {course.price > 0 && (
-                          <p className="text-lg font-bold text-primary-600 mb-3">₪{course.price}</p>
+                          <div className="mb-3">
+                            {course.discount > 0 ? (
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-lg font-bold text-primary-600">
+                                    ₪{Math.round(course.price * (1 - course.discount / 100))}
+                                  </p>
+                                  <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded">
+                                    {course.discount}% הנחה
+                                  </span>
+                                </div>
+                                <p className="text-sm text-neutral-400 line-through">₪{course.price}</p>
+                              </div>
+                            ) : (
+                              <p className="text-lg font-bold text-primary-600">₪{course.price}</p>
+                            )}
+                          </div>
                         )}
                         <div className="flex gap-2">
                           <Button
