@@ -60,14 +60,20 @@ function HomePage() {
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.1}>
-              <div className="flex justify-center mb-8">
+              <div className="flex justify-center mb-10">
                 <div className="relative">
+                  {/* Rotating glow ring */}
+                  <div className="absolute inset-0 -inset-4 md:-inset-6 rounded-full border-4 border-primary-200/60 md:border-8 md:border-primary-300/50 animate-spin-slow pointer-events-none"></div>
+                  
+                  {/* Main image */}
                   <img 
                     src={yanivImage} 
                     alt="יניב תנעמי" 
-                    className="w-48 h-48 md:w-64 md:h-64 rounded-full object-cover shadow-2xl border-4 border-white ring-4 ring-primary-100"
+                    className="w-56 h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-4 border-white ring-4 ring-primary-100"
                   />
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500/20 to-transparent"></div>
+                  
+                  {/* Inner gradient overlay */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500/15 via-transparent to-secondary-400/20 mix-blend-soft-light"></div>
                 </div>
               </div>
             </AnimatedSection>
