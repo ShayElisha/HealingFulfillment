@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -188,6 +188,27 @@ function QuestionnaireModal({ isOpen, onClose }) {
     return answers[q.id]
   })
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY
+      document.body.style.position = 'fixed'
+      document.body.style.top = `-${scrollY}px`
+      document.body.style.width = '100%'
+      document.body.style.overflow = 'hidden'
+      
+      return () => {
+        // Restore scroll position
+        document.body.style.position = ''
+        document.body.style.top = ''
+        document.body.style.width = ''
+        document.body.style.overflow = ''
+        window.scrollTo(0, scrollY)
+      }
+    }
+  }, [isOpen])
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -196,17 +217,18 @@ function QuestionnaireModal({ isOpen, onClose }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
             onClick={handleClose}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed top-20 left-0 right-0 bottom-0 z-[100] flex items-start justify-center p-4 overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            style={{ paddingTop: '1rem' }}
           >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[calc(100vh-6rem)] mb-4 overflow-hidden flex flex-col">
               {/* Header */}
               <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-6">
                 <div className="flex justify-between items-center">
