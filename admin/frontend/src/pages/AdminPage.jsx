@@ -203,6 +203,7 @@ function AdminPage() {
     title: '',
     description: '',
     price: 0,
+    discount: 0,
     sessionsCount: 1,
     isActive: true
   })
@@ -385,6 +386,7 @@ function AdminPage() {
         title: '',
         description: '',
         price: 0,
+        discount: 0,
         sessionsCount: 1,
         isActive: true
       })
@@ -528,6 +530,7 @@ function AdminPage() {
       title: course.title,
       description: course.description || '',
       price: course.price || 0,
+      discount: course.discount || 0,
       sessionsCount: course.sessionsCount || 1,
       isActive: course.isActive !== false
     })
@@ -1095,6 +1098,8 @@ function AdminPage() {
                       title: '',
                       description: '',
                       price: 0,
+                      discount: 0,
+                      sessionsCount: 1,
                       isActive: true,
                       videos: []
                     })
@@ -1140,6 +1145,18 @@ function AdminPage() {
                         onChange={(e) => setCourseForm({ ...courseForm, price: parseFloat(e.target.value) || 0 })}
                         className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">הנחה (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={courseForm.discount}
+                        onChange={(e) => setCourseForm({ ...courseForm, discount: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">הנחה באחוזים (0-100)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2 text-neutral-700">כמות מפגשים *</label>
