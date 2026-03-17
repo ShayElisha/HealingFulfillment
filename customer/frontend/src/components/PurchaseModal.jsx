@@ -156,29 +156,45 @@ function PurchaseModal() {
                               {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
                             </p>
                           )}
-                          {course.price > 0 && (
-                            <div className="mt-3">
-                              {course.originalPrice && course.originalPrice > course.price ? (
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm text-neutral-400 line-through">
-                                      ₪{course.originalPrice}
-                                    </span>
-                                    <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                      {Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}% הנחה
+                          {course.price > 0 && (() => {
+                            // Calculate original price from discount if originalPrice is not set
+                            let originalPrice = course.originalPrice
+                            let discountPercent = 0
+                            
+                            if (course.discount && course.discount > 0) {
+                              discountPercent = course.discount
+                              if (!originalPrice || originalPrice === 0) {
+                                // Calculate original price: price = originalPrice * (1 - discount/100)
+                                originalPrice = Math.round(course.price / (1 - course.discount / 100))
+                              }
+                            }
+                            
+                            const hasDiscount = originalPrice && originalPrice > course.price
+                            
+                            return (
+                              <div className="mt-3">
+                                {hasDiscount ? (
+                                  <div className="flex flex-col gap-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm text-neutral-400 line-through">
+                                        ₪{originalPrice}
+                                      </span>
+                                      <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                        {discountPercent > 0 ? discountPercent : Math.round(((originalPrice - course.price) / originalPrice) * 100)}% הנחה
+                                      </span>
+                                    </div>
+                                    <span className="text-xl font-bold text-primary-600">
+                                      ₪{course.price}
                                     </span>
                                   </div>
+                                ) : (
                                   <span className="text-xl font-bold text-primary-600">
                                     ₪{course.price}
                                   </span>
-                                </div>
-                              ) : (
-                                <span className="text-xl font-bold text-primary-600">
-                                  ₪{course.price}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                                )}
+                              </div>
+                            )
+                          })()}
                         </motion.div>
                       ))}
                     </div>
@@ -192,29 +208,45 @@ function PurchaseModal() {
                     <h3 className="text-lg font-semibold text-neutral-900 mb-2">
                       {selectedCourseForPurchase.title}
                     </h3>
-                    {selectedCourseForPurchase.price > 0 && (
-                      <div className="mb-2">
-                        {selectedCourseForPurchase.originalPrice && selectedCourseForPurchase.originalPrice > selectedCourseForPurchase.price ? (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg text-neutral-400 line-through">
-                                ₪{selectedCourseForPurchase.originalPrice}
-                              </span>
-                              <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
-                                {Math.round(((selectedCourseForPurchase.originalPrice - selectedCourseForPurchase.price) / selectedCourseForPurchase.originalPrice) * 100)}% הנחה
-                              </span>
+                    {selectedCourseForPurchase.price > 0 && (() => {
+                      // Calculate original price from discount if originalPrice is not set
+                      let originalPrice = selectedCourseForPurchase.originalPrice
+                      let discountPercent = 0
+                      
+                      if (selectedCourseForPurchase.discount && selectedCourseForPurchase.discount > 0) {
+                        discountPercent = selectedCourseForPurchase.discount
+                        if (!originalPrice || originalPrice === 0) {
+                          // Calculate original price: price = originalPrice * (1 - discount/100)
+                          originalPrice = Math.round(selectedCourseForPurchase.price / (1 - selectedCourseForPurchase.discount / 100))
+                        }
+                      }
+                      
+                      const hasDiscount = originalPrice && originalPrice > selectedCourseForPurchase.price
+                      
+                      return (
+                        <div className="mb-2">
+                          {hasDiscount ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg text-neutral-400 line-through">
+                                  ₪{originalPrice}
+                                </span>
+                                <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                  {discountPercent > 0 ? discountPercent : Math.round(((originalPrice - selectedCourseForPurchase.price) / originalPrice) * 100)}% הנחה
+                                </span>
+                              </div>
+                              <p className="text-2xl font-bold text-primary-600">
+                                ₪{selectedCourseForPurchase.price}
+                              </p>
                             </div>
+                          ) : (
                             <p className="text-2xl font-bold text-primary-600">
                               ₪{selectedCourseForPurchase.price}
                             </p>
-                          </div>
-                        ) : (
-                          <p className="text-2xl font-bold text-primary-600">
-                            ₪{selectedCourseForPurchase.price}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )
+                    })()}
                     {selectedCourseForPurchase.description && (
                       <p className="text-sm text-neutral-600">
                         {selectedCourseForPurchase.description}
