@@ -60,20 +60,25 @@ function HomePage() {
         <div className="container-custom relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.1}>
-              <div className="flex justify-center mb-10">
+              <div className="flex justify-center mb-10 mt-[60px]">
                 <div className="relative">
-                  {/* Rotating glow ring */}
-                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full border-[6px] md:border-[10px] border-primary-700/70 shadow-[0_0_40px_rgba(15,118,110,0.9)] md:shadow-[0_0_70px_rgba(15,118,110,1)] bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
+                  {/* Rotating dark glowing element around the ring */}
+                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full animate-spin-slow pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
+                  </div>
+                  
+                  {/* Rotating ring (not glowing) */}
+                  <div className="absolute inset-0 -inset-5 md:-inset-8 rounded-full border-[6px] md:border-[10px] border-primary-700/80 bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
                   
                   {/* Main image */}
                   <img 
                     src={yanivImage} 
                     alt="יניב תנעמי" 
-                    className="w-56 h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-4 border-white ring-4 ring-primary-100"
+                    className="w-56 h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-4 border-white"
                   />
-                  
-                  {/* Inner gradient overlay */}
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary-500/15 via-transparent to-secondary-400/20 mix-blend-soft-light"></div>
                 </div>
               </div>
             </AnimatedSection>
