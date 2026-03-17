@@ -158,9 +158,25 @@ function PurchaseModal() {
                           )}
                           {course.price > 0 && (
                             <div className="mt-3">
-                              <span className="text-xl font-bold text-primary-600">
-                                ₪{course.price}
-                              </span>
+                              {course.originalPrice && course.originalPrice > course.price ? (
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-neutral-400 line-through">
+                                      ₪{course.originalPrice}
+                                    </span>
+                                    <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                      {Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}% הנחה
+                                    </span>
+                                  </div>
+                                  <span className="text-xl font-bold text-primary-600">
+                                    ₪{course.price}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xl font-bold text-primary-600">
+                                  ₪{course.price}
+                                </span>
+                              )}
                             </div>
                           )}
                         </motion.div>
@@ -177,9 +193,27 @@ function PurchaseModal() {
                       {selectedCourseForPurchase.title}
                     </h3>
                     {selectedCourseForPurchase.price > 0 && (
-                      <p className="text-2xl font-bold text-primary-600 mb-2">
-                        ₪{selectedCourseForPurchase.price}
-                      </p>
+                      <div className="mb-2">
+                        {selectedCourseForPurchase.originalPrice && selectedCourseForPurchase.originalPrice > selectedCourseForPurchase.price ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg text-neutral-400 line-through">
+                                ₪{selectedCourseForPurchase.originalPrice}
+                              </span>
+                              <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                {Math.round(((selectedCourseForPurchase.originalPrice - selectedCourseForPurchase.price) / selectedCourseForPurchase.originalPrice) * 100)}% הנחה
+                              </span>
+                            </div>
+                            <p className="text-2xl font-bold text-primary-600">
+                              ₪{selectedCourseForPurchase.price}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-primary-600">
+                            ₪{selectedCourseForPurchase.price}
+                          </p>
+                        )}
+                      </div>
                     )}
                     {selectedCourseForPurchase.description && (
                       <p className="text-sm text-neutral-600">

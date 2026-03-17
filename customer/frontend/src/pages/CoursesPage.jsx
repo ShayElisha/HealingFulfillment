@@ -94,9 +94,25 @@ function CoursesPage() {
                   )}
                   {course.price > 0 && (
                     <div className="mb-4">
-                      <span className="text-2xl font-bold text-primary-600">
-                        ₪{course.price}
-                      </span>
+                      {course.originalPrice && course.originalPrice > course.price ? (
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg text-neutral-400 line-through">
+                              ₪{course.originalPrice}
+                            </span>
+                            <span className="text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                              {Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}% הנחה
+                            </span>
+                          </div>
+                          <span className="text-2xl font-bold text-primary-600">
+                            ₪{course.price}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-2xl font-bold text-primary-600">
+                          ₪{course.price}
+                        </span>
+                      )}
                     </div>
                   )}
                   <Button

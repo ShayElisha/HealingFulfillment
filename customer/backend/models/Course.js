@@ -23,6 +23,11 @@ const courseSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Price cannot be negative']
   },
+  originalPrice: {
+    type: Number,
+    default: 0,
+    min: [0, 'Original price cannot be negative']
+  },
   isActive: {
     type: Boolean,
     default: true
