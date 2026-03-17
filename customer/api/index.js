@@ -1,6 +1,7 @@
 // Vercel Serverless Function - ES Module compatible wrapper
 // This file must use ONLY ES module syntax - no CommonJS patterns
 
+
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
