@@ -8,12 +8,14 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import VideoCard from '../components/VideoCard'
+import { getVideoEmbedUrl } from '../utils/videoUtils'
 
 function CategoryPage() {
   const { id } = useParams()
   const [category, setCategory] = useState(null)
   const [loading, setLoading] = useState(true)
   const { openPurchaseModal } = usePurchase()
+  const [showMainVideo, setShowMainVideo] = useState(false)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -117,6 +119,40 @@ function CategoryPage() {
               <h1 className="text-5xl md:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-tight tracking-tight">
                 {category.name}
               </h1>
+              
+              {/* Main Video - Large, between title and description */}
+              {category.videos && category.videos.length > 0 && (() => {
+                const mainVideo = category.videos[0]
+                const embedUrl = getVideoEmbedUrl(mainVideo.url)
+                return (
+                  <div className="mb-8 max-w-5xl mx-auto">
+                    {embedUrl && showMainVideo ? (
+                      <div className="aspect-video bg-neutral-900 rounded-2xl overflow-hidden shadow-2xl">
+                        <iframe
+                          src={embedUrl}
+                          title={mainVideo.title}
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <div 
+                        className="relative aspect-video bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl overflow-hidden shadow-2xl cursor-pointer group hover:shadow-3xl transition-all duration-300"
+                        onClick={() => embedUrl ? setShowMainVideo(true) : window.open(mainVideo.url, '_blank')}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-24 h-24 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-xl">
+                            <span className="text-4xl text-primary-600 ml-2">▶</span>
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+              
               {category.description && (
                 <p className="text-xl md:text-2xl text-neutral-600 leading-relaxed max-w-3xl mx-auto font-light">
                   {category.description}
@@ -127,8 +163,8 @@ function CategoryPage() {
         </div>
       </section>
 
-      {/* Category Videos - Moved right after title */}
-      {category.videos && category.videos.length > 0 && (
+      {/* Additional Videos - Only show if there are more than 1 video */}
+      {category.videos && category.videos.length > 1 && (
         <Section variant="white">
           <div className="max-w-7xl mx-auto">
             <AnimatedSection>
@@ -139,15 +175,15 @@ function CategoryPage() {
                   </svg>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-serif font-bold text-neutral-900 mb-4 tracking-tight">
-                  סרטוני הטיפול
+                  סרטונים נוספים
                 </h2>
                 <p className="text-neutral-600 text-lg md:text-xl max-w-2xl mx-auto font-light">
-                  סרטונים מקצועיים שיעזרו לך להבין את התהליך הטיפולי
+                  סרטונים מקצועיים נוספים שיעזרו לך להבין את התהליך הטיפולי
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {category.videos.map((video, idx) => (
-                  <AnimatedSection key={idx} delay={idx * 0.1}>
+                {category.videos.slice(1).map((video, idx) => (
+                  <AnimatedSection key={idx + 1} delay={idx * 0.1}>
                     <VideoCard video={video} delay={idx * 0.1} />
                   </AnimatedSection>
                 ))}
