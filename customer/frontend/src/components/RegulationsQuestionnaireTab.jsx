@@ -101,6 +101,7 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire, showCard = true
   }
 
   const content = (
+    <>
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h3 className="text-xl font-semibold mb-1">שאלון ותקנון</h3>
@@ -192,6 +193,7 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire, showCard = true
           </div>
         </div>
       </div>
+    </>
   )
 
   return showCard ? <Card>{content}</Card> : content
