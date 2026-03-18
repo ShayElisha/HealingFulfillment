@@ -588,13 +588,6 @@ function CustomerProfilePage() {
             <div className="space-y-6">
               <Card>
                 <h3 className="text-2xl font-semibold mb-4">קבע פגישה חדשה</h3>
-
-                <div className="mb-6">
-                  <RegulationsQuestionnaireTab
-                    regulationsQuestionnaire={customerData.regulationsQuestionnaire}
-                    showCard={false}
-                  />
-                </div>
                 
                 {shouldGateFirstBooking ? (
                   <div className="space-y-4">
