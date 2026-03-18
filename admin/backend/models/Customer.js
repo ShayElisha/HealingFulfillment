@@ -81,7 +81,21 @@ const customerSchema = new mongoose.Schema({
       default: 'admin'
     }
   }],
-  
+  // תקנון ושאלון לפני פגישה ראשונה
+  regulationsQuestionnaire: {
+    completed: {
+      type: Boolean,
+      default: false
+    },
+    completedAt: {
+      type: Date
+    },
+    answers: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    }
+  },
+
   // סטטיסטיקות
   totalSessions: {
     type: Number,

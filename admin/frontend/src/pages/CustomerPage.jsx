@@ -5,6 +5,7 @@ import { purchaseService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import CustomerQuestionnaireTab from '../components/CustomerQuestionnaireTab'
 import toast from 'react-hot-toast'
 
 function CustomerPage() {
@@ -220,6 +221,7 @@ function CustomerPage() {
           <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
             {[
               { id: 'overview', label: 'סקירה כללית' },
+              { id: 'questionnaire', label: `שאלון ותקנון` },
               { id: 'files', label: `קבצים (${customer.files?.length || 0})` },
               { id: 'sessions', label: `פגישות (${customer.bookings?.length || 0})` },
               { id: 'notes', label: `הערות (${customer.notes?.length || 0})` }
@@ -417,6 +419,13 @@ function CustomerPage() {
                   </div>
                 </Card>
               )}
+            </div>
+          )}
+
+          {/* Questionnaire Tab */}
+          {activeTab === 'questionnaire' && (
+            <div className="space-y-6">
+              <CustomerQuestionnaireTab customer={customer} />
             </div>
           )}
 
