@@ -8,6 +8,7 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import RegulationsQuestionnaireModal from '../components/RegulationsQuestionnaireModal'
+import RegulationsQuestionnaireTab from '../components/RegulationsQuestionnaireTab'
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 import { reviewsService } from '../services/reviewsApi'
@@ -223,6 +224,7 @@ function CustomerProfilePage() {
           <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
             {[
               { id: 'overview', label: 'סקירה כללית' },
+              { id: 'questionnaire', label: 'שאלון ותקנון' },
               { id: 'purchases', label: `רכישות (${customerData.purchases?.length || 0})` },
               { id: 'bookings', label: `פגישות (${customerData.bookings?.filter(b => b.status !== 'completed').length || 0})` },
               { id: 'history', label: `היסטוריית פגישות (${customerData.bookings?.filter(b => b.status === 'completed').length || 0})` },
@@ -338,6 +340,16 @@ function CustomerProfilePage() {
                   התנתק
                 </Button>
               </div>
+            </div>
+          )}
+
+
+          {/* Questionnaire Tab */}
+          {activeTab === 'questionnaire' && (
+            <div className="space-y-4">
+              <RegulationsQuestionnaireTab
+                regulationsQuestionnaire={customerData.regulationsQuestionnaire}
+              />
             </div>
           )}
 
