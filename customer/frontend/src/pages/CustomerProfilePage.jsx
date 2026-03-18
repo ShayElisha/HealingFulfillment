@@ -7,6 +7,7 @@ import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import RegulationsQuestionnaireModal from '../components/RegulationsQuestionnaireModal'
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 import { reviewsService } from '../services/reviewsApi'
@@ -20,6 +21,8 @@ function CustomerProfilePage() {
   const [messages, setMessages] = useState([])
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
+  const [isRegulationsModalOpen, setIsRegulationsModalOpen] = useState(false)
+  const [isFirstBookingUnlocked, setIsFirstBookingUnlocked] = useState(false)
   const [reviewForm, setReviewForm] = useState({
     rating: 0,
     content: ''
@@ -34,6 +37,19 @@ function CustomerProfilePage() {
   })
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
+
+  const regulationsKey = customerData?._id
+    ? `regulationsQuestionnaireCompleted:${customerData._id}`
+    : null
+
+  useEffect(() => {
+    if (!regulationsKey) return
+    try {
+      setIsFirstBookingUnlocked(localStorage.getItem(regulationsKey) === 'true')
+    } catch {
+      setIsFirstBookingUnlocked(false)
+    }
+  }, [regulationsKey])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -178,6 +194,9 @@ function CustomerProfilePage() {
     totalSpent: customerData.purchases?.reduce((sum, p) => sum + (p.price || 0), 0) || 0
   }
 
+  const hasAnyBooking = (customerData.bookings || []).some((b) => b.status !== 'cancelled')
+  const shouldGateFirstBooking = !hasAnyBooking && !isFirstBookingUnlocked
+
   return (
     <>
       <Helmet>
@@ -222,9 +241,11 @@ function CustomerProfilePage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-primary-500 text-primary-600'
-                    : 'text-neutral-600 hover:text-primary-600'
+                  tab.id === 'new-booking' && shouldGateFirstBooking
+                    ? 'opacity-70 text-neutral-500'
+                    : activeTab === tab.id
+                      ? 'border-b-2 border-primary-500 text-primary-600'
+                      : 'text-neutral-600 hover:text-primary-600'
                 }`}
               >
                 {tab.label}
@@ -563,7 +584,21 @@ function CustomerProfilePage() {
               <Card>
                 <h3 className="text-2xl font-semibold mb-4">קבע פגישה חדשה</h3>
                 
-                {customerData.availableSessions > 0 ? (
+                {shouldGateFirstBooking ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
+                      <p className="text-yellow-800 font-medium mb-1">לפני קביעת הפגישה הראשונה צריך למלא תקנון ושאלון.</p>
+                      <p className="text-yellow-700 text-sm">רק לאחר מילוי השאלון ניתן לשלוח בקשה לקביעת פגישה.</p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      className="w-full"
+                      onClick={() => setIsRegulationsModalOpen(true)}
+                    >
+                      פתיחת תקנון ושאלון
+                    </Button>
+                  </div>
+                ) : customerData.availableSessions > 0 ? (
                   <>
                     <div className="mb-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
                       <p className="text-primary-800 font-medium">
@@ -864,6 +899,16 @@ function CustomerProfilePage() {
           </div>
         </div>
       )}
+
+      <RegulationsQuestionnaireModal
+        isOpen={isRegulationsModalOpen}
+        onClose={() => setIsRegulationsModalOpen(false)}
+        customerId={customerData?._id}
+        onCompleted={() => {
+          setIsFirstBookingUnlocked(true)
+          setIsRegulationsModalOpen(false)
+        }}
+      />
     </>
   )
 }
