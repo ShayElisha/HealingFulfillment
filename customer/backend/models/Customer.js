@@ -91,10 +91,8 @@ const customerSchema = new mongoose.Schema({
       type: Date
     },
     // Answers יכולים להיות גדולים/לא צפויים ולכן נשמרים כ-Mixed
-    // מסומן כ-select:false כדי שלא להחזיר אותם לכל בקשה ל-"/auth/me"
     answers: {
       type: mongoose.Schema.Types.Mixed,
-      select: false,
       default: {}
     }
   },

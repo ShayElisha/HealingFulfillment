@@ -61,7 +61,7 @@ const answerOrDash = (value) => {
   return value
 }
 
-function RegulationsQuestionnaireTab({ regulationsQuestionnaire }) {
+function RegulationsQuestionnaireTab({ regulationsQuestionnaire, showCard = true }) {
   const questionnaire = regulationsQuestionnaire || {}
   const answers = questionnaire.answers || {}
 
@@ -100,8 +100,7 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire }) {
     past: 'בעבר',
   }
 
-  return (
-    <Card>
+  const content = (
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h3 className="text-xl font-semibold mb-1">שאלון ותקנון</h3>
@@ -193,8 +192,9 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire }) {
           </div>
         </div>
       </div>
-    </Card>
   )
+
+  return showCard ? <Card>{content}</Card> : content
 }
 
 export default RegulationsQuestionnaireTab
