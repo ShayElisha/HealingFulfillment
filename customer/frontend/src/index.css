@@ -35,53 +35,6 @@
 }
 
 @layer components {
-  :root {
-    --a11y-font-scale: 1;
-  }
-
-  html {
-    font-size: calc(16px * var(--a11y-font-scale));
-  }
-
-  html[data-a11y-motion='reduced'] * {
-    scroll-behavior: auto !important;
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-
-  html[data-a11y-contrast='high'] body {
-    background-color: #000 !important;
-    color: #fff !important;
-  }
-
-  html[data-a11y-contrast='high'] * {
-    background-color: transparent !important;
-    color: #fff !important;
-    border-color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  .a11y-widget-btn {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    border-radius: 10px;
-    padding: 8px 10px;
-    cursor: pointer;
-    font-weight: 600;
-    color: #0f172a;
-    transition: transform 120ms ease, background-color 120ms ease;
-  }
-
-  .a11y-widget-btn:hover {
-    background: rgba(0, 0, 0, 0.04);
-  }
-
-  .a11y-widget-btn-active {
-    background: #0f766e;
-    border-color: #0f766e;
-    color: #fff;
-  }
-
   .btn-primary {
     @apply bg-primary-500 text-white px-6 py-3 rounded-xl font-medium 
            transition-all duration-300 hover:bg-primary-600 

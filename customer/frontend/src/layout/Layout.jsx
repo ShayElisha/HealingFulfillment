@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import Header from './Header'
 import Footer from './Footer'
 import WhatsAppButton from '../components/WhatsAppButton'
-import AccessibilityWidget from '../components/AccessibilityWidget'
 
 function Layout({ children }) {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -21,7 +20,6 @@ function Layout({ children }) {
       <main className="flex-grow">{children}</main>
       <Footer />
       <WhatsAppButton />
-      <AccessibilityWidget />
     </div>
   )
 }
