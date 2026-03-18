@@ -39,7 +39,12 @@ export const authService = {
   getMessages: async () => {
     const response = await api.get('/auth/messages')
     return response.data
-  }
+  },
+
+  submitRegulationsQuestionnaire: async (payload) => {
+    const response = await api.post('/auth/regulations-questionnaire', payload)
+    return response.data
+  },
 }
 
 export const messageService = {

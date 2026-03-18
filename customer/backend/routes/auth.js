@@ -223,6 +223,46 @@ router.get('/me', authenticateToken, async (req, res, next) => {
   }
 })
 
+// POST /api/auth/regulations-questionnaire
+// Save "תקנון ושאלון" answers for the currently authenticated customer
+router.post('/regulations-questionnaire', authenticateToken, async (req, res, next) => {
+  try {
+    const { answers } = req.body || {}
+
+    if (!answers || typeof answers !== 'object') {
+      return res.status(400).json({ message: 'Invalid questionnaire payload' })
+    }
+
+    // At minimum we require user to confirm acceptance
+    if (answers.accepted !== true) {
+      return res.status(400).json({ message: 'יש לאשר שקראת ומילאת את השאלון' })
+    }
+
+    const customer = req.customer
+    if (!customer) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    customer.regulationsQuestionnaire = customer.regulationsQuestionnaire || {}
+    customer.regulationsQuestionnaire.completed = true
+    customer.regulationsQuestionnaire.completedAt = new Date()
+    customer.regulationsQuestionnaire.answers = answers
+
+    await customer.save()
+
+    res.status(200).json({
+      message: 'השאלון נשמר בהצלחה',
+      data: {
+        completed: true,
+        completedAt: customer.regulationsQuestionnaire.completedAt
+      }
+    })
+  } catch (error) {
+    console.error('Regulations questionnaire error:', error)
+    next(error)
+  }
+})
+
 // POST /api/auth/booking - Create booking for authenticated customer
 router.post('/booking', authenticateToken, async (req, res, next) => {
   try {

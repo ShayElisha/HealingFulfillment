@@ -38,18 +38,11 @@ function CustomerProfilePage() {
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
 
-  const regulationsKey = customerData?._id
-    ? `regulationsQuestionnaireCompleted:${customerData._id}`
-    : null
-
   useEffect(() => {
-    if (!regulationsKey) return
-    try {
-      setIsFirstBookingUnlocked(localStorage.getItem(regulationsKey) === 'true')
-    } catch {
-      setIsFirstBookingUnlocked(false)
-    }
-  }, [regulationsKey])
+    // Unlock based on server value (DB) instead of localStorage
+    const completed = Boolean(customerData?.regulationsQuestionnaire?.completed)
+    setIsFirstBookingUnlocked(completed)
+  }, [customerData])
 
   useEffect(() => {
     window.scrollTo(0, 0)

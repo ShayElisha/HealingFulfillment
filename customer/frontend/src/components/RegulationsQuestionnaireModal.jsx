@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import Button from './Button'
+import { authService } from '../services/authApi'
 
 const REGULATIONS_TEXT = `
 שלום אהובים שמח שאתם כאן קוראים את מה שסיכמנו ועושים את הצעדים הראשונים בדרך שלכם לקחת אחריות על הסיבה שבאתם לחיים ועל איכות החיים שלכם ושל האהובים עליכם.
@@ -59,8 +60,6 @@ const REGULATIONS_TEXT = `
 🌿🌿🌿תודה שקראתם ומילאתם את השאלון מתרגש להפגש 🌿🌿🌿
 `
 
-const STORAGE_KEY_PREFIX = 'regulationsQuestionnaireCompleted:'
-
 function calculateCompleteness(form) {
   const required = [
     form.sleepQuality,
@@ -77,11 +76,6 @@ function calculateCompleteness(form) {
 }
 
 function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onCompleted }) {
-  const storageKey = useMemo(() => {
-    if (!customerId) return null
-    return `${STORAGE_KEY_PREFIX}${customerId}`
-  }, [customerId])
-
   const [form, setForm] = useState({
     sleepQuality: undefined, // 1-5
     nutritionQuality: undefined, // 1-5
@@ -145,18 +139,18 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
       return
     }
 
-    if (storageKey) {
+    ;(async () => {
       try {
-        localStorage.setItem(storageKey, 'true')
-        localStorage.setItem(`${storageKey}:answers`, JSON.stringify(form))
-      } catch {
-        // if localStorage fails, still allow completion
+        // Save questionnaire answers in DB (authenticated route)
+        await authService.submitRegulationsQuestionnaire({ answers: form })
+        onCompleted?.(form)
+        onClose?.()
+        toast.success('התקנון והשאלון מולאו בהצלחה')
+      } catch (error) {
+        console.error('Error saving regulations questionnaire:', error)
+        toast.error(error.response?.data?.message || 'שגיאה בשמירת השאלון. נסה שוב.')
       }
-    }
-
-    onCompleted?.(form)
-    onClose?.()
-    toast.success('התקנון והשאלון מולאו בהצלחה')
+    })()
   }
 
   return (
