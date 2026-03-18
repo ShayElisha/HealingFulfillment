@@ -221,6 +221,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.sleepQuality === n}
                             onChange={() => setForm({ ...form, sleepQuality: n })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-semibold">{n}</span>
                         </label>
@@ -243,6 +245,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.nutritionQuality === n}
                             onChange={() => setForm({ ...form, nutritionQuality: n })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-semibold">{n}</span>
                         </label>
@@ -272,6 +276,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.physicalActivity === opt.value}
                             onChange={() => setForm({ ...form, physicalActivity: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium">{opt.label}</span>
                         </label>
@@ -305,6 +311,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.mentalStability === opt.value}
                             onChange={() => setForm({ ...form, mentalStability: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium text-sm sm:text-base">{opt.label}</span>
                         </label>
@@ -333,6 +341,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.unresolvedTrauma === opt.value}
                             onChange={() => setForm({ ...form, unresolvedTrauma: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium text-sm sm:text-base">{opt.label}</span>
                         </label>
@@ -362,6 +372,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.triggers === opt.value}
                             onChange={() => setForm({ ...form, triggers: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium text-sm sm:text-base">{opt.label}</span>
                         </label>
@@ -391,6 +403,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.physicalDiagnosis === opt.value}
                             onChange={() => setForm({ ...form, physicalDiagnosis: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium">{opt.label}</span>
                         </label>
@@ -420,6 +434,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.mentalDiagnosis === opt.value}
                             onChange={() => setForm({ ...form, mentalDiagnosis: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium">{opt.label}</span>
                         </label>
@@ -449,6 +465,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                             checked={form.meds === opt.value}
                             onChange={() => setForm({ ...form, meds: opt.value })}
                             className="sr-only"
+                            tabIndex={-1}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
                           <span className="font-medium">{opt.label}</span>
                         </label>
@@ -463,6 +481,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId, onComplete
                       checked={form.accepted}
                       onChange={(e) => setForm({ ...form, accepted: e.target.checked })}
                       className="mt-1"
+                      tabIndex={-1}
+                      onMouseDown={(e) => e.preventDefault()}
                     />
                     <label htmlFor="accepted" className="text-sm text-neutral-700 leading-relaxed">
                       אני מאשר/ת שקראתי ומילאתי את השאלון כנדרש לפני קביעת פגישה ראשונה.
