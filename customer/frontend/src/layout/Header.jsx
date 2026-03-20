@@ -16,7 +16,7 @@ function Header({ isScrolled }) {
   const navItems = [
     { path: '/', label: 'בית' },
     { path: '/about', label: 'אודות' },
-    { path: '/treatments', label: 'סוגי טיפולים' },
+    { path: '/treatments', label: 'תהליכי ליווי' },
     { path: '/courses', label: 'מסלולים' },
     { path: '/contact', label: 'צור קשר' },
   ]

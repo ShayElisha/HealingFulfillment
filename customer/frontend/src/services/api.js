@@ -118,6 +118,12 @@ export const bookingService = {
     const response = await api.post('/booking', data)
     return response.data
   },
+  getAvailability: async (date) => {
+    const response = await api.get('/booking/availability', {
+      params: { date },
+    })
+    return response.data
+  },
 }
 
 export const categoryService = {

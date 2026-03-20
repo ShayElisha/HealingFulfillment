@@ -35,7 +35,7 @@ function TreatmentsPage() {
   return (
     <>
       <Helmet>
-        <title>סוגי טיפולים | טיפול בחרדות, פוסט טראומה והגשמה עצמית</title>
+        <title>תהליכי ליווי | טיפול בחרדות, פוסט טראומה והגשמה עצמית</title>
         <meta
           name="description"
           content="מגוון טיפולים מותאמים אישית: טיפול בחרדות, פוסט טראומה, שחרור חסימות רגשיות ותהליכי הגשמה עצמית."
@@ -56,8 +56,8 @@ function TreatmentsPage() {
                 <span className="text-primary-700 font-medium text-sm">טיפולים מותאמים אישית</span>
               </div>
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-6 leading-[1.1]">
-                <span className="text-neutral-900">סוגי</span>{' '}
-                <span className="text-primary-600">טיפולים</span>
+                <span className="text-neutral-900">תהליכי</span>{' '}
+                <span className="text-primary-600">ליווי</span>
               </h1>
               <p className="text-lg md:text-xl text-neutral-600 leading-relaxed max-w-2xl mx-auto font-light">
                 כל אדם הוא עולם בפני עצמו, ולכן כל תהליך טיפולי מותאם אישית

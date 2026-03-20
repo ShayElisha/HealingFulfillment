@@ -212,12 +212,12 @@ function HomePage() {
         </div>
       </Section>
 
-      {/* סוגי טיפולים Section */}
+      {/* תהליכי ליווי Section */}
       <Section variant="primary" id="treatments">
         <AnimatedSection>
           <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
-              סוגי טיפולים
+              תהליכי ליווי
             </h2>
             <p className="text-base sm:text-lg md:text-xl text-neutral-700 max-w-2xl mx-auto px-3">
               כל אדם הוא עולם בפני עצמו, ולכן כל תהליך טיפולי מותאם אישית לצרכים הייחודיים שלך.

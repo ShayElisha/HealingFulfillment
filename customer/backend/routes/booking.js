@@ -6,6 +6,57 @@ import { sendIntroMeetingConfirmationEmail, sendRegularMeetingConfirmationEmail 
 
 const router = express.Router()
 
+// GET /api/booking/availability?date=YYYY-MM-DD
+router.get('/availability', async (req, res, next) => {
+  try {
+    const { date } = req.query
+
+    if (!date) {
+      return res.status(400).json({
+        message: 'Missing required query parameter: date'
+      })
+    }
+
+    const selectedDate = new Date(date)
+    if (Number.isNaN(selectedDate.getTime())) {
+      return res.status(400).json({
+        message: 'Invalid date format'
+      })
+    }
+
+    const dateStart = new Date(selectedDate)
+    dateStart.setHours(0, 0, 0, 0)
+    const dateEnd = new Date(selectedDate)
+    dateEnd.setHours(23, 59, 59, 999)
+
+    const activeBookings = await Booking.find({
+      preferredDate: {
+        $gte: dateStart,
+        $lte: dateEnd
+      },
+      status: { $in: ['pending', 'confirmed'] }
+    }).select('preferredTime')
+
+    const unavailableTimes = activeBookings
+      .map((booking) => booking.preferredTime)
+      .filter((time) => typeof time === 'string' && time.trim() !== '')
+
+    const isDateUnavailable = activeBookings.some(
+      (booking) => !booking.preferredTime || booking.preferredTime.trim() === ''
+    )
+
+    res.json({
+      data: {
+        date,
+        unavailableTimes,
+        isDateUnavailable
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // POST /api/booking
 router.post('/', validateBooking, async (req, res, next) => {
   try {

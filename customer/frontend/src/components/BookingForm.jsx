@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { bookingService } from '../services/api'
 import Button from './Button'
 import { triggerConfetti } from '../utils/confetti'
@@ -7,7 +9,6 @@ import toast from 'react-hot-toast'
 function BookingForm() {
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
     email: '',
     preferredDate: '',
     preferredTime: '',
@@ -15,34 +16,114 @@ function BookingForm() {
     notes: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [availability, setAvailability] = useState({
+    unavailableTimes: [],
+    isDateUnavailable: false,
+  })
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+
+  const timeOptions = [
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+  ]
+
+  const loadAvailability = async (date) => {
+    if (!date) {
+      setAvailability({ unavailableTimes: [], isDateUnavailable: false })
+      return
+    }
+
+    try {
+      setLoadingAvailability(true)
+      const response = await bookingService.getAvailability(date)
+      setAvailability({
+        unavailableTimes: response?.data?.unavailableTimes || [],
+        isDateUnavailable: Boolean(response?.data?.isDateUnavailable),
+      })
+    } catch (error) {
+      console.error('Error loading availability:', error)
+      setAvailability({ unavailableTimes: [], isDateUnavailable: false })
+    } finally {
+      setLoadingAvailability(false)
+    }
+  }
 
   const handleChange = (e) => {
+    const { name, value } = e.target
+
+    if (name === 'preferredDate') {
+      setFormData((prev) => ({
+        ...prev,
+        preferredDate: value,
+        preferredTime: '',
+      }))
+      loadAvailability(value)
+      return
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     })
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const trimmedEmail = formData.email.trim()
+
+    if (!phone || !isValidPhoneNumber(phone)) {
+      toast.error('אנא הזן מספר טלפון תקין כולל קידומת מדינה.')
+      return
+    }
+
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        toast.error('אנא הזן כתובת אימייל תקינה.')
+        return
+      }
+    }
+
+    if (availability.isDateUnavailable) {
+      toast.error('התאריך שבחרת כבר תפוס. אנא בחר תאריך אחר.')
+      return
+    }
+
+    if (formData.preferredTime && availability.unavailableTimes.includes(formData.preferredTime)) {
+      toast.error('השעה שבחרת כבר תפוסה. אנא בחר שעה אחרת.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       await bookingService.submit({
         ...formData,
+        phone,
+        email: trimmedEmail,
         isIntroMeeting: true // זה טופס לפגישת היכרות
       })
       triggerConfetti()
       toast.success('הבקשה נשלחה בהצלחה! ניצור איתך קשר בקרוב לאישור הפגישה.')
       setFormData({
         name: '',
-        phone: '',
         email: '',
         preferredDate: '',
         preferredTime: '',
         meetingType: 'frontend',
         notes: '',
       })
+      setPhone('')
     } catch (error) {
       const errorMessage = error.response?.data?.message || 
                           (error.response?.data?.errors && Array.isArray(error.response.data.errors) 
@@ -78,15 +159,13 @@ function BookingForm() {
           <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-2">
             טלפון *
           </label>
-          <input
-            type="tel"
+          <PhoneInput
             id="phone"
-            name="phone"
-            required
-            value={formData.phone}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-            placeholder="050-123-4567"
+            international
+            defaultCountry="IL"
+            value={phone}
+            onChange={setPhone}
+            className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all"
           />
         </div>
       </div>
@@ -101,6 +180,7 @@ function BookingForm() {
           name="email"
           value={formData.email}
           onChange={handleChange}
+          pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
           className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           placeholder="your@email.com"
         />
@@ -186,6 +266,12 @@ function BookingForm() {
             onChange={handleChange}
             className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
+          {loadingAvailability && (
+            <p className="text-xs text-neutral-500 mt-2">בודק זמינות...</p>
+          )}
+          {!loadingAvailability && availability.isDateUnavailable && (
+            <p className="text-xs text-red-500 mt-2">התאריך תפוס. אנא בחר תאריך אחר.</p>
+          )}
         </div>
 
         <div>
@@ -197,20 +283,22 @@ function BookingForm() {
             name="preferredTime"
             value={formData.preferredTime}
             onChange={handleChange}
+            disabled={availability.isDateUnavailable}
             className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           >
             <option value="">בחר שעה</option>
-            <option value="09:00">09:00</option>
-            <option value="10:00">10:00</option>
-            <option value="11:00">11:00</option>
-            <option value="12:00">12:00</option>
-            <option value="13:00">13:00</option>
-            <option value="14:00">14:00</option>
-            <option value="15:00">15:00</option>
-            <option value="16:00">16:00</option>
-            <option value="17:00">17:00</option>
-            <option value="18:00">18:00</option>
+            {timeOptions.map((time) => {
+              const isUnavailable = availability.unavailableTimes.includes(time)
+              return (
+                <option key={time} value={time} disabled={isUnavailable}>
+                  {time}{isUnavailable ? ' (תפוס)' : ''}
+                </option>
+              )
+            })}
           </select>
+          {!loadingAvailability && !availability.isDateUnavailable && availability.unavailableTimes.length > 0 && (
+            <p className="text-xs text-neutral-500 mt-2">שעות מסומנות כ"תפוס" אינן זמינות לקביעה.</p>
+          )}
         </div>
       </div>
 
