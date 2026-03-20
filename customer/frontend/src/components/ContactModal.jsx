@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { useContact } from '../context/ContactContext'
 import { contactService } from '../services/api'
 import Button from './Button'
@@ -10,16 +12,17 @@ function ContactModal() {
   const { isModalOpen, closeContactModal } = useContact()
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
     email: '',
     message: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phone, setPhone] = useState('')
 
   useEffect(() => {
     if (!isModalOpen) {
       // Reset form when modal closes
-      setFormData({ name: '', phone: '', email: '', message: '' })
+      setFormData({ name: '', email: '', message: '' })
+      setPhone('')
     }
   }, [isModalOpen])
 
@@ -32,13 +35,41 @@ function ContactModal() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const trimmedMessage = formData.message.trim()
+    const trimmedEmail = formData.email.trim()
+
+    if (!phone || !isValidPhoneNumber(phone)) {
+      toast.error('אנא הזן מספר טלפון תקין כולל קידומת מדינה.')
+      return
+    }
+
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        toast.error('אנא הזן כתובת אימייל תקינה.')
+        return
+      }
+    }
+
+    if (!trimmedMessage) {
+      toast.error('שדה ההודעה הוא שדה חובה.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      await contactService.submit(formData)
+      await contactService.submit({
+        ...formData,
+        phone,
+        email: trimmedEmail,
+        message: trimmedMessage,
+      })
       triggerConfetti()
       toast.success('ההודעה נשלחה בהצלחה! ניצור איתך קשר בקרוב.')
-      setFormData({ name: '', phone: '', email: '', message: '' })
+      setFormData({ name: '', email: '', message: '' })
+      setPhone('')
       // Close modal after 2 seconds on success
       setTimeout(() => {
         closeContactModal()
@@ -102,15 +133,13 @@ function ContactModal() {
                   <label htmlFor="modal-phone" className="block text-sm font-medium text-neutral-700 mb-2">
                     טלפון *
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
                     id="modal-phone"
-                    name="phone"
-                    required
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                    placeholder="050-123-4567"
+                    international
+                    defaultCountry="IL"
+                    value={phone}
+                    onChange={setPhone}
+                    className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all"
                   />
                 </div>
 
@@ -124,6 +153,7 @@ function ContactModal() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                     className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="your@email.com"
                   />
