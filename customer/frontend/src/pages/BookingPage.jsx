@@ -115,7 +115,7 @@ function BookingPage() {
                 התקשר עכשיו
               </a>
               <a
-                href="https://wa.me/972501234567"
+                href="https://wa.me/972526264507"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-secondary inline-block text-center"

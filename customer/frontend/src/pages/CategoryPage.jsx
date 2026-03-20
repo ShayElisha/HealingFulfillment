@@ -430,7 +430,7 @@ function CategoryPage() {
                     קבע פגישה
                   </Button>
                   <Button
-                    href="https://wa.me/972501234567"
+                    href="https://wa.me/972526264507"
                     variant="secondary"
                     target="_blank"
                     className="bg-green-500 hover:bg-green-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 px-8 py-4 text-lg font-semibold"

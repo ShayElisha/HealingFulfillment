@@ -385,7 +385,7 @@ function HomePage() {
                 קבע פגישת היכרות
               </Button>
               <Button
-                href="https://wa.me/972501234567"
+                href="https://wa.me/972526264507"
                 variant="secondary"
                 className="w-full sm:w-auto"
               >

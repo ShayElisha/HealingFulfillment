@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 
 function WhatsAppButton() {
-  const phoneNumber = '972501234567' // Replace with actual number
+  const phoneNumber = '972526264507'
   const message = encodeURIComponent('שלום, אני מעוניין/ת לקבוע פגישה')
 
   return (
