@@ -42,18 +42,18 @@ function Footer() {
               </li>
               <li>
                 <Link
-                  to="/anxiety"
+                  to="/courses"
                   className="text-neutral-400 hover:text-primary-400 transition-colors"
                 >
-                  טיפול בחרדות
+                  מסלולים
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/trauma"
+                  to="/contact"
                   className="text-neutral-400 hover:text-primary-400 transition-colors"
                 >
-                  טיפול בפוסט טראומה
+                  צור קשר
                 </Link>
               </li>
             </ul>

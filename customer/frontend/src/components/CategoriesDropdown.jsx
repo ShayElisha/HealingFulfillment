@@ -129,34 +129,15 @@ function CategoriesDropdown({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Treatment Pages Links */}
+          {/* Treatments overview link */}
           <div className="mt-4 pt-4 border-t border-neutral-200">
-            <h4 className="text-sm font-medium text-neutral-700 mb-2">
-              דפי טיפול:
-            </h4>
-            <div className="space-y-1">
-              <Link
-                to="/anxiety"
-                onClick={onClose}
-                className="block text-sm text-neutral-700 hover:text-primary-600 p-2 rounded hover:bg-neutral-50 transition-colors"
-              >
-                טיפול בחרדות
-              </Link>
-              <Link
-                to="/trauma"
-                onClick={onClose}
-                className="block text-sm text-neutral-700 hover:text-primary-600 p-2 rounded hover:bg-neutral-50 transition-colors"
-              >
-                טיפול בפוסט טראומה
-              </Link>
-              <Link
-                to="/treatments"
-                onClick={onClose}
-                className="block text-sm text-neutral-700 hover:text-primary-600 p-2 rounded hover:bg-neutral-50 transition-colors"
-              >
-                כל סוגי הטיפולים
-              </Link>
-            </div>
+            <Link
+              to="/treatments"
+              onClick={onClose}
+              className="block text-sm text-neutral-700 hover:text-primary-600 p-2 rounded hover:bg-neutral-50 transition-colors text-center"
+            >
+              כל סוגי הטיפולים
+            </Link>
           </div>
         </div>
       </div>

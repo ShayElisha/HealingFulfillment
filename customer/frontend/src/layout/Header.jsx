@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import CategoriesDropdown from '../components/CategoriesDropdown'
 import QuestionnaireModal from '../components/QuestionnaireModal'
 import { usePurchase } from '../context/PurchaseContext'
 import { useAuth } from '../context/AuthContext'
@@ -9,7 +8,6 @@ import logoImage from '../assets/IMG_1562-Photoroom.png'
 
 function Header({ isScrolled }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isCategoriesDropdownOpen, setIsCategoriesDropdownOpen] = useState(false)
   const [isQuestionnaireOpen, setIsQuestionnaireOpen] = useState(false)
   const location = useLocation()
   const { openPurchaseModal } = usePurchase()
@@ -78,26 +76,6 @@ function Header({ isScrolled }) {
                 )}
               </Link>
             ))}
-            
-            {/* Categories Dropdown Button */}
-            <div className="relative">
-              <button
-                onClick={() => setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)}
-                className={`relative px-3 py-2 font-medium transition-colors duration-200 flex items-center gap-1 ${
-                  isCategoriesDropdownOpen
-                    ? 'text-primary-600'
-                    : 'text-neutral-700 hover:text-primary-600'
-                }`}
-              >
-                טיפולים ומסלולים
-                <span className="text-xs">{isCategoriesDropdownOpen ? '▲' : '▼'}</span>
-              </button>
-              <CategoriesDropdown
-                isOpen={isCategoriesDropdownOpen}
-                onClose={() => setIsCategoriesDropdownOpen(false)}
-              />
-            </div>
-
             <button
               onClick={() => openPurchaseModal()}
               className="btn-secondary text-sm px-5 py-2.5"
@@ -176,29 +154,6 @@ function Header({ isScrolled }) {
                     {item.label}
                   </Link>
                 ))}
-                
-                {/* Mobile Categories Button */}
-                <button
-                  onClick={() => {
-                    setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)
-                  }}
-                  className="block w-full text-right px-4 py-3 rounded-lg font-medium transition-colors text-neutral-700 hover:bg-neutral-100 flex justify-between items-center"
-                >
-                  <span>קטגוריות ומסלולים</span>
-                  <span>{isCategoriesDropdownOpen ? '▲' : '▼'}</span>
-                </button>
-                
-                {isCategoriesDropdownOpen && (
-                  <div className="mx-4 mt-2 mb-4">
-                    <CategoriesDropdown
-                      isOpen={isCategoriesDropdownOpen}
-                      onClose={() => {
-                        setIsCategoriesDropdownOpen(false)
-                      }}
-                    />
-                  </div>
-                )}
-                
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false)

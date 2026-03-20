@@ -4,8 +4,6 @@ import Layout from './layout/Layout'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import TreatmentsPage from './pages/TreatmentsPage'
-import AnxietyPage from './pages/AnxietyPage'
-import TraumaPage from './pages/TraumaPage'
 import ContactPage from './pages/ContactPage'
 import BookingPage from './pages/BookingPage'
 import CoursesPage from './pages/CoursesPage'
@@ -54,8 +52,6 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/treatments" element={<TreatmentsPage />} />
-        <Route path="/anxiety" element={<AnxietyPage />} />
-        <Route path="/trauma" element={<TraumaPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/courses" element={<CoursesPage />} />
