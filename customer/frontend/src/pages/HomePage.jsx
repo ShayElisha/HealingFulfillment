@@ -319,21 +319,8 @@ function HomePage() {
         <AnimatedSection>
           <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
-              מה אומרים
+              חוות דעת
             </h2>
-            {reviewStats && reviewStats.totalReviews > 0 && (
-              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-3 sm:mt-4 px-3">
-                <div className="text-2xl sm:text-3xl font-bold text-primary-600">
-                  {reviewStats.averageRating.toFixed(1)}
-                </div>
-                <div className="flex text-accent-500 text-xl sm:text-2xl">
-                  {'⭐'.repeat(Math.round(reviewStats.averageRating))}
-                </div>
-                <div className="text-sm sm:text-base text-neutral-600">
-                  ({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? 'ביקורת' : 'ביקורות'})
-                </div>
-              </div>
-            )}
           </div>
         </AnimatedSection>
 
