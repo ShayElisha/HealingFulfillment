@@ -65,11 +65,11 @@ function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="tel:+972501234567"
+                  href="tel:+972526264507"
                   className="text-neutral-400 hover:text-primary-400 transition-colors flex items-center space-x-reverse space-x-2"
                 >
                   <span>📞</span>
-                  <span>050-123-4567</span>
+                  <span>052-6264507</span>
                 </a>
               </li>
               <li>

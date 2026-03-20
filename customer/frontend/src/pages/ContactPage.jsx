@@ -52,10 +52,10 @@ function ContactPage() {
                       טלפון
                     </h3>
                     <a
-                      href="tel:+972501234567"
+                      href="tel:+972526264507"
                       className="text-primary-600 hover:text-primary-700 transition-colors"
                     >
-                      050-123-4567
+                      052-6264507
                     </a>
                   </div>
                 </div>
@@ -90,7 +90,7 @@ function ContactPage() {
                       WhatsApp
                     </h3>
                     <a
-                      href="https://wa.me/972501234567"
+                      href="https://wa.me/972526264507"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:text-primary-700 transition-colors"

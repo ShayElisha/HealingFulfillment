@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { contactService } from '../services/api'
 import Button from './Button'
 import { triggerConfetti } from '../utils/confetti'
@@ -12,6 +14,7 @@ function ContactForm() {
     message: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phone, setPhone] = useState('')
 
   const handleChange = (e) => {
     setFormData({
@@ -22,13 +25,41 @@ function ContactForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const trimmedMessage = formData.message.trim()
+    const trimmedEmail = formData.email.trim()
+
+    if (!phone || !isValidPhoneNumber(phone)) {
+      toast.error('אנא הזן מספר טלפון תקין כולל קידומת מדינה.')
+      return
+    }
+
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        toast.error('אנא הזן כתובת אימייל תקינה.')
+        return
+      }
+    }
+
+    if (!trimmedMessage) {
+      toast.error('שדה ההודעה הוא שדה חובה.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      await contactService.submit(formData)
+      await contactService.submit({
+        ...formData,
+        phone,
+        email: trimmedEmail,
+        message: trimmedMessage,
+      })
       triggerConfetti()
       toast.success('ההודעה נשלחה בהצלחה! ניצור איתך קשר בקרוב.')
       setFormData({ name: '', phone: '', email: '', message: '' })
+      setPhone('')
     } catch (error) {
       toast.error('אירעה שגיאה בשליחת ההודעה. אנא נסה שוב או צור קשר ישירות.')
     } finally {
@@ -58,15 +89,13 @@ function ContactForm() {
         <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-2">
           טלפון *
         </label>
-        <input
-          type="tel"
+        <PhoneInput
           id="phone"
-          name="phone"
-          required
-          value={formData.phone}
-          onChange={handleChange}
-          className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-          placeholder="050-123-4567"
+          international
+          defaultCountry="IL"
+          value={phone}
+          onChange={setPhone}
+          className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all"
         />
       </div>
 
@@ -80,6 +109,7 @@ function ContactForm() {
           name="email"
           value={formData.email}
           onChange={handleChange}
+          pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
           className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           placeholder="your@email.com"
         />
