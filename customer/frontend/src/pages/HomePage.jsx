@@ -8,6 +8,7 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
+import { categoryService } from '../services/api'
 import yanivImage from '../assets/yaniv.png'
 
 function HomePage() {
@@ -15,10 +16,13 @@ function HomePage() {
   const [reviews, setReviews] = useState([])
   const [reviewStats, setReviewStats] = useState(null)
   const [loadingReviews, setLoadingReviews] = useState(true)
+  const [treatments, setTreatments] = useState([])
+  const [loadingTreatments, setLoadingTreatments] = useState(true)
 
   useEffect(() => {
     window.scrollTo(0, 0)
     loadReviews()
+    loadTreatments()
   }, [])
 
   const loadReviews = async () => {
@@ -40,6 +44,21 @@ function HomePage() {
       setReviewStats(null)
     } finally {
       setLoadingReviews(false)
+    }
+  }
+
+  const loadTreatments = async () => {
+    try {
+      setLoadingTreatments(true)
+      const response = await categoryService.getAll()
+      const activeTreatments = (response?.data || []).filter((treatment) => treatment.isActive)
+      activeTreatments.sort((a, b) => (a.order || 0) - (b.order || 0))
+      setTreatments(activeTreatments.slice(0, 4))
+    } catch (error) {
+      console.error('Error loading treatments:', error)
+      setTreatments([])
+    } finally {
+      setLoadingTreatments(false)
     }
   }
 
@@ -206,49 +225,45 @@ function HomePage() {
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
-          {[
-            {
-              title: 'טיפול בחרדות',
-              description:
-                'עבודה משותפת על הבנת מקורות החרדה, טכניקות להרגעה עצמית, וכלים מעשיים להתמודדות יומיומית.',
-              link: '/anxiety',
-            },
-            {
-              title: 'טיפול בפוסט טראומה',
-              description:
-                'תהליך עדין ומכיל לעיבוד טראומות מהעבר, שחרור מהגוף והנפש, וחזרה לחיים מלאים ומשמעותיים.',
-              link: '/trauma',
-            },
-            {
-              title: 'שחרור חסימות רגשיות',
-              description:
-                'זיהוי ושחרור של דפוסים רגשיים שמחזיקים אותך במקום, ופתיחת דרך לצמיחה והתפתחות.',
-              link: '/treatments',
-            },
-            {
-              title: 'תהליכי הגשמה עצמית',
-              description:
-                'מסע אישי אל עבר הבנה עמוקה יותר של עצמך, הגשמת הפוטנציאל שלך וחיים מלאי משמעות.',
-              link: '/treatments',
-            },
-          ].map((item, index) => (
-            <AnimatedSection key={index} delay={index * 0.15}>
-              <Card className="bg-white shadow-lg">
-                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-neutral-900 mb-2 sm:mb-3">
-                  {item.title}
-                </h3>
-                <p className="text-sm sm:text-base text-neutral-700 leading-relaxed mb-3 sm:mb-4">{item.description}</p>
-                <Link
-                  to={item.link}
-                  className="text-sm sm:text-base text-primary-600 font-medium hover:text-primary-700 transition-colors inline-flex items-center"
-                >
-                  קרא עוד ←
-                </Link>
-              </Card>
-            </AnimatedSection>
-          ))}
-        </div>
+        {loadingTreatments ? (
+          <div className="text-center py-12">
+            <p className="text-neutral-600">טוען טיפולים...</p>
+          </div>
+        ) : treatments.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-neutral-600">אין טיפולים זמינים כרגע</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+            {treatments.map((treatment, index) => (
+              <AnimatedSection key={treatment._id} delay={index * 0.15}>
+                <Card className="bg-white shadow-lg">
+                  <h3 className="text-xl sm:text-2xl font-serif font-semibold text-neutral-900 mb-2 sm:mb-3">
+                    {treatment.name}
+                  </h3>
+                  <p
+                    className="text-sm sm:text-base text-neutral-700 leading-relaxed mb-3 sm:mb-4"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {treatment.description || 'פרטים נוספים זמינים בעמוד הטיפול.'}
+                  </p>
+                  <Link
+                    to={`/category/${treatment._id}`}
+                    className="text-sm sm:text-base text-primary-600 font-medium hover:text-primary-700 transition-colors inline-flex items-center"
+                  >
+                    קרא עוד ←
+                  </Link>
+                </Card>
+              </AnimatedSection>
+            ))}
+          </div>
+        )}
       </Section>
 
       {/* על המטפל Section */}
