@@ -95,7 +95,7 @@ export const getBaseTemplate = (title, content) => {
         </div>
         <div class="footer">
           <p>ריפוי והגשמה - מסע משותף אל עבר שחרור מחסימות רגשיות והגשמה עצמית</p>
-          <p>כתובת: [כתובת המשרד] | טלפון: 050-123-4567 | אימייל: info@healing-fulfillment.co.il</p>
+          <p>כתובת: [כתובת המשרד] | טלפון: 050-123-4567 | אימייל: yaniv@elatzmi.com</p>
         </div>
       </div>
     </body>

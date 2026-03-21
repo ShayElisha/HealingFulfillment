@@ -71,10 +71,10 @@ function ContactPage() {
                       אימייל
                     </h3>
                     <a
-                      href="mailto:info@healing-fulfillment.co.il"
+                      href="mailto:yaniv@elatzmi.com"
                       className="text-primary-600 hover:text-primary-700 transition-colors"
                     >
-                      info@healing-fulfillment.co.il
+                      yaniv@elatzmi.com
                     </a>
                   </div>
                 </div>

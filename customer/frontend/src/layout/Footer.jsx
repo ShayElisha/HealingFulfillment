@@ -74,11 +74,11 @@ function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:info@healing-fulfillment.co.il"
+                  href="mailto:yaniv@elatzmi.com"
                   className="text-neutral-400 hover:text-primary-400 transition-colors flex items-center space-x-reverse space-x-2"
                 >
                   <span>✉️</span>
-                  <span>info@healing-fulfillment.co.il</span>
+                  <span>yaniv@elatzmi.com</span>
                 </a>
               </li>
               <li>
