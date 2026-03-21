@@ -36,10 +36,38 @@ const purchaseSchema = new mongoose.Schema({
     enum: ['pending', 'completed', 'cancelled'],
     default: 'pending'
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed', 'cancelled'],
+    default: 'pending'
+  },
   paymentMethod: {
     type: String,
     enum: ['credit_card', 'bank_transfer', 'paypal', 'other'],
     default: 'other'
+  },
+  orderId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true
+  },
+  provider: {
+    type: String,
+    enum: ['cardcom', 'manual'],
+    default: 'manual'
+  },
+  providerTransactionId: {
+    type: String,
+    trim: true
+  },
+  providerResponse: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  paidAt: {
+    type: Date,
+    default: null
   },
   notes: {
     type: String,

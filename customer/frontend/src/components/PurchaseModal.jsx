@@ -4,7 +4,6 @@ import { usePurchase } from '../context/PurchaseContext'
 import { coursesService } from '../services/coursesApi'
 import { purchaseService } from '../services/purchaseApi'
 import Button from './Button'
-import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 
 function PurchaseModal() {
@@ -69,17 +68,20 @@ function PurchaseModal() {
     setIsSubmitting(true)
 
     try {
-      await purchaseService.create({
+      const response = await purchaseService.createCheckout({
         courseId: selectedCourseForPurchase._id,
         ...purchaseForm
       })
-      triggerConfetti()
-      toast.success('בקשת הרכישה נשלחה בהצלחה! ניצור איתך קשר בקרוב להשלמת התשלום.')
+
+      const checkoutUrl = response?.data?.checkoutUrl
+      if (!checkoutUrl) {
+        throw new Error('לא התקבל קישור תשלום מחברת הסליקה')
+      }
+
+      toast.success('מעביר אותך לעמוד התשלום...')
       setTimeout(() => {
-        closePurchaseModal()
-        setCurrentStep('select')
-        setSelectedCourseForPurchase(null)
-      }, 3000)
+        window.location.href = checkoutUrl
+      }, 500)
     } catch (error) {
       toast.error(error.response?.data?.message || 'אירעה שגיאה בשליחת בקשת הרכישה. אנא נסה שוב או צור קשר ישירות.')
     } finally {
