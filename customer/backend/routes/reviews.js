@@ -12,7 +12,6 @@ router.get('/', async (req, res, next) => {
     const reviews = await Review.find({ status: 'approved' })
       .populate('customer', 'name')
       .sort({ createdAt: -1 })
-      .limit(50)
       .lean()
 
     res.json({

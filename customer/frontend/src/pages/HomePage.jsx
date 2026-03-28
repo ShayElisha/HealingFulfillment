@@ -6,6 +6,7 @@ import Button from '../components/Button'
 import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
+import ReviewsCarousel from '../components/ReviewsCarousel'
 import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
 import { categoryService } from '../services/api'
@@ -132,7 +133,6 @@ function HomePage() {
   const forWhomHoverMode = useForWhomHoverMode()
   const { openPurchaseModal } = usePurchase()
   const [reviews, setReviews] = useState([])
-  const [reviewStats, setReviewStats] = useState(null)
   const [loadingReviews, setLoadingReviews] = useState(true)
   const [treatments, setTreatments] = useState([])
   const [loadingTreatments, setLoadingTreatments] = useState(true)
@@ -146,20 +146,13 @@ function HomePage() {
   const loadReviews = async () => {
     try {
       setLoadingReviews(true)
-      const [reviewsRes, statsRes] = await Promise.all([
-        reviewsService.getAll(),
-        reviewsService.getStats()
-      ])
-      console.log('Reviews response:', reviewsRes)
-      console.log('Stats response:', statsRes)
+      const reviewsRes = await reviewsService.getAll()
       setReviews(reviewsRes?.data || [])
-      setReviewStats(statsRes?.data || null)
     } catch (error) {
       console.error('Error loading reviews:', error)
       console.error('Error details:', error.response?.data || error.message)
       // Set empty arrays on error
       setReviews([])
-      setReviewStats(null)
     } finally {
       setLoadingReviews(false)
     }
@@ -500,34 +493,9 @@ function HomePage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-6xl mx-auto px-3 sm:px-4">
-            {reviews.slice(0, 6).map((review, index) => (
-              <AnimatedSection key={review._id} delay={index * 0.1}>
-                <Card>
-                  <div className="mb-3 sm:mb-4">
-                    <div className="flex text-accent-500 mb-2 text-lg sm:text-xl">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <span key={star}>{star <= review.rating ? '⭐' : '☆'}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm sm:text-base text-neutral-700 leading-relaxed mb-3 sm:mb-4 italic">
-                    "{review.content}"
-                  </p>
-                  <p className="text-sm sm:text-base text-neutral-900 font-semibold">— {review.customerName || review.customer?.name || 'לקוח'}</p>
-                  {review.createdAt && (
-                    <p className="text-xs sm:text-sm text-neutral-500 mt-2">
-                      {new Date(review.createdAt).toLocaleDateString('he-IL', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  )}
-                </Card>
-              </AnimatedSection>
-            ))}
-          </div>
+          <AnimatedSection>
+            <ReviewsCarousel reviews={reviews} />
+          </AnimatedSection>
         )}
       </Section>
 

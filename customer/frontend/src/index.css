@@ -21,6 +21,34 @@
       animation: none;
     }
   }
+
+  /* חוות דעת — שני מקטעים זהים; -50% מהרוחב = מחזור אחד (אין gap בין המקטעים) */
+  .reviews-marquee-row {
+    animation-name: reviews-marquee-shift;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform;
+  }
+
+  @keyframes reviews-marquee-shift {
+    from {
+      transform: translate3d(90%, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .reviews-marquee-wrap:hover .reviews-marquee-row,
+  .reviews-marquee-wrap:focus-within .reviews-marquee-row {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reviews-marquee-row {
+      animation: none;
+    }
+  }
 }
 
 @layer base {
