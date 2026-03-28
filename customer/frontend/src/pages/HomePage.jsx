@@ -10,6 +10,7 @@ import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
 import { categoryService } from '../services/api'
 import yanivImage from '../assets/yaniv.png'
+import heroVideo from '../assets/PixVerse_V5.5_Extend_720P_Seamless_looping_cin.mp4'
 
 function HomePage() {
   const { openPurchaseModal } = usePurchase()
@@ -74,8 +75,18 @@ function HomePage() {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-16 sm:pt-20 pb-32 sm:pb-24">
-<div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50"></div>
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 pb-32 sm:pb-24">
+        <video
+          className="absolute inset-0 z-0 h-full w-full object-cover pointer-events-none"
+          src={heroVideo}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          aria-hidden
+        />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-br from-primary-50/25 via-white/25 to-secondary-50/25" />
         <div className="container-custom relative z-10 px-3 sm:px-4">
           <div className="max-w-4xl mx-auto text-center">
             <AnimatedSection delay={0.1}>
@@ -128,7 +139,7 @@ function HomePage() {
             </AnimatedSection>
           </div>
         </div>
-        <div className="absolute bottom-6 sm:bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center px-3">
+        <div className="absolute bottom-6 sm:bottom-10 left-1/2 z-10 -translate-x-1/2 transform flex flex-col items-center px-3">
           {/* Speech bubble with text */}
           <div className="relative mb-3 sm:mb-4 animate-bounce">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border-2 border-primary-200 px-4 sm:px-6 py-3 sm:py-4 max-w-[280px] sm:max-w-xs md:max-w-sm">
