@@ -10,7 +10,8 @@ function Button({
   type = 'button',
   ...props 
 }) {
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-300 active:scale-95'
+  const baseClasses =
+    'inline-flex items-center justify-center font-medium transition-all duration-300 ease-out hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 active:translate-y-0 active:scale-95 motion-reduce:active:scale-100'
   
   const variants = {
     primary: 'btn-primary',

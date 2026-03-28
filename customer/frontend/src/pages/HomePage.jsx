@@ -194,70 +194,83 @@ function HomePage() {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 pb-32 sm:pb-24">
         <video
-          className="absolute inset-0 z-0 h-full w-full object-cover pointer-events-none"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover [transform:translateZ(0)]"
           src={heroVideo}
           autoPlay
           loop
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           aria-hidden
         />
         <div className="absolute inset-0 z-[1] bg-gradient-to-br from-primary-50/25 via-white/25 to-secondary-50/25" />
         <div className="container-custom relative z-10 px-3 sm:px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <AnimatedSection delay={0.1}>
-              <div className="flex justify-center mb-8 sm:mb-12 md:mb-16">
-                <div className="relative">
-                  {/* Rotating dark glowing element around the ring */}
-                  <div className="absolute inset-0 -inset-3 sm:-inset-5 md:-inset-8 rounded-full animate-spin-slow pointer-events-none">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 md:w-6 md:h-6 rounded-full bg-primary-800 shadow-[0_0_15px_rgba(15,118,110,0.8)] sm:shadow-[0_0_20px_rgba(15,118,110,1)] md:shadow-[0_0_30px_rgba(15,118,110,1.2)]"></div>
-                  </div>
-                  
-                  {/* Rotating ring (not glowing) */}
-                  <div className="absolute inset-0 -inset-3 sm:-inset-5 md:-inset-8 rounded-full border-[4px] sm:border-[6px] md:border-[10px] border-primary-700/80 bg-primary-900/10 animate-spin-slow pointer-events-none"></div>
-                  
-                  {/* Main image */}
-                  <img 
-                    src={yanivImage} 
-                    alt="יניב תנעמי" 
-                    className="w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 rounded-full object-cover shadow-2xl border-2 sm:border-4 border-white"
-                  />
+          {/* מתיחה לרוחב ה־container (ביטול ה-padding הפנימי) + רווח אופקי גדול — תמונה צמודה יותר לשמאל, טקסט לימין */}
+          <div className="-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8">
+            <div
+              className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-y-10 gap-x-10 px-3 sm:px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-x-28 md:gap-y-12 md:px-6 lg:gap-x-36 lg:px-8 xl:gap-x-44 2xl:gap-x-52"
+              dir="ltr"
+            >
+            <div className="order-2 flex w-full justify-center md:order-1 md:justify-start">
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-0 -inset-3 motion-reduce:will-change-auto motion-reduce:animate-none will-change-transform animate-spin-slow rounded-full sm:-inset-5 md:-inset-8">
+                  <div className="absolute inset-0 rounded-full border-[4px] border-primary-700/80 bg-primary-900/10 sm:border-[6px] md:border-[10px]" />
+                  <div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                  <div className="absolute bottom-0 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                  <div className="absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                  <div className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                </div>
+                <img
+                  src={yanivImage}
+                  alt="יניב תנעמי"
+                  className="relative z-[1] h-40 w-40 rounded-full border-2 border-white object-cover shadow-2xl sm:h-56 sm:w-56 sm:border-4 md:h-80 md:w-80"
+                />
+              </div>
+            </div>
+
+            <div className="order-2 min-w-0 max-w-4xl w-full md:order-2">
+              <div
+                className="mx-auto min-w-0 w-full max-w-4xl rounded-2xl border border-white/50 bg-white/90 p-5 shadow-xl sm:bg-white/88 sm:p-7 md:ml-auto md:mr-0 lg:max-w-3xl lg:p-10"
+                dir="rtl"
+              >
+                <h1 className="mb-4 font-serif text-3xl font-bold leading-tight text-neutral-900 sm:mb-5 sm:text-4xl md:text-5xl lg:text-6xl">
+                  מהישרדות לשגשוג תהליך אינטגרטיבי מאחד{' '}
+                  <span className="text-gradient">ריפוי והגשמה</span>
+                </h1>
+                <p className="mb-6 text-base leading-relaxed text-neutral-700 sm:mb-8 sm:text-lg md:text-xl lg:text-2xl">
+                  המוח שלך לא שבור – הוא פשוט מחווט להישרדות. הגיע הזמן לחזור לריבונות
+                </p>
+                <div className="flex min-w-0 w-full max-w-full flex-row flex-nowrap items-stretch gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3">
+                  <Button
+                    onClick={() => openPurchaseModal()}
+                    variant="secondary"
+                    className="min-h-[2.75rem] min-w-0 flex-1 basis-0 px-1.5 py-2 text-center text-[11px] leading-tight whitespace-normal sm:px-2 sm:text-xs md:px-3 md:py-3 md:text-sm lg:px-4 lg:text-base"
+                  >
+                    רכוש מסלול
+                  </Button>
+                  <Button
+                    to="/booking"
+                    variant="primary"
+                    className="min-h-[2.75rem] min-w-0 flex-1 basis-0 px-1.5 py-2 text-center text-[11px] leading-tight whitespace-normal sm:px-2 sm:text-xs md:px-3 md:py-3 md:text-sm lg:px-4 lg:text-base"
+                  >
+                    קבע פגישת היכרות
+                  </Button>
+                  <Button
+                    to="/about"
+                    variant="soft"
+                    className="min-h-[2.75rem] min-w-0 flex-1 basis-0 px-1.5 py-2 text-center text-[11px] leading-tight whitespace-normal sm:px-2 sm:text-xs md:px-3 md:py-3 md:text-sm lg:px-4 lg:text-base"
+                  >
+                    גלה עוד עליי
+                  </Button>
                 </div>
               </div>
-            </AnimatedSection>
-            <AnimatedSection delay={0.2}>
-              <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6 leading-tight px-2">
-                ,מהישרדות לשגשוג תהליך אינטגרטיבי מאחד{' '}
-                <span className="text-gradient">ריפוי והגשמה</span>
-              </h1>
-            </AnimatedSection>
-            <AnimatedSection delay={0.4}>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto px-3">
-                המוח שלך לא שבור – הוא פשוט מחווט להישרדות. הגיע הזמן לחזור לריבונות
-              </p>
-            </AnimatedSection>
-            <AnimatedSection delay={0.6}>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
-                <Button onClick={() => openPurchaseModal()} variant="secondary" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
-                  רכוש מסלול
-                </Button>
-                <Button to="/booking" variant="primary" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
-                  קבע פגישת היכרות
-                </Button>
-                <Button to="/about" variant="soft" className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto">
-                  גלה עוד עליי
-                </Button>
-              </div>
-            </AnimatedSection>
+            </div>
+            </div>
           </div>
         </div>
         <div className="absolute bottom-6 sm:bottom-10 left-1/2 z-10 -translate-x-1/2 transform flex flex-col items-center px-3">
           {/* Speech bubble with text */}
-          <div className="relative mb-3 sm:mb-4 animate-bounce">
+          <div className="relative mb-3 animate-bounce motion-reduce:animate-none sm:mb-4">
             <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl border-2 border-primary-200 px-4 sm:px-6 py-3 sm:py-4 max-w-[280px] sm:max-w-xs md:max-w-sm">
               <p className="text-xs sm:text-sm md:text-base text-neutral-700 text-center leading-relaxed font-medium">
                 אתה מרגיש תקוע? אתה חושב שהכל חשוך? תבדוק אם אחד הדברים פה מתאים לך?
