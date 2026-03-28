@@ -131,6 +131,7 @@ router.post('/create-checkout', async (req, res, next) => {
       customerName,
       customerEmail,
       customerPhone,
+      productName: course.title || 'רכישת מסלול',
       successUrl: `${frontendUrl}/payment/success?orderId=${encodeURIComponent(orderId)}`,
       failedUrl: `${frontendUrl}/payment/failed?orderId=${encodeURIComponent(orderId)}`,
       callbackUrl: `${backendUrl}/api/purchases/cardcom/webhook`,

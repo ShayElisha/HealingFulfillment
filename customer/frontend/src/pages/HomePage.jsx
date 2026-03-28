@@ -114,14 +114,13 @@ function HomePage() {
             </AnimatedSection>
             <AnimatedSection delay={0.2}>
               <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6 leading-tight px-2">
-                המסע שלך אל עבר{' '}
+              ,מהישרדות לשגשוג תהליך אינטגרטיבי מאחד{' '}
                 <span className="text-gradient">ריפוי והגשמה</span>
               </h1>
             </AnimatedSection>
             <AnimatedSection delay={0.4}>
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto px-3">
-                במקום בטוח ומכיל, נוכל יחד להתחיל את הדרך לשחרור מחסימות רגשיות,
-                ריפוי מטראומות והגשמה עצמית. כאן, כל צעד הוא צעד קדימה.
+              המוח שלך לא שבור – הוא פשוט מחווט להישרדות. הגיע הזמן לחזור לריבונות
               </p>
             </AnimatedSection>
             <AnimatedSection delay={0.6}>
