@@ -12,7 +12,124 @@ import { categoryService } from '../services/api'
 import yanivImage from '../assets/yaniv.png'
 import heroVideo from '../assets/PixVerse_V5.5_Extend_720P_Seamless_looping_cin.mp4'
 
+/** true = פתיחה במעבר עכבר; false = מסכי מגע — לחיצה לפתיחה/סגירה */
+function useForWhomHoverMode() {
+  const [hoverMode, setHoverMode] = useState(true)
+  useEffect(() => {
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const sync = () => setHoverMode(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  return hoverMode
+}
+
+function ForWhomAudienceCard({ item, index, hoverMode }) {
+  const [open, setOpen] = useState(false)
+
+  const pointerHandlers = hoverMode
+    ? {
+        onMouseEnter: () => setOpen(true),
+        onMouseLeave: () => setOpen(false),
+      }
+    : {
+        onClick: () => setOpen((o) => !o),
+      }
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setOpen((o) => !o)
+    }
+  }
+
+  return (
+    <AnimatedSection delay={Math.min(index * 0.08, 0.5)}>
+      <div className="mx-auto flex w-full max-w-[300px] flex-col items-center">
+        <h3 className="mb-4 flex min-h-[4.5rem] items-end justify-center px-1 text-center text-lg font-serif font-semibold leading-snug text-neutral-900 sm:mb-5 sm:text-xl">
+          {item.title}
+        </h3>
+        <div
+          {...pointerHandlers}
+          onKeyDown={onKeyDown}
+          tabIndex={0}
+          className={`flex w-full flex-col items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 ${hoverMode ? '' : 'cursor-pointer touch-manipulation'}`}
+          role={hoverMode ? undefined : 'button'}
+          aria-expanded={hoverMode ? undefined : open}
+          aria-label={hoverMode ? undefined : `${open ? 'סגירת' : 'פתיחת'} פרטים: ${item.title}`}
+        >
+          <p className="sr-only">{item.description}</p>
+          <div className="relative aspect-[3/4] w-full min-h-[240px] max-h-[360px] min-[480px]:min-h-[280px] min-[480px]:max-h-[400px] sm:max-h-[440px] rounded-xl" aria-hidden>
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-b from-neutral-100 via-neutral-200/90 to-neutral-300 p-[6px] shadow-[0_10px_40px_-10px_rgba(15,118,110,0.25),0_2px_8px_rgba(0,0,0,0.06),inset_0_1px_0_rgba(255,255,255,0.85)] ring-1 ring-neutral-400/30 min-[480px]:p-[7px]">
+              <div className="relative h-full w-full rounded-lg bg-gradient-to-b from-neutral-300/50 to-neutral-400/30 p-[3px] shadow-[inset_0_2px_6px_rgba(0,0,0,0.12)]">
+                <div className="absolute inset-[8px] z-0 flex min-h-0 flex-col overflow-hidden rounded-md border border-primary-100/70 bg-gradient-to-b from-primary-50/95 via-white to-secondary-50/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)] min-[480px]:inset-[10px]">
+                  <p className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-right text-xs leading-relaxed text-neutral-700 min-[480px]:px-5 min-[480px]:py-4 sm:px-6 sm:text-sm">
+                    {item.description}
+                  </p>
+                </div>
+                <div dir="ltr" className="absolute inset-[3px] z-10 flex overflow-hidden rounded-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]">
+                  <div
+                    className={`relative h-full w-1/2 shrink-0 overflow-hidden border-r border-teal-950/50 transition-[transform,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? '-translate-x-full brightness-[1.03]' : 'translate-x-0'}`}
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #0f766e 0%, #115e59 38%, #134e4a 72%, #042f2e 100%)',
+                      boxShadow:
+                        'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -8px 24px rgba(0,0,0,0.35), inset 3px 0 12px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.14]"
+                      style={{
+                        backgroundImage:
+                          'repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 5px)',
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-y-4 right-0 w-px bg-gradient-to-b from-transparent via-white/25 to-transparent" />
+                    <div
+                      className="absolute right-2 top-[42%] h-8 w-2 rounded-full border border-amber-900/40 bg-gradient-to-b from-amber-100 via-amber-400 to-amber-800 shadow-[2px_2px_6px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)]"
+                      aria-hidden
+                    />
+                  </div>
+                  <div
+                    className={`relative h-full w-1/2 shrink-0 overflow-hidden border-l border-teal-950/50 transition-[transform,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'translate-x-full brightness-[1.03]' : 'translate-x-0'}`}
+                    style={{
+                      background:
+                        'linear-gradient(225deg, #0f766e 0%, #115e59 38%, #134e4a 72%, #042f2e 100%)',
+                      boxShadow:
+                        'inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -8px 24px rgba(0,0,0,0.35), inset -3px 0 12px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.14]"
+                      style={{
+                        backgroundImage:
+                          'repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.12) 3px, rgba(0,0,0,0.12) 5px)',
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-y-4 left-0 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+                    <div
+                      className="absolute left-2 top-[42%] h-8 w-2 rounded-full border border-amber-900/40 bg-gradient-to-b from-amber-100 via-amber-400 to-amber-800 shadow-[2px_2px_6px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)]"
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p
+            className={`mt-3 text-center text-xs transition-colors ${open ? 'text-primary-600/80' : 'text-neutral-500'}`}
+          >
+            {hoverMode ? 'העברו את העכבר לפתיחה' : 'לחצו על הדלת לפתיחה ולסגירה'}
+          </p>
+        </div>
+      </div>
+    </AnimatedSection>
+  )
+}
+
 function HomePage() {
+  const forWhomHoverMode = useForWhomHoverMode()
   const { openPurchaseModal } = usePurchase()
   const [reviews, setReviews] = useState([])
   const [reviewStats, setReviewStats] = useState(null)
@@ -114,13 +231,13 @@ function HomePage() {
             </AnimatedSection>
             <AnimatedSection delay={0.2}>
               <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-neutral-900 mb-4 sm:mb-6 leading-tight px-2">
-              ,מהישרדות לשגשוג תהליך אינטגרטיבי מאחד{' '}
+                ,מהישרדות לשגשוג תהליך אינטגרטיבי מאחד{' '}
                 <span className="text-gradient">ריפוי והגשמה</span>
               </h1>
             </AnimatedSection>
             <AnimatedSection delay={0.4}>
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-neutral-600 mb-6 sm:mb-8 leading-relaxed max-w-2xl mx-auto px-3">
-              המוח שלך לא שבור – הוא פשוט מחווט להישרדות. הגיע הזמן לחזור לריבונות
+                המוח שלך לא שבור – הוא פשוט מחווט להישרדות. הגיע הזמן לחזור לריבונות
               </p>
             </AnimatedSection>
             <AnimatedSection delay={0.6}>
@@ -185,39 +302,63 @@ function HomePage() {
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-bold text-neutral-900 mb-3 sm:mb-4 px-3">
               למי זה מתאים?
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-neutral-600 max-w-2xl mx-auto px-3">
-              אם אתה מרגיש שאתה תקוע, מתמודד עם חרדות או טראומות מהעבר,
-              או פשוט מחפש דרך לצמוח ולהתפתח – אתה במקום הנכון.
-            </p>
+            <div className="mx-auto max-w-3xl space-y-3 px-3 text-base text-neutral-600 sm:text-lg md:space-y-4 md:text-xl">
+              <p className="leading-relaxed">
+                להלן <strong className="font-semibold text-neutral-800">שמונה פרופילים שכיחים</strong>
+                . בכל כרטיס תמצאו נתונים, תיאור של ה«כאב» האופייני, ומידע על מוכנות לשינוי.
+              </p>
+              <p className="text-sm leading-relaxed text-neutral-500 sm:text-base md:text-lg">
+                <span className="font-medium text-neutral-600">איך לפתוח?</span>{' '}
+                במחשב — העבירו את העכבר מעל הדלת. בטלפון — לחצו על הדלת כדי לפתוח או לסגור.
+              </p>
+            </div>
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 sm:gap-8 md:gap-10 xl:gap-8">
           {[
             {
-              title: 'מתמודדים עם חרדות',
+              title: 'מנהלים ושכירים בכירים — שחיקה (Burnout)',
               description:
-                'אם חרדות משפיעות על החיים היומיומיים שלך, על היחסים, על העבודה או על השינה – יש דרך לצאת מזה.',
+                'נתונים: בני 35–52, הכנסה של כ־25,000–45,000 ₪ ברוטו. הכאב: «הכלוב המצופה בזהב» — יש כסף ומעמד, אבל המוח בסטרס כרוני, עם פגיעה בבריאות וביחסים בבית. מוכנות לשינוי: גבוהה מאוד — הרגשה שזה «עכשיו או התקף לב».',
             },
             {
-              title: 'חווים פוסט טראומה',
+              title: 'הורים לצעירים (22–32) — «תקועים» בבית',
               description:
-                'טראומות מהעבר יכולות להמשיך להשפיע על ההווה. יחד נוכל לעבד אותן ולשחרר את העומס הרגשי.',
+                'נתונים: הורים בני 50–65, מעמד בינוני–גבוה. הכאב: דאגה קיומית לעתיד הילד, עייפות מלכלכל אותו, ותחושת כישלון בהורות. מוכנות לשינוי: גבוהה — מוכנים לשלם כדי «לקנות» לילד עצמאות.',
             },
             {
-              title: 'מחפשים צמיחה',
+              title: 'יזמים ובעלי עסקים — תקרת זכוכית',
               description:
-                'גם אם הכל נראה בסדר מבחוץ, אם יש תחושה של תקיעות או רצון לצמוח – זה המקום להתחיל.',
+                'נתונים: עסקים קטנים–בינוניים, מחזור שנתי בערך 1–5 מיליון ₪. הכאב: העסק מנהל אותם; תקיעות במצב תפעולי־הישרדותי, בלי צמיחה ובלי מקום למשפחה. מוכנות לשינוי: גבוהה — רואים בליווי השקעה עסקית עם ROI ברור.',
+            },
+            {
+              title: 'זוגות במשבר אמצע הדרך — לפני פירוק',
+              description:
+                'נתונים: נשואים 10–20 שנה, הורים לילדים. הכאב: חוסר תקשורת, בדידות בתוך הקשר, ותחושה ש«זה לא יכול להמשיך ככה» — לצד פחד מגירושין. מוכנות לשינוי: גבוהה מאוד — האלטרנטיבה יקרה וכואבת בהרבה.',
+            },
+            {
+              title: 'כוחות ביטחון ומילואים — מעבר לאזרחות',
+              description:
+                'נתונים: יוצאי קבע ארוך או מילואים ממושכים, כולל אחרי אירועי 2023–2025. הכאב: קושי במציאת זהות חדשה, דריכות יתר (מוח הישרדותי) וחוסר סנכרון עם השקט האזרחי. מוכנות לשינוי: גבוהה — חיפוש אחר משמעות וריבונות מחדש.',
+            },
+            {
+              title: 'נשים בקריירה שנייה — פוסט־אימהות',
+              description:
+                'נתונים: נשים בנות 40+, אחרי שהילדים גדלו קצת. הכאב: תחושת החמצה, רצון למימוש עצמי ושליחות, אבל פחד מחוסר יציבות או מ«מה יגידו». מוכנות לשינוי: בינונית–גבוהה — צורך רגשי עז בשינוי.',
+            },
+            {
+              title: 'רווקים ורווקות — חיפוש זוגיות מתמשך',
+              description:
+                'נתונים: בני 30–45, מצליחים מקצועית, בערים הגדולות. הכאב: «למה כולם מצליחים ואני לא?» — דפוסים חוזרים של חרדת נטישה או הימנעות (חיווט שמקשה על קשר). מוכנות לשינוי: גבוהה — תסכול מצטבר מאפליקציות ומבדידות.',
+            },
+            {
+              title: 'צעירים High Potentials — איבוד כיוון (Lost 20s)',
+              description:
+                'נתונים: בני 22–28, אינטליגנציה גבוהה, ללא תואר או מקצוע יציב. הכאב: FOMO, חוסר יכולת להתחייב למסלול אחד, והרגשה שהחיים עוברים לידם. מוכנות לשינוי: גבוהה — רצון «להתניע» מהצד של המטופל.',
             },
           ].map((item, index) => (
-            <AnimatedSection key={index} delay={index * 0.2}>
-              <Card>
-                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-neutral-900 mb-2 sm:mb-3">
-                  {item.title}
-                </h3>
-                <p className="text-sm sm:text-base text-neutral-600 leading-relaxed">{item.description}</p>
-              </Card>
-            </AnimatedSection>
+            <ForWhomAudienceCard key={item.title} item={item} index={index} hoverMode={forWhomHoverMode} />
           ))}
         </div>
       </Section>
