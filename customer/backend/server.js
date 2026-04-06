@@ -17,6 +17,7 @@ import categoriesRoutes from './routes/categories.js'
 import purchasesRoutes from './routes/purchases.js'
 import messagesRoutes from './routes/messages.js'
 import leadsRoutes from './routes/leads.js'
+import forWhomAudienceRoutes from './routes/forWhomAudience.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -216,6 +217,7 @@ app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/leads', leadsRoutes)
+app.use('/api', forWhomAudienceRoutes)
 
 function isMongoTransientError(err) {
   if (!err) return false

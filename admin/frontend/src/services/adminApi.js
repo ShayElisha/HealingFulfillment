@@ -159,6 +159,29 @@ export const leadService = {
   },
 }
 
+export const forWhomAudienceService = {
+  getAll: async () => {
+    const response = await api.get('/admin/for-whom-audience')
+    return response.data
+  },
+  create: async (data) => {
+    const response = await api.post('/admin/for-whom-audience', data)
+    return response.data
+  },
+  update: async (id, data) => {
+    const response = await api.put(`/admin/for-whom-audience/${id}`, data)
+    return response.data
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/admin/for-whom-audience/${id}`)
+    return response.data
+  },
+  seed: async () => {
+    const response = await api.post('/admin/for-whom-audience/seed')
+    return response.data
+  },
+}
+
 export const transactionService = {
   getAll: async (params = {}) => {
     const queryString = new URLSearchParams(params).toString()

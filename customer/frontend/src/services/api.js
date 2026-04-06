@@ -139,5 +139,12 @@ export const categoryService = {
   },
 }
 
+export const forWhomAudienceService = {
+  getAll: async () => {
+    const response = await api.get('/for-whom-audience')
+    return response.data
+  },
+}
+
 export default api
 

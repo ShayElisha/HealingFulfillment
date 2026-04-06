@@ -8,65 +8,10 @@ import Card from '../components/Card'
 import ReviewsCarousel from '../components/ReviewsCarousel'
 import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
-import { categoryService } from '../services/api'
+import { categoryService, forWhomAudienceService } from '../services/api'
+import ForWhomAudienceDoorCard from '../components/ForWhomAudienceDoorCard'
 import yanivImage from '../assets/yaniv.png'
 import heroVideo from '../assets/PixVerse_V5.5_Extend_720P_Seamless_looping_cin.mp4'
-
-const FOR_WHOM_AUDIENCE = [
-  {
-    title: 'מנהלים ושכירים בכירים — שחיקה (Burnout)',
-    description:
-      'נתונים: בני 35–52, הכנסה של כ־25,000–45,000 ₪ ברוטו. הכאב: «הכלוב המצופה בזהב» — יש כסף ומעמד, אבל המוח בסטרס כרוני, עם פגיעה בבריאות וביחסים בבית. מוכנות לשינוי: גבוהה מאוד — הרגשה שזה «עכשיו או התקף לב».',
-  },
-  {
-    title: 'הורים לצעירים (22–32) — «תקועים» בבית',
-    description:
-      'נתונים: הורים בני 50–65, מעמד בינוני–גבוה. הכאב: דאגה קיומית לעתיד הילד, עייפות מלכלכל אותו, ותחושת כישלון בהורות. מוכנות לשינוי: גבוהה — מוכנים לשלם כדי «לקנות» לילד עצמאות.',
-  },
-  {
-    title: 'יזמים ובעלי עסקים — תקרת זכוכית',
-    description:
-      'נתונים: עסקים קטנים–בינוניים, מחזור שנתי בערך 1–5 מיליון ₪. הכאב: העסק מנהל אותם; תקיעות במצב תפעולי־הישרדותי, בלי צמיחה ובלי מקום למשפחה. מוכנות לשינוי: גבוהה — רואים בליווי השקעה עסקית עם ROI ברור.',
-  },
-  {
-    title: 'זוגות במשבר אמצע הדרך — לפני פירוק',
-    description:
-      'נתונים: נשואים 10–20 שנה, הורים לילדים. הכאב: חוסר תקשורת, בדידות בתוך הקשר, ותחושה ש«זה לא יכול להמשיך ככה» — לצד פחד מגירושין. מוכנות לשינוי: גבוהה מאוד — האלטרנטיבה יקרה וכואבת בהרבה.',
-  },
-  {
-    title: 'כוחות ביטחון ומילואים — מעבר לאזרחות',
-    description:
-      'נתונים: יוצאי קבע ארוך או מילואים ממושכים, כולל אחרי אירועי 2023–2025. הכאב: קושי במציאת זהות חדשה, דריכות יתר (מוח הישרדותי) וחוסר סנכרון עם השקט האזרחי. מוכנות לשינוי: גבוהה — חיפוש אחר משמעות וריבונות מחדש.',
-  },
-  {
-    title: 'נשים בקריירה שנייה — פוסט־אימהות',
-    description:
-      'נתונים: נשים בנות 40+, אחרי שהילדים גדלו קצת. הכאב: תחושת החמצה, רצון למימוש עצמי ושליחות, אבל פחד מחוסר יציבות או מ«מה יגידו». מוכנות לשינוי: בינונית–גבוהה — צורך רגשי עז בשינוי.',
-  },
-  {
-    title: 'רווקים ורווקות — חיפוש זוגיות מתמשך',
-    description:
-      'נתונים: בני 30–45, מצליחים מקצועית, בערים הגדולות. הכאב: «למה כולם מצליחים ואני לא?» — דפוסים חוזרים של חרדת נטישה או הימנעות (חיווט שמקשה על קשר). מוכנות לשינוי: גבוהה — תסכול מצטבר מאפליקציות ומבדידות.',
-  },
-  {
-    title: 'צעירים High Potentials — איבוד כיוון (Lost 20s)',
-    description:
-      'נתונים: בני 22–28, אינטליגנציה גבוהה, ללא תואר או מקצוע יציב. הכאב: FOMO, חוסר יכולת להתחייב למסלול אחד, והרגשה שהחיים עוברים לידם. מוכנות לשינוי: גבוהה — רצון «להתניע» מהצד של המטופל.',
-  },
-]
-
-function ForWhomAudienceCard({ item, index }) {
-  return (
-    <AnimatedSection delay={Math.min(index * 0.08, 0.5)}>
-      <Card className="h-full">
-        <h3 className="mb-3 text-center text-lg font-serif font-semibold leading-snug text-neutral-900 sm:text-xl">
-          {item.title}
-        </h3>
-        <p className="text-right text-sm leading-relaxed text-neutral-700 sm:text-base">{item.description}</p>
-      </Card>
-    </AnimatedSection>
-  )
-}
 
 function HomePage() {
   const { openPurchaseModal } = usePurchase()
@@ -74,11 +19,14 @@ function HomePage() {
   const [loadingReviews, setLoadingReviews] = useState(true)
   const [treatments, setTreatments] = useState([])
   const [loadingTreatments, setLoadingTreatments] = useState(true)
+  const [forWhomProfiles, setForWhomProfiles] = useState([])
+  const [loadingForWhom, setLoadingForWhom] = useState(true)
 
   useEffect(() => {
     window.scrollTo(0, 0)
     loadReviews()
     loadTreatments()
+    loadForWhomProfiles()
   }, [])
 
   const loadReviews = async () => {
@@ -108,6 +56,19 @@ function HomePage() {
       setTreatments([])
     } finally {
       setLoadingTreatments(false)
+    }
+  }
+
+  const loadForWhomProfiles = async () => {
+    try {
+      setLoadingForWhom(true)
+      const res = await forWhomAudienceService.getAll()
+      setForWhomProfiles(Array.isArray(res?.data) ? res.data : [])
+    } catch (error) {
+      console.error('Error loading for-whom profiles:', error)
+      setForWhomProfiles([])
+    } finally {
+      setLoadingForWhom(false)
     }
   }
 
@@ -248,18 +209,33 @@ function HomePage() {
             </h2>
             <div className="mx-auto max-w-3xl space-y-3 px-3 text-base text-neutral-600 sm:text-lg md:space-y-4 md:text-xl">
               <p className="leading-relaxed">
-                להלן <strong className="font-semibold text-neutral-800">שמונה פרופילים שכיחים</strong>
+                להלן{' '}
+                <strong className="font-semibold text-neutral-800">
+                  {loadingForWhom || forWhomProfiles.length === 0
+                    ? 'פרופילים שכיחים'
+                    : `${forWhomProfiles.length} פרופילים שכיחים`}
+                </strong>
                 . בכל כרטיס תמצאו נתונים, תיאור של ה«כאב» האופייני, ומידע על מוכנות לשינוי.
+              </p>
+              <p className="text-sm leading-relaxed text-neutral-500 sm:text-base md:text-lg">
+                <span className="font-medium text-neutral-600">איך לפתוח?</span>{' '}
+                במחשב — העבירו את העכבר מעל הדלת. בטלפון — לחצו על הדלת כדי לפתוח או לסגור.
               </p>
             </div>
           </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 sm:gap-8 md:gap-10 xl:gap-8">
-          {FOR_WHOM_AUDIENCE.map((item, index) => (
-            <ForWhomAudienceCard key={item.title} item={item} index={index} />
-          ))}
-        </div>
+        {loadingForWhom ? (
+          <div className="py-12 text-center text-neutral-600">טוען כרטיסים…</div>
+        ) : forWhomProfiles.length === 0 ? (
+          <div className="py-12 text-center text-neutral-500">תוכן הסקציה יתעדכן בקרוב.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-10 sm:gap-8 md:gap-10 xl:gap-8">
+            {forWhomProfiles.map((item, index) => (
+              <ForWhomAudienceDoorCard key={item._id} item={item} index={index} />
+            ))}
+          </div>
+        )}
       </Section>
 
       {/* תהליכי ליווי Section */}

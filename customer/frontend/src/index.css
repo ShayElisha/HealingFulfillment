@@ -142,47 +142,37 @@
     opacity: 1 !important;
   }
 
-  /* כרטיסי «למי זה מתאים» — דלתות פורמייקה נפתחות ב־hover (תלת־ממד) */
-  .forwhom-door-card .forwhom-door {
-    transform-style: preserve-3d;
-    backface-visibility: hidden;
-    transition: transform 0.72s cubic-bezier(0.33, 1, 0.68, 1);
-  }
-
-  /* צירים בצדדים החיצוניים — פתיחה מהאמצע החוצה, בלי קיטוע ע״י overflow */
+  /* כרטיסי «למי זה מתאים» — דלתות נפתחות מהאמצע לצדדים (החלקה; לא rotateY כדי למנוע «קו דק» במרכז) */
   .forwhom-door-card {
     position: relative;
     z-index: 0;
   }
 
   .forwhom-door-card:hover,
-  .forwhom-door-card:focus-within {
+  .forwhom-door-card:focus-within,
+  .forwhom-door-card.forwhom-door-card--open {
     z-index: 25;
   }
 
-  .forwhom-door-card .forwhom-door-left {
-    transform-origin: left center;
-    border-radius: 1rem 0 0 1rem;
-  }
-
-  .forwhom-door-card .forwhom-door-right {
-    transform-origin: right center;
-    border-radius: 0 1rem 1rem 0;
+  .forwhom-door-card .forwhom-door {
+    transition: transform 0.72s cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   .forwhom-door-card:hover .forwhom-door-left,
-  .forwhom-door-card:focus-within .forwhom-door-left {
-    transform: rotateY(-88deg) translateZ(0.1px);
+  .forwhom-door-card:focus-within .forwhom-door-left,
+  .forwhom-door-card.forwhom-door-card--open .forwhom-door-left {
+    transform: translate3d(-100%, 0, 0);
   }
 
   .forwhom-door-card:hover .forwhom-door-right,
-  .forwhom-door-card:focus-within .forwhom-door-right {
-    transform: rotateY(88deg) translateZ(0.1px);
+  .forwhom-door-card:focus-within .forwhom-door-right,
+  .forwhom-door-card.forwhom-door-card--open .forwhom-door-right {
+    transform: translate3d(100%, 0, 0);
   }
 
-  /* כשהדלתות פתוחות — אין חפיפה מעל הטקסט */
   .forwhom-door-card:hover .forwhom-door-swing,
-  .forwhom-door-card:focus-within .forwhom-door-swing {
+  .forwhom-door-card:focus-within .forwhom-door-swing,
+  .forwhom-door-card.forwhom-door-card--open .forwhom-door-swing {
     pointer-events: none;
   }
 
@@ -193,12 +183,6 @@
 
     .forwhom-door-card .forwhom-door {
       transition: none;
-    }
-  }
-
-  @media (hover: none) and (pointer: coarse) {
-    .forwhom-door-card .forwhom-door-swing {
-      display: none !important;
     }
   }
 }

@@ -10,6 +10,7 @@ import MessagesPage from './pages/MessagesPage'
 import ReviewsPage from './pages/ReviewsPage'
 import LeadsPage from './pages/LeadsPage'
 import TransactionsPage from './pages/TransactionsPage'
+import ForWhomAudiencePage from './pages/ForWhomAudiencePage'
 import ErrorBoundary from './components/ErrorBoundary'
 import { NavCountsProvider } from './context/NavCountsContext'
 
@@ -61,6 +62,7 @@ function App() {
               <Route path="/contacts" element={<ContactsPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/for-whom-audience" element={<ForWhomAudiencePage />} />
               <Route path="/leads" element={<LeadsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
             </Routes>

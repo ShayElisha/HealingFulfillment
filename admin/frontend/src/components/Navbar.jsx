@@ -11,6 +11,7 @@ function Navbar() {
   const tabs = [
     { id: 'dashboard', label: 'לוח בקרה', icon: '📊', route: '/dashboard' },
     { id: 'categories', label: 'טיפולים', icon: '💆', route: '/categories' },
+    { id: 'for-whom-audience', label: 'למי זה מתאים', icon: '🚪', route: '/for-whom-audience' },
     { id: 'courses', label: 'מסלולים', icon: '📚', route: '/courses' },
     { id: 'purchase', label: 'רכישה ידנית', icon: '💰', route: '/purchase' },
     { id: 'new-booking', label: 'צור פגישה', icon: '➕', route: '/new-booking' },
@@ -32,6 +33,7 @@ function Navbar() {
     const path = location.pathname
     if (path === '/dashboard') return 'dashboard'
     if (path === '/categories') return 'categories'
+    if (path === '/for-whom-audience') return 'for-whom-audience'
     if (path === '/courses') return 'courses'
     if (path === '/purchase') return 'purchase'
     if (path === '/new-booking') return 'new-booking'

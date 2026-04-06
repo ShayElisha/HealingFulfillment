@@ -20,6 +20,7 @@ import reviewsRoutes from './routes/reviews.js'
 import contactRoutes from './routes/contact.js'
 import leadsRoutes from './routes/leads.js'
 import transactionsRoutes from './routes/transactions.js'
+import forWhomAudienceAdminRoutes from './routes/forWhomAudience.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -211,6 +212,7 @@ app.get('/health', (req, res) => {
 // which would otherwise be caught by /api/admin prefix
 app.use('/api', customersRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin', forWhomAudienceAdminRoutes)
 app.use('/api/courses', coursesRoutes)
 app.use('/api/categories', categoriesRoutes)
 app.use('/api/purchases', purchasesRoutes)
