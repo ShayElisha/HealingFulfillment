@@ -13,8 +13,26 @@ import {
   sendPurchaseCancelledEmail
 } from '../services/emailService.js'
 import Transaction from '../models/Transaction.js'
+import { applyAutoCoachingWindowIfNeeded } from '../utils/coachingPurchaseWindow.js'
+import { createSubscriptionForCompletedPurchase } from '../utils/subscriptionFromPurchase.js'
 
 const router = express.Router()
+
+const COACHING_DEFAULT_MONTHS = 3
+
+/** משך ליווי בחודשים; תאריכי ליווי ישנים מתאפסים (מקור האמת הוא חודשים) */
+function normalizeCoursePayload(body) {
+  if (!body || typeof body !== 'object') return body
+  const out = { ...body }
+  let months = Number(out.coachingProcessMonths)
+  if (!Number.isFinite(months)) months = parseInt(out.coachingProcessMonths, 10)
+  if (!Number.isFinite(months) || months < 1) months = COACHING_DEFAULT_MONTHS
+  if (months > 60) months = 60
+  out.coachingProcessMonths = months
+  out.coachingProcessStartAt = null
+  out.coachingProcessEndAt = null
+  return out
+}
 
 // ========== CATEGORIES ==========
 
@@ -22,7 +40,14 @@ const router = express.Router()
 router.get('/categories', async (req, res, next) => {
   try {
     console.log('Fetching categories...')
-    const categories = await Category.find().sort({ order: 1, createdAt: -1 }).lean()
+    const categories = [...(await Category.find().lean())].sort((a, b) => {
+      const ao = Number(a.order) || 0
+      const bo = Number(b.order) || 0
+      if (ao !== bo) return ao - bo
+      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      return db - da
+    })
     console.log(`Found ${categories.length} categories`)
     
     // Normalize therapeuticApproach, symptoms, and copingMethods to arrays
@@ -225,7 +250,7 @@ router.get('/courses/:id', async (req, res, next) => {
 // POST /api/admin/courses - Create new course
 router.post('/courses', async (req, res, next) => {
   try {
-    const course = new Course(req.body)
+    const course = new Course(normalizeCoursePayload(req.body))
     await course.save()
     res.status(201).json({
       message: 'Course created successfully',
@@ -247,7 +272,7 @@ router.put('/courses/:id', async (req, res, next) => {
   try {
     const course = await Course.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      normalizeCoursePayload(req.body),
       { new: true, runValidators: true }
     )
     
@@ -387,6 +412,18 @@ router.put('/purchases/:id/status', async (req, res, next) => {
         } catch (emailError) {
           console.error('❌ Error sending purchase completed email:', emailError)
         }
+      }
+
+      try {
+        await applyAutoCoachingWindowIfNeeded(purchase._id)
+      } catch (coachingErr) {
+        console.error('[coaching-window:auto] admin purchase status', coachingErr?.message || coachingErr)
+      }
+
+      try {
+        await createSubscriptionForCompletedPurchase(purchase._id)
+      } catch (subErr) {
+        console.error('[subscription] admin purchase status', subErr?.message || subErr)
       }
     }
     

@@ -10,7 +10,7 @@ const router = express.Router()
 router.get('/', async (req, res, next) => {
   try {
     const reviews = await Review.find({ status: 'approved' })
-      .populate('customer', 'name')
+      .select('customerName rating content createdAt')
       .sort({ createdAt: -1 })
       .lean()
 

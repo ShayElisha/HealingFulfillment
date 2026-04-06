@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import Customer from '../models/Customer.js'
 import Booking from '../models/Booking.js'
 import Purchase from '../models/Purchase.js'
+import Subscription from '../models/Subscription.js'
 import Message from '../models/Message.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
@@ -180,9 +181,10 @@ router.get('/me', authenticateToken, async (req, res, next) => {
         path: 'purchases',
         populate: {
           path: 'course',
-          select: 'title price sessionsCount'
+          select:
+            'title price sessionsCount installmentsCount coachingProcessMonths coachingProcessStartAt coachingProcessEndAt'
         },
-        select: 'course price status createdAt'
+        select: 'course price status createdAt paidAt coachingStartedAt coachingEndsAt'
       })
       .populate('bookings', 'preferredDate preferredTime status meetingType zoomLink isIntroMeeting sessionSummary')
 
@@ -212,6 +214,16 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     customerData.activeBookings = customer.bookings.filter(b => 
       b.status === 'pending' || b.status === 'confirmed'
     ).length
+
+    const activeSubscription = await Subscription.findOne({
+      customer: req.customerId,
+      status: 'active',
+      endsAt: { $gt: new Date() }
+    })
+      .select('planSnapshot startedAt endsAt purchase course status')
+      .lean()
+
+    customerData.activeSubscription = activeSubscription || null
 
     res.json({
       message: 'פרטי לקוח נטענו בהצלחה',
@@ -280,7 +292,7 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
         path: 'purchases',
         populate: {
           path: 'course',
-          select: 'sessionsCount'
+          select: 'sessionsCount installmentsCount'
         }
       })
 

@@ -46,6 +46,15 @@ const purchaseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Notes cannot exceed 500 characters']
   },
+  /** תקופת ליווי בפועל — מתחילה רק לאחר פתיחת תיק; הסיום לפי משך המסלול (חודשים) */
+  coachingStartedAt: {
+    type: Date,
+    default: null
+  },
+  coachingEndsAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

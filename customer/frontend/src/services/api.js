@@ -66,7 +66,9 @@ api.interceptors.request.use(
       }
     }
     
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+    if (import.meta.env.DEV) {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+    }
     return config
   },
   (error) => {

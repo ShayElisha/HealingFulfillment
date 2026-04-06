@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { authService } from '../services/authApi'
 
 const AuthContext = createContext()
@@ -17,66 +17,68 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // טען token מ-localStorage בעת טעינת האפליקציה
+  const logout = useCallback(() => {
+    setToken(null)
+    setUser(null)
+    setIsAuthenticated(false)
+    localStorage.removeItem('authToken')
+  }, [])
+
+  const loadUser = useCallback(
+    async (tokenToUse) => {
+      const effective = tokenToUse !== undefined && tokenToUse !== null ? tokenToUse : token
+      if (!effective) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await authService.getMe()
+        setUser(response.data)
+        setIsAuthenticated(true)
+      } catch (error) {
+        console.error('Error loading user:', error)
+        logout()
+      } finally {
+        setLoading(false)
+      }
+    },
+    [token, logout]
+  )
+
   useEffect(() => {
     const storedToken = localStorage.getItem('authToken')
     if (storedToken) {
       setToken(storedToken)
-      // נסה לטעון את פרטי המשתמש
       loadUser(storedToken)
     } else {
       setLoading(false)
     }
+    // Bootstrap only — loadUser is stable enough for first paint via useCallback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadUser = async (tokenToUse = token) => {
-    if (!tokenToUse) {
-      setLoading(false)
-      return
-    }
-
+  const login = useCallback(async (email, password) => {
     try {
-      const response = await authService.getMe()
-      setUser(response.data)
-      setIsAuthenticated(true)
-    } catch (error) {
-      console.error('Error loading user:', error)
-      // אם יש שגיאה, נקה את ה-token
-      logout()
-    } finally {
-      setLoading(false)
-    }
-  }
+      const body = await authService.login(email, password)
+      const { token: newToken, customer } = body.data
 
-  const login = async (email, password) => {
-    try {
-      const response = await authService.login(email, password)
-      const { token: newToken, customer } = response.data
-      
       setToken(newToken)
       setUser(customer)
       setIsAuthenticated(true)
       localStorage.setItem('authToken', newToken)
-      
+
       return { success: true, mustChangePassword: customer.mustChangePassword }
     } catch (error) {
       console.error('Login error:', error)
       const errorMessage = error.response?.data?.message || 'שגיאה בהתחברות'
       throw new Error(errorMessage)
     }
-  }
+  }, [])
 
-  const logout = () => {
-    setToken(null)
-    setUser(null)
-    setIsAuthenticated(false)
-    localStorage.removeItem('authToken')
-  }
-
-  const changePassword = async (oldPassword, newPassword) => {
+  const changePassword = useCallback(async (oldPassword, newPassword) => {
     try {
       await authService.changePassword(oldPassword, newPassword)
-      // עדכן את המשתמש כדי להסיר את mustChangePassword
       if (user) {
         setUser({ ...user, mustChangePassword: false })
       }
@@ -86,19 +88,21 @@ export const AuthProvider = ({ children }) => {
       const errorMessage = error.response?.data?.message || 'שגיאה בשינוי סיסמה'
       throw new Error(errorMessage)
     }
-  }
+  }, [user])
 
-  const value = {
-    isAuthenticated,
-    user,
-    token,
-    loading,
-    login,
-    logout,
-    changePassword,
-    loadUser
-  }
+  const value = useMemo(
+    () => ({
+      isAuthenticated,
+      user,
+      token,
+      loading,
+      login,
+      logout,
+      changePassword,
+      loadUser,
+    }),
+    [isAuthenticated, user, token, loading, login, logout, changePassword, loadUser]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-

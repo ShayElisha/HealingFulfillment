@@ -1,13 +1,64 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { categoryService, courseService, purchaseService, bookingService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Section from '../components/Section'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import { useNavCounts } from '../context/NavCountsContext'
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
+
+const DEFAULT_COACHING_MONTHS = 3
+
+function monthsHebrew(n) {
+  const x = Number(n)
+  if (!Number.isFinite(x) || x < 1) return null
+  return `${x} חודש${x === 1 ? '' : 'ים'}`
+}
+
+/** תאריכים ישנים בלבד (מסמכים לפני מעבר לחודשים) */
+function formatCourseCoachingRangeHebrew(course) {
+  const s = course?.coachingProcessStartAt
+  const e = course?.coachingProcessEndAt
+  if (!s && !e) return null
+  const opts = { year: 'numeric', month: 'short', day: 'numeric' }
+  const a = s ? new Date(s).toLocaleDateString('he-IL', opts) : ''
+  const b = e ? new Date(e).toLocaleDateString('he-IL', opts) : ''
+  if (a && b) return `${a} – ${b}`
+  return a || b
+}
+
+function formatCourseCoachingLine(course) {
+  if (course?.coachingProcessMonths != null && Number(course.coachingProcessMonths) >= 1) {
+    return monthsHebrew(course.coachingProcessMonths)
+  }
+  return formatCourseCoachingRangeHebrew(course)
+}
+
+function effectiveCoachingMonthsForForm(course) {
+  if (course?.coachingProcessMonths != null && Number(course.coachingProcessMonths) >= 1) {
+    return Math.min(60, Number(course.coachingProcessMonths))
+  }
+  const s = course?.coachingProcessStartAt
+  const e = course?.coachingProcessEndAt
+  if (s && e) {
+    const ms = new Date(e).getTime() - new Date(s).getTime()
+    const approx = Math.round(ms / (30.44 * 24 * 60 * 60 * 1000))
+    return Math.max(1, Math.min(60, approx || DEFAULT_COACHING_MONTHS))
+  }
+  return DEFAULT_COACHING_MONTHS
+}
+
+function courseTimelineLabelForSelect(course) {
+  const line = formatCourseCoachingLine(course)
+  if (line) return `תהליך ליווי: ${line}`
+  if (course?.sessionsCount) return `${course.sessionsCount} מפגשים (ישן)`
+  return 'מסלול'
+}
 
 // Booking Card Component
 function BookingCard({ booking, onUpdate }) {
@@ -162,8 +213,18 @@ function BookingCard({ booking, onUpdate }) {
   )
 }
 
+const ADMIN_SECTION_PATHS = {
+  '/categories': 'categories',
+  '/courses': 'courses',
+  '/purchase': 'purchase',
+  '/new-booking': 'new-booking'
+}
+
 function AdminPage() {
-  const [activeTab, setActiveTab] = useState('categories')
+  const { refreshNavCounts } = useNavCounts()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const section = useMemo(() => ADMIN_SECTION_PATHS[location.pathname] || 'categories', [location.pathname])
   const [categories, setCategories] = useState([])
   const [courses, setCourses] = useState([])
   const [purchases, setPurchases] = useState([])
@@ -199,14 +260,16 @@ function AdminPage() {
     description: ''
   })
 
-  const [courseForm, setCourseForm] = useState({
+  const [courseForm, setCourseForm] = useState(() => ({
     title: '',
     description: '',
     price: 0,
     discount: 0,
-    sessionsCount: 1,
-    isActive: true
-  })
+    installmentsCount: 1,
+    isActive: true,
+    videos: [],
+    coachingProcessMonths: DEFAULT_COACHING_MONTHS
+  }))
 
   const [purchaseForm, setPurchaseForm] = useState({
     courseId: '',
@@ -233,16 +296,21 @@ function AdminPage() {
 
   useEffect(() => {
     loadData()
-    
-    // בדוק אם יש tab ב-URL query parameters
-    const urlParams = new URLSearchParams(window.location.search)
-    const tabFromUrl = urlParams.get('tab')
-    if (tabFromUrl && ['categories', 'courses', 'purchase', 'new-booking'].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl)
-      // נקה את ה-query parameter
-      window.history.replaceState({}, '', '/')
-    }
   }, [])
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get('tab')
+    const legacyRoutes = {
+      categories: '/categories',
+      courses: '/courses',
+      purchase: '/purchase',
+      'new-booking': '/new-booking'
+    }
+    const target = tab && legacyRoutes[tab]
+    if (target) {
+      navigate(target, { replace: true })
+    }
+  }, [location.search, navigate])
 
   const loadData = async (retryCount = 0) => {
     setLoading(true)
@@ -311,6 +379,7 @@ function AdminPage() {
       setPurchases(purchasesData)
       setBookings(bookingsData)
       setCustomers(customersData)
+      await refreshNavCounts()
     } catch (error) {
       console.error('Error loading data:', error)
       console.error('Error details:', error.response?.data || error.message)
@@ -333,6 +402,7 @@ function AdminPage() {
       setCourses([])
       setPurchases([])
       setBookings([])
+      setCustomers([])
     } finally {
       setLoading(false)
     }
@@ -373,10 +443,21 @@ function AdminPage() {
   const handleCourseSubmit = async (e) => {
     e.preventDefault()
     try {
+      const months = Math.min(60, Math.max(1, parseInt(courseForm.coachingProcessMonths, 10) || DEFAULT_COACHING_MONTHS))
+      const payload = {
+        title: courseForm.title,
+        description: courseForm.description,
+        price: courseForm.price,
+        discount: courseForm.discount,
+        installmentsCount: courseForm.installmentsCount,
+        isActive: courseForm.isActive,
+        videos: courseForm.videos || [],
+        coachingProcessMonths: months
+      }
       if (editingCourse) {
-        await courseService.update(editingCourse._id, courseForm)
+        await courseService.update(editingCourse._id, payload)
       } else {
-        await courseService.create(courseForm)
+        await courseService.create(payload)
         triggerConfetti()
       }
       await loadData()
@@ -387,8 +468,10 @@ function AdminPage() {
         description: '',
         price: 0,
         discount: 0,
-        sessionsCount: 1,
-        isActive: true
+        installmentsCount: 1,
+        isActive: true,
+        videos: [],
+        coachingProcessMonths: DEFAULT_COACHING_MONTHS
       })
     } catch (error) {
       console.error('Error saving course:', error)
@@ -531,8 +614,10 @@ function AdminPage() {
       description: course.description || '',
       price: course.price || 0,
       discount: course.discount || 0,
-      sessionsCount: course.sessionsCount || 1,
-      isActive: course.isActive !== false
+      installmentsCount: course.installmentsCount ?? 1,
+      isActive: course.isActive !== false,
+      videos: course.videos || [],
+      coachingProcessMonths: effectiveCoachingMonthsForForm(course)
     })
     setShowCourseForm(true)
   }
@@ -630,61 +715,47 @@ function AdminPage() {
     }
   }
 
-  // Ensure arrays are always arrays to prevent errors
-  const safePurchases = Array.isArray(purchases) ? purchases : []
-  const safeBookings = Array.isArray(bookings) ? bookings : []
-
   return (
     <>
       {/* Navbar */}
-      <Navbar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        purchasesCount={safePurchases.length}
-        bookingsCount={safeBookings.length}
-        contactsCount={0}
-        customersCount={customers.length}
-      />
+      <Navbar />
 
-      {/* Main Content */}
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AdminPageShell>
 
-          {/* Categories Tab */}
-          {activeTab === 'categories' && (
+          {/* Categories */}
+          {section === 'categories' && (
             <div>
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h2 className="text-3xl font-serif font-semibold text-neutral-900 mb-1">
-                    טיפולים
-                  </h2>
-                  <p className="text-neutral-600 text-sm">{categories.length} טיפולים זמינים</p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setEditingCategory(null)
-                    setCategoryForm({
-                      name: '',
-                      description: '',
-                      symptoms: [],
-                      copingMethods: [],
-                      therapeuticApproach: [],
-                      order: 0,
-                      isActive: true,
-                      purchaseCTA: 'מוכן להתחיל את המסע? קבע פגישה או רכוש את המסלול המלא',
-                      videos: [],
-                      files: []
-                    })
-                    setNewCategoryVideo({ title: '', url: '', description: '' })
-                    setNewSymptom('')
-                    setNewCopingMethod('')
-                    setShowCategoryForm(true)
-                  }}
-                  variant="primary"
-                >
-                  + הוסף טיפול
-                </Button>
-              </div>
+              <PageHeader
+                title="טיפולים"
+                subtitle={`${categories.length} טיפולים זמינים`}
+                backTo={null}
+                actions={
+                  <Button
+                    onClick={() => {
+                      setEditingCategory(null)
+                      setCategoryForm({
+                        name: '',
+                        description: '',
+                        symptoms: [],
+                        copingMethods: [],
+                        therapeuticApproach: [],
+                        order: 0,
+                        isActive: true,
+                        purchaseCTA: 'מוכן להתחיל את המסע? קבע פגישה או רכוש את המסלול המלא',
+                        videos: [],
+                        files: []
+                      })
+                      setNewCategoryVideo({ title: '', url: '', description: '' })
+                      setNewSymptom('')
+                      setNewCopingMethod('')
+                      setShowCategoryForm(true)
+                    }}
+                    variant="primary"
+                  >
+                    + הוסף טיפול
+                  </Button>
+                }
+              />
 
               {showCategoryForm && (
                 <Card className="mb-8 border-2 border-primary-100">
@@ -1082,34 +1153,34 @@ function AdminPage() {
           )}
 
           {/* Courses Tab */}
-          {activeTab === 'courses' && (
+          {section === 'courses' && (
             <div>
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h2 className="text-3xl font-serif font-semibold text-neutral-900 mb-1">
-                    מסלולים
-                  </h2>
-                  <p className="text-neutral-600 text-sm">{courses.length} מסלולים זמינים</p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setEditingCourse(null)
-                    setCourseForm({
-                      title: '',
-                      description: '',
-                      price: 0,
-                      discount: 0,
-                      sessionsCount: 1,
-                      isActive: true,
-                      videos: []
-                    })
-                    setShowCourseForm(true)
-                  }}
-                  variant="primary"
-                >
-                  + הוסף מסלול
-                </Button>
-              </div>
+              <PageHeader
+                title="מסלולים"
+                subtitle={`${courses.length} מסלולים זמינים`}
+                backTo={null}
+                actions={
+                  <Button
+                    onClick={() => {
+                      setEditingCourse(null)
+                      setCourseForm({
+                        title: '',
+                        description: '',
+                        price: 0,
+                        discount: 0,
+                        installmentsCount: 1,
+                        isActive: true,
+                        videos: [],
+                        coachingProcessMonths: DEFAULT_COACHING_MONTHS
+                      })
+                      setShowCourseForm(true)
+                    }}
+                    variant="primary"
+                  >
+                    + הוסף מסלול
+                  </Button>
+                }
+              />
 
               {showCourseForm && (
                 <Card className="mb-8 border-2 border-primary-100">
@@ -1159,16 +1230,40 @@ function AdminPage() {
                       <p className="text-xs text-neutral-500 mt-1">הנחה באחוזים (0-100)</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2 text-neutral-700">כמות מפגשים *</label>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">משך תהליך הליווי (חודשים) *</label>
                       <input
                         type="number"
                         min="1"
+                        max="60"
                         required
-                        value={courseForm.sessionsCount}
-                        onChange={(e) => setCourseForm({ ...courseForm, sessionsCount: parseInt(e.target.value) || 1 })}
+                        value={courseForm.coachingProcessMonths}
+                        onChange={(e) =>
+                          setCourseForm({
+                            ...courseForm,
+                            coachingProcessMonths: Math.min(60, Math.max(1, parseInt(e.target.value, 10) || 1))
+                          })
+                        }
                         className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
                       />
-                      <p className="text-xs text-neutral-500 mt-1">מספר המפגשים במסלול</p>
+                      <p className="text-xs text-neutral-500 mt-1">למשל 3 = ליווי של שלושה חודשים (ללא תאריכי לוח שנה קבועים)</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-neutral-700">מספר תשלומים *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        required
+                        value={courseForm.installmentsCount}
+                        onChange={(e) =>
+                          setCourseForm({
+                            ...courseForm,
+                            installmentsCount: Math.max(1, parseInt(e.target.value, 10) || 1)
+                          })
+                        }
+                        className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 bg-white"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">כמה תשלומים מותרים/נדרשים לרכישת המסלול (למשל 1 = תשלום אחד)</p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1232,9 +1327,30 @@ function AdminPage() {
                         {course.description && (
                           <p className="text-neutral-600 text-sm mb-3 line-clamp-2">{course.description}</p>
                         )}
-                        {course.sessionsCount && (
+                        {formatCourseCoachingLine(course) && (
                           <p className="text-xs text-neutral-500 mb-2">
-                            {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
+                            תהליך ליווי: {formatCourseCoachingLine(course)}
+                            {(() => {
+                              const n = course.installmentsCount ?? 1
+                              return (
+                                <span className="ms-1">
+                                  · {n} {n === 1 ? 'תשלום' : 'תשלומים'}
+                                </span>
+                              )
+                            })()}
+                          </p>
+                        )}
+                        {!formatCourseCoachingLine(course) && course.sessionsCount > 0 && (
+                          <p className="text-xs text-neutral-500 mb-2">
+                            (ישן) {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
+                            {(() => {
+                              const n = course.installmentsCount ?? 1
+                              return (
+                                <span className="ms-1">
+                                  · {n} {n === 1 ? 'תשלום' : 'תשלומים'}
+                                </span>
+                              )
+                            })()}
                           </p>
                         )}
                         {course.price > 0 && (
@@ -1272,17 +1388,14 @@ function AdminPage() {
           )}
 
           {/* Purchase Tab */}
-          {activeTab === 'purchase' && (
+          {section === 'purchase' && (
             <div>
               <div className="max-w-3xl mx-auto">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-                    רכישה ידנית
-                  </h2>
-                  <p className="text-neutral-600">
-                    הוסף רכישה חדשה למסלול
-                  </p>
-                </div>
+                <PageHeader
+                  title="רכישה ידנית"
+                  subtitle="הוסף רכישה חדשה למסלול"
+                  backTo={null}
+                />
 
                 <Card>
                   <form onSubmit={handlePurchaseSubmit} className="space-y-6">
@@ -1306,7 +1419,7 @@ function AdminPage() {
                         <option value="">בחר מסלול</option>
                         {(Array.isArray(courses) ? courses.filter(c => c.isActive) : []).map((course) => (
                           <option key={course._id} value={course._id}>
-                            {course.title} - ₪{course.price} ({course.sessionsCount} מפגשים)
+                            {course.title} - ₪{course.price} — {courseTimelineLabelForSelect(course)}
                           </option>
                         ))}
                       </select>
@@ -1318,7 +1431,16 @@ function AdminPage() {
                               <div className="text-sm">
                                 <p className="font-semibold text-neutral-900">{selectedCourse.title}</p>
                                 <p className="text-neutral-600">מחיר: ₪{selectedCourse.price}</p>
-                                <p className="text-neutral-600">מפגשים: {selectedCourse.sessionsCount}</p>
+                                {formatCourseCoachingLine(selectedCourse) ? (
+                                  <p className="text-neutral-600">
+                                    תהליך ליווי: {formatCourseCoachingLine(selectedCourse)}
+                                  </p>
+                                ) : selectedCourse.sessionsCount ? (
+                                  <p className="text-neutral-600">מפגשים (ישן): {selectedCourse.sessionsCount}</p>
+                                ) : null}
+                                <p className="text-neutral-600">
+                                  תשלומים: {selectedCourse.installmentsCount ?? 1}
+                                </p>
                               </div>
                             ) : null
                           })()}
@@ -1450,17 +1572,14 @@ function AdminPage() {
           )}
 
           {/* New Booking Tab */}
-          {activeTab === 'new-booking' && (
+          {section === 'new-booking' && (
             <div>
               <div className="max-w-3xl mx-auto">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-                    צור פגישה חדשה
-                  </h2>
-                  <p className="text-neutral-600">
-                    צור פגישה ללקוח קיים או לאדם חדש
-                  </p>
-                </div>
+                <PageHeader
+                  title="צור פגישה חדשה"
+                  subtitle="צור פגישה ללקוח קיים או לאדם חדש"
+                  backTo={null}
+                />
 
                 <Card>
                   <form onSubmit={handleBookingSubmit} className="space-y-6">
@@ -1706,8 +1825,7 @@ function AdminPage() {
             </div>
           )}
 
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

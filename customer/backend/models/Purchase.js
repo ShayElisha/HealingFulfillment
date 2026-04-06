@@ -31,6 +31,12 @@ const purchaseSchema = new mongoose.Schema({
     required: [true, 'Price is required'],
     min: [0, 'Price cannot be negative']
   },
+  /** סכום לתשלום (מסונכרן עם price בעת יצירת הזמנה) — לצורך ביקורת מול Cardcom */
+  amount: {
+    type: Number,
+    min: [0, 'Amount cannot be negative'],
+    default: null
+  },
   status: {
     type: String,
     enum: ['pending', 'completed', 'cancelled'],
@@ -38,7 +44,7 @@ const purchaseSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'cancelled'],
+    enum: ['pending', 'paid', 'succeeded', 'failed', 'cancelled'],
     default: 'pending'
   },
   paymentMethod: {
@@ -57,10 +63,27 @@ const purchaseSchema = new mongoose.Schema({
     enum: ['cardcom', 'manual'],
     default: 'manual'
   },
+  /** מזהה עסקה ב-Cardcom (InternalDealNumber / TransactionId) */
+  transactionId: {
+    type: String,
+    trim: true,
+    default: null
+  },
   providerTransactionId: {
     type: String,
     trim: true
   },
+  cardcomResponseCode: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  cardcomDescription: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  /** תגובה גולמית מספק התשלומים (webhook / low-profile) */
   providerResponse: {
     type: mongoose.Schema.Types.Mixed,
     default: null
@@ -73,6 +96,14 @@ const purchaseSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [500, 'Notes cannot exceed 500 characters']
+  },
+  coachingStartedAt: {
+    type: Date,
+    default: null
+  },
+  coachingEndsAt: {
+    type: Date,
+    default: null
   },
   createdAt: {
     type: Date,
@@ -92,4 +123,3 @@ purchaseSchema.pre('save', function(next) {
 const Purchase = mongoose.model('Purchase', purchaseSchema)
 
 export default Purchase
-

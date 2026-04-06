@@ -66,6 +66,9 @@ const bookingSchema = new mongoose.Schema({
   }
 })
 
+bookingSchema.index({ preferredDate: 1, status: 1 })
+bookingSchema.index({ preferredDate: 1, preferredTime: 1, status: 1 })
+
 const Booking = mongoose.model('Booking', bookingSchema)
 
 export default Booking

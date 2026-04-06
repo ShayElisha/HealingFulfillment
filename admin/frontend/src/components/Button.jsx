@@ -14,6 +14,8 @@ function Button({
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     soft: 'btn-soft',
+    ghost: 'btn-ghost',
+    danger: 'btn-danger',
   }
 
   const classes = `${baseClasses} ${variants[variant]} ${className}`

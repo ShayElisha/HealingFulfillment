@@ -83,7 +83,15 @@ function PurchaseModal() {
         window.location.href = checkoutUrl
       }, 500)
     } catch (error) {
-      toast.error(error.response?.data?.message || 'אירעה שגיאה בשליחת בקשת הרכישה. אנא נסה שוב או צור קשר ישירות.')
+      const status = error.response?.status
+      const msg = error.response?.data?.message
+      if (status === 409 && msg) {
+        toast.error(msg)
+      } else {
+        toast.error(
+          msg || 'אירעה שגיאה בשליחת בקשת הרכישה. אנא נסה שוב או צור קשר ישירות.'
+        )
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -105,7 +113,7 @@ function PurchaseModal() {
           {/* Header */}
           <div className="p-6 border-b border-neutral-200 flex justify-between items-center">
             <h2 className="text-2xl font-serif font-bold text-neutral-900">
-              {currentStep === 'select' ? 'בחר מסלול' : 'טופס הרשמה'}
+              {currentStep === 'select' ? 'בחר מסלול' : 'טופס רכישה'}
             </h2>
             <button
               onClick={closePurchaseModal}
@@ -156,6 +164,15 @@ function PurchaseModal() {
                           {course.sessionsCount && (
                             <p className="text-xs text-neutral-500 mb-2">
                               {course.sessionsCount} מפגש{course.sessionsCount > 1 ? 'ים' : ''}
+                              {(() => {
+                                const n = course.installmentsCount ?? 1
+                                return (
+                                  <span className="mr-1">
+                                    {' '}
+                                    · {n} {n === 1 ? 'תשלום' : 'תשלומים'}
+                                  </span>
+                                )
+                              })()}
                             </p>
                           )}
                           {course.price > 0 && (() => {
@@ -259,6 +276,21 @@ function PurchaseModal() {
                         </div>
                       )
                     })()}
+                    {selectedCourseForPurchase.sessionsCount ? (
+                      <p className="text-sm text-neutral-600 mb-2">
+                        {selectedCourseForPurchase.sessionsCount} מפגש
+                        {selectedCourseForPurchase.sessionsCount > 1 ? 'ים' : ''}
+                        {(() => {
+                          const n = selectedCourseForPurchase.installmentsCount ?? 1
+                          return (
+                            <span className="mr-1">
+                              {' '}
+                              · {n} {n === 1 ? 'תשלום' : 'תשלומים'}
+                            </span>
+                          )
+                        })()}
+                      </p>
+                    ) : null}
                     {selectedCourseForPurchase.description && (
                       <p className="text-sm text-neutral-600">
                         {selectedCourseForPurchase.description}

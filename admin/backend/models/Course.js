@@ -12,11 +12,30 @@ const courseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
+  /** שדה ישן — נשמר לתאימות; הצד הציבורי עדיין עלול להשתמש בו */
   sessionsCount: {
     type: Number,
-    required: [true, 'Sessions count is required'],
-    min: [1, 'Sessions count must be at least 1'],
-    default: 1
+    min: [0, 'Sessions count cannot be negative']
+  },
+  /** משך תהליך הליווי בחודשים (למשל 3) */
+  coachingProcessMonths: {
+    type: Number,
+    default: 3,
+    min: [1, 'Coaching duration must be at least 1 month'],
+    max: [60, 'Coaching duration cannot exceed 60 months']
+  },
+  /** שדות ישנים — נשמרים לתאימות עם מסמכים קיימים */
+  coachingProcessStartAt: {
+    type: Date
+  },
+  coachingProcessEndAt: {
+    type: Date
+  },
+  installmentsCount: {
+    type: Number,
+    default: 1,
+    min: [1, 'Number of payments must be at least 1'],
+    max: [120, 'Number of payments cannot exceed 120']
   },
   price: {
     type: Number,
@@ -29,6 +48,13 @@ const courseSchema = new mongoose.Schema({
     min: [0, 'Discount cannot be negative'],
     max: [100, 'Discount cannot exceed 100%']
   },
+  videos: [{
+    title: { type: String, trim: true },
+    url: { type: String, trim: true },
+    description: { type: String, trim: true },
+    duration: { type: Number },
+    order: { type: Number, default: 0 }
+  }],
   isActive: {
     type: Boolean,
     default: true

@@ -89,6 +89,15 @@ function CoursesPage() {
                     <div className="mb-4">
                       <p className="text-sm text-neutral-500 mb-2">
                         <span className="text-primary-600 font-medium">{course.sessionsCount}</span> מפגש{course.sessionsCount > 1 ? 'ים' : ''}
+                        {(() => {
+                          const n = course.installmentsCount ?? 1
+                          return (
+                            <span className="mr-1">
+                              {' '}
+                              · {n} {n === 1 ? 'תשלום' : 'תשלומים'}
+                            </span>
+                          )
+                        })()}
                       </p>
                     </div>
                   )}

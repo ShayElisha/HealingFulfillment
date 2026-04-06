@@ -1,122 +1,80 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavCounts } from '../context/NavCountsContext'
 
-function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, customersCount = 0, contactsCount = 0 }) {
+function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { customersCount, bookingsCount, contactsCount } = useNavCounts()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const tabs = [
     { id: 'dashboard', label: 'לוח בקרה', icon: '📊', route: '/dashboard' },
-    { id: 'categories', label: 'טיפולים', icon: '💆' },
-    { id: 'courses', label: 'מסלולים', icon: '📚' },
-    { id: 'purchase', label: 'רכישה ידנית', icon: '💰' },
-    { id: 'new-booking', label: 'צור פגישה', icon: '➕' },
+    { id: 'categories', label: 'טיפולים', icon: '💆', route: '/categories' },
+    { id: 'courses', label: 'מסלולים', icon: '📚', route: '/courses' },
+    { id: 'purchase', label: 'רכישה ידנית', icon: '💰', route: '/purchase' },
+    { id: 'new-booking', label: 'צור פגישה', icon: '➕', route: '/new-booking' },
     { id: 'customers', label: `לקוחות (${customersCount || 0})`, icon: '👥', route: '/customers' },
     { id: 'bookings', label: `פגישות (${bookingsCount || 0})`, icon: '📅', route: '/bookings' },
     { id: 'contacts', label: `פניות (${contactsCount || 0})`, icon: '📧', route: '/contacts' },
     { id: 'leads', label: 'לידים', icon: '📋', route: '/leads' },
     { id: 'transactions', label: 'הכנסות והוצאות', icon: '💵', route: '/transactions' },
     { id: 'messages', label: 'הודעות', icon: '💬', route: '/messages' },
-    { id: 'reviews', label: 'ביקורות', icon: '⭐', route: '/reviews' },
+    { id: 'reviews', label: 'ביקורות', icon: '⭐', route: '/reviews' }
   ]
 
-  // קבע את הטאב הפעיל לפי ה-location
-  useEffect(() => {
-    if (location.pathname === '/customers') {
-      // הטאב customers פעיל, אבל זה בדף נפרד אז לא צריך לעדכן את activeTab
-    } else if (location.pathname === '/bookings') {
-      // הטאב bookings פעיל, אבל זה בדף נפרד אז לא צריך לעדכן את activeTab
-    } else if (location.pathname === '/') {
-      // אם אנחנו בדף הראשי, השאר את activeTab כמו שהוא
-    }
-  }, [location.pathname])
-
-  const handleTabClick = (tab) => {
+  const handleNavClick = (route) => {
     setIsMobileMenuOpen(false)
-    
-    if (tab.route) {
-      // אם יש route, נווט לדף הנפרד
-      navigate(tab.route)
-    } else {
-      // אם אין route, זה טאב ב-AdminPage
-      // אם אנחנו לא בדף הראשי, נווט אליו עם הטאב החדש
-      if (location.pathname !== '/') {
-        navigate('/')
-        // המתן קצת לפני שינוי הטאב כדי שהדף יטען
-        setTimeout(() => {
-          if (onTabChange) {
-            onTabChange(tab.id)
-          }
-        }, 50)
-      } else {
-        // אם כבר בדף הראשי, פשוט שנה טאב
-        if (onTabChange) {
-          onTabChange(tab.id)
-        }
-      }
-    }
+    navigate(route)
   }
 
-  // קבע את הטאב הפעיל לפי ה-location או activeTab
-  const getActiveTab = () => {
-    if (location.pathname === '/dashboard') {
-      return 'dashboard'
-    }
-    if (location.pathname === '/customers' || location.pathname.startsWith('/customer/')) {
-      return 'customers'
-    }
-    if (location.pathname === '/bookings') {
-      return 'bookings'
-    }
-    if (location.pathname === '/contacts') {
-      return 'contacts'
-    }
-    if (location.pathname === '/leads') {
-      return 'leads'
-    }
-    if (location.pathname === '/transactions') {
-      return 'transactions'
-    }
-    if (location.pathname === '/messages') {
-      return 'messages'
-    }
-    if (location.pathname === '/reviews') {
-      return 'reviews'
-    }
-    // בדוק אם יש query parameter של tab
-    const urlParams = new URLSearchParams(location.search)
-    const tabFromUrl = urlParams.get('tab')
-    if (tabFromUrl) {
-      return tabFromUrl
-    }
-    return activeTab || 'categories'
+  const getActiveTabId = () => {
+    const path = location.pathname
+    if (path === '/dashboard') return 'dashboard'
+    if (path === '/categories') return 'categories'
+    if (path === '/courses') return 'courses'
+    if (path === '/purchase') return 'purchase'
+    if (path === '/new-booking') return 'new-booking'
+    if (path === '/customers' || path.startsWith('/customer/')) return 'customers'
+    if (path === '/bookings') return 'bookings'
+    if (path === '/contacts') return 'contacts'
+    if (path === '/leads') return 'leads'
+    if (path === '/transactions') return 'transactions'
+    if (path === '/messages') return 'messages'
+    if (path === '/reviews') return 'reviews'
+    return null
   }
 
-  const currentActiveTab = getActiveTab()
+  const currentActiveId = getActiveTabId()
 
   return (
-    <nav className="bg-white/95 backdrop-blur-md border-b border-neutral-200/60 shadow-soft sticky top-0 z-50 w-full">
+    <nav className="sticky top-0 z-50 w-full border-b border-neutral-200/70 bg-white/80 shadow-soft backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
       <div className="w-full px-2 sm:px-4 md:px-4 lg:px-6 xl:px-8">
         <div className="flex justify-between items-center h-14 md:h-16">
-          {/* Logo */}
           <div className="flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-soft-lg">
-              <span className="text-white text-sm md:text-lg">📊</span>
+            <div className="flex h-9 w-9 md:h-11 md:w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-sky-700 text-white shadow-soft-md ring-1 ring-white/20">
+              <span className="text-sm md:text-base" aria-hidden>
+                📊
+              </span>
             </div>
-            <h1 className="text-base md:text-lg lg:text-xl font-serif font-semibold text-neutral-800">
-              לוח בקרה
-            </h1>
+            <div className="leading-tight">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-primary-600/90 md:text-xs">
+                Healing Fulfillment
+              </p>
+              <h1 className="font-serif text-base font-semibold text-neutral-900 md:text-lg lg:text-xl">
+                פאנל ניהול
+              </h1>
+            </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-reverse space-x-0.5 lg:space-x-1">
+          <div className="hidden md:flex items-center space-x-reverse space-x-0.5 lg:space-x-1 flex-wrap justify-end gap-0.5">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => handleTabClick(tab)}
+                type="button"
+                onClick={() => handleNavClick(tab.route)}
                 className={`px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm ${
-                  currentActiveTab === tab.id
+                  currentActiveId === tab.id
                     ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
                     : 'text-neutral-600 hover:bg-neutral-50 hover:text-primary-600'
                 }`}
@@ -129,9 +87,9 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
             ))}
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             className="md:hidden p-2 text-neutral-700 hover:text-primary-600"
+            type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="תפריט"
           >
@@ -153,16 +111,16 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-neutral-200/60 bg-neutral-50/50">
             <div className="space-y-1">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabClick(tab)}
+                  type="button"
+                  onClick={() => handleNavClick(tab.route)}
                   className={`w-full text-right px-4 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 ${
-                    currentActiveTab === tab.id
+                    currentActiveId === tab.id
                       ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
                       : 'text-neutral-700 hover:bg-white hover:text-primary-600'
                   }`}
@@ -180,4 +138,3 @@ function Navbar({ activeTab, onTabChange, purchasesCount, bookingsCount, custome
 }
 
 export default Navbar
-

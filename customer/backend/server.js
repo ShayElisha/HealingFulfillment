@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './load-env.js'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -21,10 +21,16 @@ import leadsRoutes from './routes/leads.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Set default JWT_SECRET if not defined (for development only)
+// JWT_SECRET: required in production; dev-only fallback otherwise
 if (!process.env.JWT_SECRET) {
-  console.warn('⚠️  WARNING: JWT_SECRET is not defined in .env file')
-  console.warn('⚠️  Using a default secret for development. DO NOT use this in production!')
+  const isProd =
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'production'
+  if (isProd) {
+    console.error('❌ JWT_SECRET is required in production. Set it in your environment.')
+    process.exit(1)
+  }
+  console.warn('⚠️  WARNING: JWT_SECRET is not defined — using a one-time dev default.')
   process.env.JWT_SECRET = 'dev-secret-key-change-in-production-' + Date.now()
 }
 
@@ -81,19 +87,123 @@ app.use('/api/', generalLimiter)
 
 // Health check - support both /health and /api/health
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'customer-service',
-    timestamp: new Date().toISOString() 
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    dbName: mongoose.connection.readyState === 1 ? mongoose.connection.db?.databaseName : undefined,
+    timestamp: new Date().toISOString()
   })
 })
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  const ok = mongoose.connection.readyState === 1
+  res.json({
+    status: 'ok',
     service: 'customer-service',
-    timestamp: new Date().toISOString() 
+    db: ok ? 'connected' : 'disconnected',
+    dbName: ok ? mongoose.connection.db?.databaseName : undefined,
+    timestamp: new Date().toISOString()
   })
+})
+
+// אבחון ללא סינון DB — לפני ה-middleware שדורש חיבור
+// ?counts=1 — ספירות מול האוספים + רמזים (למה האתר "ריק" למרות חיבור תקין)
+app.get('/api/debug/db-ping', async (req, res) => {
+  const rs = mongoose.connection.readyState
+  const stateLabel = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }[rs] || rs
+  const wantCounts = req.query.counts === '1' || req.query.counts === 'true'
+
+  if (rs !== 1) {
+    return res.status(503).json({
+      ok: false,
+      readyState: rs,
+      state: stateLabel,
+      message: 'אין חיבור פעיל ל-MongoDB'
+    })
+  }
+
+  try {
+    await mongoose.connection.db.admin().ping()
+    const base = {
+      ok: true,
+      db: mongoose.connection.db?.databaseName,
+      state: stateLabel
+    }
+
+    if (!wantCounts) {
+      return res.json(base)
+    }
+
+    const db = mongoose.connection.db
+    const [categoriesTotal, categoriesActive, reviewsTotal, reviewsApproved, coursesTotal, coursesActive] =
+      await Promise.all([
+        db.collection('categories').countDocuments(),
+        db.collection('categories').countDocuments({ isActive: true }),
+        db.collection('reviews').countDocuments(),
+        db.collection('reviews').countDocuments({ status: 'approved' }),
+        db.collection('courses').countDocuments(),
+        db.collection('courses').countDocuments({ isActive: true })
+      ])
+
+    const hints = []
+    if (categoriesTotal === 0 && reviewsTotal === 0 && coursesTotal === 0) {
+      hints.push(
+        'האוספים ריקים במסד שב-MONGODB_URI — וודאו שזה אותו מסד שהמנהל יוצר בו נתונים (שם אחרי כתובת Atlas).'
+      )
+    }
+    if (categoriesTotal > 0 && categoriesActive === 0) {
+      hints.push(
+        'יש קטגוריות אבל אף אחת לא isActive:true — בפאנל המנהל סמנו "פעיל".'
+      )
+    }
+    if (reviewsTotal > 0 && reviewsApproved === 0) {
+      hints.push(
+        'יש ביקורות אבל אין עם status=approved — אשרו ביקורות במנהל.'
+      )
+    }
+    if (coursesTotal > 0 && coursesActive === 0) {
+      hints.push(
+        'יש מסלולים אבל אף אחד לא isActive:true — סמנו פעיל במנהל.'
+      )
+    }
+
+    return res.json({
+      ...base,
+      publicApiFilters: {
+        categories: 'GET /api/categories → רק isActive:true',
+        reviews: 'GET /api/reviews → רק status=approved',
+        courses: 'GET /api/courses → רק isActive:true'
+      },
+      counts: {
+        categories: { total: categoriesTotal, returnedByPublicApi: categoriesActive },
+        reviews: { total: reviewsTotal, returnedByPublicApi: reviewsApproved },
+        courses: { total: coursesTotal, returnedByPublicApi: coursesActive }
+      },
+      hints
+    })
+  } catch (e) {
+    return res.status(503).json({
+      ok: false,
+      error: e.message,
+      name: e.name,
+      readyState: rs,
+      state: stateLabel
+    })
+  }
+})
+
+// דורש חיבור פעיל ל-MongoDB לכל נתיבי /api למעט health (מונע 500 מבלבל כש-DB לא זמין)
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || req.path === '/debug/db-ping') return next()
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message:
+        'מסד הנתונים לא מחובר. הריצו את customer/backend עם MONGODB_URI תקין ב-customer/backend/.env, וודאו ש-IP ברשימת Atlas Network Access, ואז הפעילו מחדש את השרת.',
+      code: 'DB_UNAVAILABLE'
+    })
+  }
+  next()
 })
 
 // Routes - Customer Service
@@ -107,11 +217,37 @@ app.use('/api/purchases', purchasesRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/leads', leadsRoutes)
 
+function isMongoTransientError(err) {
+  if (!err) return false
+  const name = err.name || ''
+  const msg = String(err.message || '').toLowerCase()
+  return (
+    name === 'MongoServerSelectionError' ||
+    name === 'MongoNetworkError' ||
+    name === 'MongoPoolClearedError' ||
+    name === 'PoolClearedError' ||
+    msg.includes('server selection') ||
+    msg.includes('topology') ||
+    msg.includes('connection pool') ||
+    msg.includes('connection timed out') ||
+    msg.includes('not connected') ||
+    msg.includes('connection closed') ||
+    msg.includes('network error')
+  )
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Customer Service Error:', err)
-  res.status(err.status || 500).json({
+  console.error('Customer Service Error:', err?.name, err?.message)
+  const transient = isMongoTransientError(err)
+  const status = transient ? 503 : err.statusCode || err.status || 500
+  res.status(status).json({
     message: err.message || 'Internal server error',
+    code: err.code || err.name || 'ERROR',
+    ...(transient && {
+      hint:
+        'בעיית חיבור ל-MongoDB (Atlas, מגבלת חיבורים, רשת או VPN). סגרו שרתים כפולים, המתינו דקה ונסו שוב; בדקו Metrics → Connections ב-Atlas.'
+    }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   })
 })
@@ -123,38 +259,47 @@ app.use((req, res) => {
 
 // Connect to MongoDB - use connection pooling for serverless
 const connectMongoDB = async () => {
-  try {
-    // Check if already connected
-    if (mongoose.connection.readyState === 1) {
-      console.log('✅ Customer Service: Already connected to MongoDB')
-      return
-    }
-
-    await mongoose.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-    })
-    console.log('✅ Customer Service: Connected to MongoDB')
-  } catch (error) {
-    console.error('❌ Customer Service: MongoDB connection error:', error)
-    // Don't exit on Vercel - let the function handle the error
-    if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
-      process.exit(1)
-    }
+  if (mongoose.connection.readyState === 1) {
+    console.log('✅ Customer Service: Already connected to MongoDB')
+    return
   }
+  await mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 15000,
+    socketTimeoutMS: 45000,
+    // M0 Atlas — מגביל חיבורים; ברירת מחדל של הדרייבר גבוהה מדי כשמריצים כמה שירותים
+    maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 10,
+    minPoolSize: 0
+  })
+  const dbName = mongoose.connection.db?.databaseName
+  console.log(`✅ Customer Service: Connected to MongoDB (database: ${dbName || '?'})`)
 }
 
 // Connect to MongoDB
 if (process.env.VERCEL !== '1' && !process.env.VERCEL_ENV) {
-  // Local development - connect and start server
-  connectMongoDB().then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Customer Service running on port ${PORT}`)
-    })
-  })
-} else {
-  // Vercel serverless - connect but don't block
   connectMongoDB()
+    .then(() => {
+      const server = app.listen(PORT, () => {
+        console.log(`🚀 Customer Service running on port ${PORT}`)
+      })
+      const shutdown = async (signal) => {
+        console.log(`\n${signal}: סוגר חיבורי MongoDB…`)
+        try {
+          await mongoose.disconnect()
+        } catch (e) {
+          console.error(e)
+        }
+        server.close(() => process.exit(0))
+        setTimeout(() => process.exit(0), 5_000).unref()
+      }
+      process.once('SIGINT', () => shutdown('SIGINT'))
+      process.once('SIGTERM', () => shutdown('SIGTERM'))
+    })
+    .catch((error) => {
+      console.error('❌ Customer Service: MongoDB connection error:', error)
+      process.exit(1)
+    })
+} else {
+  connectMongoDB().catch((e) => console.error('❌ Customer Service: MongoDB connection error:', e))
   console.log('🚀 Customer Service ready for Vercel serverless functions')
 }
 

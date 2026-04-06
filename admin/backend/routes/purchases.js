@@ -4,6 +4,11 @@ import Course from '../models/Course.js'
 import Customer from '../models/Customer.js'
 import Transaction from '../models/Transaction.js'
 import { sendPurchaseConfirmationEmail } from '../services/emailService.js'
+import { applyAutoCoachingWindowIfNeeded } from '../utils/coachingPurchaseWindow.js'
+import {
+  hasActiveSubscriptionForCustomerId,
+  createSubscriptionForCompletedPurchase
+} from '../utils/subscriptionFromPurchase.js'
 
 const router = express.Router()
 
@@ -34,6 +39,13 @@ router.post('/', async (req, res, next) => {
         status: 'active'
       })
       await customer.save()
+    }
+
+    if (await hasActiveSubscriptionForCustomerId(customer._id)) {
+      return res.status(409).json({
+        message:
+          'קיים מנוי פעיל ללקוח עם אימייל זה. לא ניתן לבצע רכישה חדשה עד תום תקופת המנוי.',
+      })
     }
 
     const purchase = new Purchase({
@@ -94,6 +106,18 @@ router.post('/', async (req, res, next) => {
       } catch (transactionError) {
         // Log error but don't fail the purchase creation
         console.error('❌ Error creating income transaction:', transactionError)
+      }
+
+      try {
+        await applyAutoCoachingWindowIfNeeded(purchase._id)
+      } catch (coachingErr) {
+        console.error('[coaching-window:auto] admin create purchase', coachingErr?.message || coachingErr)
+      }
+
+      try {
+        await createSubscriptionForCompletedPurchase(purchase._id)
+      } catch (subErr) {
+        console.error('[subscription] admin create purchase', subErr?.message || subErr)
       }
     }
 

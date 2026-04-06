@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { leadService } from '../services/adminApi'
 import Card from '../components/Card'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import AdminModalLayout from '../components/AdminModalLayout'
+import Button from '../components/Button'
 import toast from 'react-hot-toast'
 
 function LeadsPage() {
@@ -103,33 +107,12 @@ function LeadsPage() {
 
   return (
     <>
-      <Navbar 
-        activeTab="leads" 
-        onTabChange={() => {}} 
-        purchasesCount={0} 
-        bookingsCount={0} 
-        customersCount={0}
-        contactsCount={0}
-      />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← חזור לדף הראשי
-            </button>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
-                ניהול לידים - שאלון התאמה
-              </h1>
-              <p className="text-neutral-600">
-                כל הלידים שמילאו את שאלון ההתאמה
-              </p>
-            </div>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader
+          title="ניהול לידים — שאלון התאמה"
+          subtitle="כל הלידים שמילאו את שאלון ההתאמה"
+        />
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -301,152 +284,133 @@ function LeadsPage() {
 
           {/* Lead Detail Modal */}
           {selectedLead && (
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedLead(null)}
-            >
-              <div 
-                className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-soft-xl border border-neutral-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-neutral-200/60 bg-gradient-to-r from-primary-50/30 to-white flex justify-between items-center">
-                  <h2 className="text-2xl font-serif font-semibold text-neutral-900">
-                    פרטי ליד
-                  </h2>
-                  <button
-                    onClick={() => setSelectedLead(null)}
-                    className="text-neutral-400 hover:text-neutral-600 text-2xl transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="space-y-6">
-                    {/* Contact Info */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-4">פרטי יצירת קשר</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-600 mb-1">שם</label>
-                          <p className="text-neutral-900">{selectedLead.name}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-600 mb-1">טלפון</label>
-                          {selectedLead.phone ? (
-                            <a href={`tel:${selectedLead.phone}`} className="text-primary-600 hover:text-primary-700">
-                              {selectedLead.phone}
-                            </a>
-                          ) : (
-                            <span className="text-neutral-400">לא צוין</span>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-600 mb-1">אימייל</label>
-                          {selectedLead.email ? (
-                            <a href={`mailto:${selectedLead.email}`} className="text-primary-600 hover:text-primary-700">
-                              {selectedLead.email}
-                            </a>
-                          ) : (
-                            <span className="text-neutral-400">לא צוין</span>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-neutral-600 mb-1">תאריך</label>
-                          <p className="text-neutral-900">{formatDate(selectedLead.createdAt)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Answers */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-4">תשובות לשאלון</h3>
-                      <div className="space-y-4">
-                        {selectedLead.answers?.map((answer, index) => (
-                          <div key={index} className="bg-neutral-50 rounded-xl p-4">
-                            <p className="font-medium text-neutral-900 mb-2">{answer.question}</p>
-                            <p className="text-neutral-700">{answer.answer}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Additional Notes */}
-                    {selectedLead.additionalNotes && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-neutral-900 mb-2">הערות נוספות</h3>
-                        <p className="text-neutral-700 whitespace-pre-wrap bg-neutral-50 rounded-xl p-4">
-                          {selectedLead.additionalNotes}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Next Step */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-2">מה ביקש לעשות</h3>
-                      <p className="text-neutral-700">
-                        {selectedLead.nextStep === 'book_appointment' 
-                          ? '✓ ביקש לקבוע פגישה ראשונית'
-                          : '✓ ביקש שהמטפל יצור איתו קשר'}
-                      </p>
-                    </div>
-
-                    {/* Admin Notes */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-2">הערות מנהל</h3>
-                      <textarea
-                        value={adminNotes || selectedLead.adminNotes || ''}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                        rows="3"
-                        className="w-full px-4 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
-                        placeholder="הוסף הערות..."
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="p-6 border-t border-neutral-200/60 bg-neutral-50/30 flex gap-4 flex-wrap">
+            <AdminModalLayout
+              title="פרטי ליד"
+              maxWidthClass="max-w-3xl"
+              onClose={() => setSelectedLead(null)}
+              footer={
+                <div className="flex w-full flex-wrap items-stretch gap-3 md:items-center">
                   <select
                     value={selectedLead.status}
                     onChange={(e) => handleStatusUpdate(selectedLead._id, e.target.value)}
-                    className="px-4 py-2.5 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="admin-select min-w-[10rem] shrink-0"
                   >
                     <option value="new">חדש</option>
                     <option value="contacted">נוצר קשר</option>
                     <option value="converted">הומר ללקוח</option>
                     <option value="not_interested">לא מעוניין</option>
                   </select>
-                  {selectedLead.phone && (
+                  {selectedLead.phone ? (
                     <a
                       href={`tel:${selectedLead.phone}`}
-                      className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl text-center hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-soft-lg font-medium"
+                      className="btn-primary inline-flex min-w-[7rem] flex-1 items-center justify-center text-center"
                     >
                       התקשר
                     </a>
-                  )}
-                  {selectedLead.email && (
+                  ) : null}
+                  {selectedLead.email ? (
                     <a
                       href={`mailto:${selectedLead.email}`}
-                      className="px-4 py-2.5 bg-white text-neutral-700 rounded-xl text-center hover:bg-neutral-50 transition-all duration-200 border border-neutral-200 shadow-soft font-medium"
+                      className="btn-secondary inline-flex min-w-[7rem] flex-1 items-center justify-center text-center"
                     >
                       שלח אימייל
                     </a>
-                  )}
-                  {selectedLead.nextStep === 'book_appointment' && (
-                    <button
+                  ) : null}
+                  {selectedLead.nextStep === 'book_appointment' ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="min-w-[7rem] flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
                       onClick={() => {
                         setSelectedLead(null)
                         navigate('/bookings')
                       }}
-                      className="px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 font-medium"
                     >
                       קבע פגישה
-                    </button>
-                  )}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            >
+              <div className="space-y-6">
+                <div>
+                  <h3 className="mb-4 text-lg font-semibold text-neutral-900">פרטי יצירת קשר</h3>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="admin-label mb-1">שם</label>
+                      <p className="text-neutral-900">{selectedLead.name}</p>
+                    </div>
+                    <div>
+                      <label className="admin-label mb-1">טלפון</label>
+                      {selectedLead.phone ? (
+                        <a href={`tel:${selectedLead.phone}`} className="text-primary-600 hover:text-primary-700">
+                          {selectedLead.phone}
+                        </a>
+                      ) : (
+                        <span className="text-neutral-400">לא צוין</span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="admin-label mb-1">אימייל</label>
+                      {selectedLead.email ? (
+                        <a href={`mailto:${selectedLead.email}`} className="text-primary-600 hover:text-primary-700">
+                          {selectedLead.email}
+                        </a>
+                      ) : (
+                        <span className="text-neutral-400">לא צוין</span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="admin-label mb-1">תאריך</label>
+                      <p className="text-neutral-900">{formatDate(selectedLead.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-4 text-lg font-semibold text-neutral-900">תשובות לשאלון</h3>
+                  <div className="space-y-4">
+                    {selectedLead.answers?.map((answer, index) => (
+                      <div key={index} className="rounded-xl bg-neutral-50 p-4">
+                        <p className="mb-2 font-medium text-neutral-900">{answer.question}</p>
+                        <p className="text-neutral-700">{answer.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedLead.additionalNotes && (
+                  <div>
+                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">הערות נוספות</h3>
+                    <p className="whitespace-pre-wrap rounded-xl bg-neutral-50 p-4 text-neutral-700">
+                      {selectedLead.additionalNotes}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="mb-2 text-lg font-semibold text-neutral-900">מה ביקש לעשות</h3>
+                  <p className="text-neutral-700">
+                    {selectedLead.nextStep === 'book_appointment'
+                      ? 'ביקש לקבוע פגישה ראשונית'
+                      : 'ביקש שהמטפל יצור איתו קשר'}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-lg font-semibold text-neutral-900">הערות מנהל</h3>
+                  <textarea
+                    value={adminNotes || selectedLead.adminNotes || ''}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    rows="3"
+                    className="admin-textarea resize-none"
+                    placeholder="הוסף הערות..."
+                  />
                 </div>
               </div>
-            </div>
+            </AdminModalLayout>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

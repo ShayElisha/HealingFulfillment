@@ -1,29 +1,28 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 
 const ContactContext = createContext()
 
 export function ContactProvider({ children }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const openContactModal = () => {
+  const openContactModal = useCallback(() => {
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const closeContactModal = () => {
+  const closeContactModal = useCallback(() => {
     setIsModalOpen(false)
-  }
+  }, [])
 
-  return (
-    <ContactContext.Provider
-      value={{
-        isModalOpen,
-        openContactModal,
-        closeContactModal,
-      }}
-    >
-      {children}
-    </ContactContext.Provider>
+  const value = useMemo(
+    () => ({
+      isModalOpen,
+      openContactModal,
+      closeContactModal,
+    }),
+    [isModalOpen, openContactModal, closeContactModal]
   )
+
+  return <ContactContext.Provider value={value}>{children}</ContactContext.Provider>
 }
 
 export function useContact() {
@@ -33,4 +32,3 @@ export function useContact() {
   }
   return context
 }
-

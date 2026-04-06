@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { contactService } from '../services/adminApi'
 import Card from '../components/Card'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import AdminModalLayout from '../components/AdminModalLayout'
+import EmptyState from '../components/EmptyState'
+import Button from '../components/Button'
 import toast from 'react-hot-toast'
 
 function ContactsPage() {
-  const navigate = useNavigate()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedContact, setSelectedContact] = useState(null)
+  const [readFilter, setReadFilter] = useState('all')
 
   useEffect(() => {
     loadContacts()
@@ -82,6 +86,12 @@ function ContactsPage() {
     })
   }
 
+  const filteredContacts = contacts.filter((c) => {
+    if (readFilter === 'unread') return !c.isRead
+    if (readFilter === 'read') return c.isRead
+    return true
+  })
+
   const stats = {
     total: contacts.length,
     unread: contacts.filter(c => !c.isRead).length,
@@ -100,105 +110,91 @@ function ContactsPage() {
 
   return (
     <>
-      <Navbar 
-        activeTab="contacts" 
-        onTabChange={() => {}} 
-        purchasesCount={0} 
-        bookingsCount={0} 
-        customersCount={0}
-        contactsCount={contacts.length}
-      />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← חזור לדף הראשי
-            </button>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
-                ניהול פניות יצירת קשר
-              </h1>
-              <p className="text-neutral-600">
-                כל הפניות שנשלחו דרך טופס יצירת הקשר באתר
-              </p>
-            </div>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader
+          title="ניהול פניות יצירת קשר"
+          subtitle="כל הפניות שנשלחו דרך טופס יצירת הקשר באתר"
+        />
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-primary-50 to-white">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary-600 mb-1">
-                  {stats.total}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">סה"כ פניות</div>
+          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+            {[
+              { label: 'סה"כ פניות', value: stats.total, className: 'text-primary-600' },
+              { label: 'לא נקראו', value: stats.unread, className: 'text-red-600' },
+              { label: 'היום', value: stats.today, className: 'text-blue-600' },
+              { label: 'השבוע', value: stats.thisWeek, className: 'text-purple-600' },
+            ].map((s) => (
+              <div key={s.label} className="admin-stat-pill">
+                <div className={`font-serif text-3xl font-semibold ${s.className} mb-1`}>{s.value}</div>
+                <div className="text-sm font-medium text-neutral-600">{s.label}</div>
               </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-red-50 to-white">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-red-600 mb-1">
-                  {stats.unread}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">לא נקראו</div>
-              </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-blue-50 to-white">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-1">
-                  {stats.today}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">היום</div>
-              </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-purple-50 to-white">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600 mb-1">
-                  {stats.thisWeek}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">השבוע</div>
-              </div>
-            </Card>
+            ))}
           </div>
+
+          {!loading && contacts.length > 0 ? (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {[
+                { id: 'all', label: 'הכל' },
+                { id: 'unread', label: 'לא נקראו' },
+                { id: 'read', label: 'נקראו' },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setReadFilter(f.id)}
+                  className={`admin-chip ${readFilter === f.id ? 'admin-chip-active' : ''}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           {/* Contacts Table */}
           {loading ? (
             <Card>
-              <div className="text-center py-12">
+              <div className="py-12 text-center">
                 <p className="text-neutral-600">טוען פניות...</p>
               </div>
             </Card>
           ) : contacts.length === 0 ? (
-            <Card>
-              <div className="text-center py-12">
-                <p className="text-neutral-600">אין פניות עדיין</p>
-              </div>
-            </Card>
+            <EmptyState
+              icon="📧"
+              title="אין פניות עדיין"
+              description="כאשר ממלאים טופס יצירת קשר באתר, הפניות יופיעו כאן."
+            />
+          ) : filteredContacts.length === 0 ? (
+            <EmptyState
+              icon="🔎"
+              title="אין תוצאות"
+              description="נסו לשנות את מסנן הסטטוס."
+            >
+              <Button type="button" variant="soft" onClick={() => setReadFilter('all')}>
+                הצג הכל
+              </Button>
+            </EmptyState>
           ) : (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+            <div className="admin-table-wrap">
+              <table className="admin-table min-w-[720px]">
                   <thead>
-                    <tr className="border-b border-neutral-200 bg-neutral-50/50">
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">סטטוס</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">תאריך</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">שם</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">טלפון</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">אימייל</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">הודעה</th>
-                      <th className="text-right py-3 px-4 font-semibold text-neutral-700 text-sm">פעולות</th>
+                    <tr>
+                      <th>סטטוס</th>
+                      <th>תאריך</th>
+                      <th>שם</th>
+                      <th>טלפון</th>
+                      <th>אימייל</th>
+                      <th>הודעה</th>
+                      <th>פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {contacts.map((contact) => (
-                      <tr 
-                        key={contact._id} 
-                        className={`border-b border-neutral-100 hover:bg-primary-50/30 transition-colors duration-150 ${!contact.isRead ? 'bg-red-50/20' : ''}`}
+                    {filteredContacts.map((contact) => (
+                      <tr
+                        key={contact._id}
+                        className={!contact.isRead ? 'bg-red-50/25' : ''}
                       >
-                        <td className="py-4 px-4">
+                        <td>
                           {!contact.isRead ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
                               <span className="w-2 h-2 bg-red-500 rounded-full"></span>
@@ -211,17 +207,17 @@ function ContactsPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-4 px-4 text-neutral-700 text-sm">
+                        <td className="text-sm text-neutral-700">
                           {formatDate(contact.createdAt)}
                         </td>
-                        <td className="py-4 px-4 text-neutral-900 font-medium">
+                        <td className="font-medium text-neutral-900">
                           {contact.name}
                         </td>
-                        <td className="py-4 px-4 text-neutral-700">
+                        <td className="text-neutral-700">
                           {contact.phone ? (
-                            <a 
+                            <a
                               href={`tel:${contact.phone}`}
-                              className="text-primary-600 hover:text-primary-700"
+                              className="font-medium text-primary-600 hover:text-primary-700 hover:underline"
                             >
                               {contact.phone}
                             </a>
@@ -229,11 +225,11 @@ function ContactsPage() {
                             <span className="text-neutral-400">-</span>
                           )}
                         </td>
-                        <td className="py-4 px-4 text-neutral-700">
+                        <td className="text-neutral-700">
                           {contact.email ? (
-                            <a 
+                            <a
                               href={`mailto:${contact.email}`}
-                              className="text-primary-600 hover:text-primary-700"
+                              className="text-primary-600 hover:text-primary-700 hover:underline"
                             >
                               {contact.email}
                             </a>
@@ -241,23 +237,25 @@ function ContactsPage() {
                             <span className="text-neutral-400">-</span>
                           )}
                         </td>
-                        <td className="py-4 px-4 text-neutral-700 max-w-xs">
+                        <td className="max-w-xs text-neutral-700">
                           <div className="truncate" title={contact.message}>
                             {contact.message || '-'}
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
+                        <td>
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
+                              type="button"
                               onClick={() => handleViewContact(contact)}
-                              className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                              className="text-sm font-medium text-primary-600 transition-colors hover:text-primary-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 rounded-md px-1"
                             >
                               צפה
                             </button>
                             {!contact.isRead && (
                               <button
+                                type="button"
                                 onClick={() => handleMarkAsRead(contact._id)}
-                                className="text-green-600 hover:text-green-700 text-sm font-medium"
+                                className="text-sm font-medium text-green-600 transition-colors hover:text-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400 rounded-md px-1"
                               >
                                 נקרא
                               </button>
@@ -268,35 +266,48 @@ function ContactsPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </Card>
+            </div>
           )}
 
           {/* Contact Detail Modal */}
           {selectedContact && (
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedContact(null)}
-            >
-              <div 
-                className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-soft-xl border border-neutral-100"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-6 border-b border-neutral-200/60 bg-gradient-to-r from-primary-50/30 to-white flex justify-between items-center">
-                  <h2 className="text-2xl font-serif font-semibold text-neutral-900">
-                    פרטי פנייה
-                  </h2>
-                  <button
-                    onClick={() => setSelectedContact(null)}
-                    className="text-neutral-400 hover:text-neutral-600 text-2xl transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100"
-                  >
-                    ✕
-                  </button>
+            <AdminModalLayout
+              title="פרטי פנייה"
+              onClose={() => setSelectedContact(null)}
+              footer={
+                <div className="flex w-full flex-wrap gap-3">
+                  {!selectedContact.isRead && (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="min-w-[8rem] flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
+                      onClick={() => handleMarkAsRead(selectedContact._id)}
+                    >
+                      סמן כנקרא
+                    </Button>
+                  )}
+                  {selectedContact.phone ? (
+                    <a
+                      href={`tel:${selectedContact.phone}`}
+                      className="btn-primary inline-flex min-w-[8rem] flex-1 items-center justify-center text-center"
+                    >
+                      התקשר
+                    </a>
+                  ) : null}
+                  {selectedContact.email ? (
+                    <a
+                      href={`mailto:${selectedContact.email}`}
+                      className="btn-secondary inline-flex min-w-[8rem] flex-1 items-center justify-center text-center"
+                    >
+                      שלח אימייל
+                    </a>
+                  ) : null}
                 </div>
-                <div className="flex-1 overflow-y-auto p-6">
+              }
+            >
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         סטטוס
                       </label>
                       {!selectedContact.isRead ? (
@@ -319,7 +330,7 @@ function ContactsPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         תאריך
                       </label>
                       <p className="text-neutral-900">
@@ -327,13 +338,13 @@ function ContactsPage() {
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         שם מלא
                       </label>
                       <p className="text-neutral-900">{selectedContact.name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         טלפון
                       </label>
                       {selectedContact.phone ? (
@@ -348,7 +359,7 @@ function ContactsPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         אימייל
                       </label>
                       {selectedContact.email ? (
@@ -363,7 +374,7 @@ function ContactsPage() {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-neutral-600 mb-1">
+                      <label className="admin-label mb-1">
                         הודעה
                       </label>
                       <p className="text-neutral-900 whitespace-pre-wrap">
@@ -371,38 +382,9 @@ function ContactsPage() {
                       </p>
                     </div>
                   </div>
-                </div>
-                <div className="p-6 border-t border-neutral-200/60 bg-neutral-50/30 flex gap-4">
-                  {!selectedContact.isRead && (
-                    <button
-                      onClick={() => handleMarkAsRead(selectedContact._id)}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2.5 rounded-xl text-center hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-soft-lg font-medium"
-                    >
-                      סמן כנקרא
-                    </button>
-                  )}
-                  {selectedContact.phone && (
-                    <a
-                      href={`tel:${selectedContact.phone}`}
-                      className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2.5 rounded-xl text-center hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-soft-lg font-medium"
-                    >
-                      התקשר
-                    </a>
-                  )}
-                  {selectedContact.email && (
-                    <a
-                      href={`mailto:${selectedContact.email}`}
-                      className="flex-1 bg-white text-neutral-700 px-4 py-2.5 rounded-xl text-center hover:bg-neutral-50 transition-all duration-200 border border-neutral-200 shadow-soft font-medium"
-                    >
-                      שלח אימייל
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
+            </AdminModalLayout>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

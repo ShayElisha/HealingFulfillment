@@ -1,8 +1,8 @@
+import './load-env.js'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
-import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -23,8 +23,6 @@ import transactionsRoutes from './routes/transactions.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-dotenv.config()
 
 // Set default JWT_SECRET if not defined (for development only)
 if (!process.env.JWT_SECRET) {
@@ -99,9 +97,11 @@ const connectDB = async () => {
     try {
       // Increase timeout for Vercel serverless (30 seconds)
       await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 30000, // 30 seconds
-        socketTimeoutMS: 45000, // 45 seconds
-        connectTimeoutMS: 30000, // 30 seconds
+        serverSelectionTimeoutMS: 30000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 30000,
+        maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE) || 10,
+        minPoolSize: 0
       })
     isConnected = true
       isConnecting = false
@@ -170,15 +170,28 @@ app.options('*', (req, res) => {
   res.sendStatus(200)
 })
 
-// Rate limiting - more lenient for admin panel
+// Rate limiting — dashboard fires many parallel /api/* calls; /api/admin/* was counted twice
+// (general + admin), which quickly hit 429. Skip general bucket for /api/admin paths.
+const isDev = process.env.NODE_ENV !== 'production'
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200
+  max: isDev ? 8000 : 1200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+  skip: (req) => {
+    const path = (req.originalUrl || req.url || '').split('?')[0]
+    return path.startsWith('/api/admin')
+  },
 })
 
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500 // limit each IP to 500 requests per windowMs for admin
+  max: isDev ? 15000 : 4000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
 })
 
 app.use('/api/', generalLimiter)

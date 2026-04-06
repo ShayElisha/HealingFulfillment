@@ -5,8 +5,73 @@ import { purchaseService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import AdminModalLayout from '../components/AdminModalLayout'
+import EmptyState from '../components/EmptyState'
 import CustomerQuestionnaireTab from '../components/CustomerQuestionnaireTab'
 import toast from 'react-hot-toast'
+
+function addCalendarMonths(date, months) {
+  const m = Math.min(120, Math.max(1, parseInt(months, 10) || 1))
+  const d = new Date(date.getTime())
+  const day = d.getDate()
+  d.setMonth(d.getMonth() + m)
+  if (d.getDate() < day) d.setDate(0)
+  return d
+}
+
+function courseCoachingSecondaryLine(course) {
+  if (!course) return null
+  if (course.coachingProcessMonths != null && Number(course.coachingProcessMonths) >= 1) {
+    const n = Number(course.coachingProcessMonths)
+    return `${n} חודש${n === 1 ? '' : 'ים'}`
+  }
+  if (course.coachingProcessStartAt || course.coachingProcessEndAt) {
+    return [
+      course.coachingProcessStartAt &&
+        new Date(course.coachingProcessStartAt).toLocaleDateString('he-IL'),
+      course.coachingProcessEndAt &&
+        new Date(course.coachingProcessEndAt).toLocaleDateString('he-IL')
+    ]
+      .filter(Boolean)
+      .join(' – ')
+  }
+  return null
+}
+
+/** שמור על הרכישה / תאריכי קורס, או חישוב מ־חודשים + תאריך פתיחת תיק / חיוב (כמו ב-API coaching-window) */
+function getPurchaseCoachingWindowResolved(purchase, customer) {
+  const c = purchase?.course
+  const exS = purchase?.coachingStartedAt || c?.coachingProcessStartAt
+  const exE = purchase?.coachingEndsAt || c?.coachingProcessEndAt
+  const opts = { year: 'numeric', month: 'short', day: 'numeric' }
+  if (exS && exE) {
+    const a = new Date(exS).toLocaleDateString('he-IL', opts)
+    const b = new Date(exE).toLocaleDateString('he-IL', opts)
+    return { line: `${a} – ${b}`, derived: false }
+  }
+  const months = c?.coachingProcessMonths
+  if (purchase?.status === 'completed' && months != null && Number(months) >= 1) {
+    const anchorRaw = customer?.caseOpenedAt || purchase?.paidAt || purchase?.createdAt
+    if (anchorRaw) {
+      const start = new Date(anchorRaw)
+      const end = addCalendarMonths(start, Number(months))
+      return {
+        line: `${start.toLocaleDateString('he-IL', opts)} – ${end.toLocaleDateString('he-IL', opts)}`,
+        derived: true,
+      }
+    }
+  }
+  return null
+}
+
+/** כתובות קבצים מהשרת (למשל /uploads/...) — בפיתוח הפרוקסי מפנה ל־backend */
+function staticUploadSrc(urlPath) {
+  if (!urlPath) return ''
+  if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath
+  return urlPath
+}
 
 function CustomerPage() {
   const { id } = useParams()
@@ -16,12 +81,16 @@ function CustomerPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [fileUpload, setFileUpload] = useState(null)
   const [fileDescription, setFileDescription] = useState('')
+  const [audioFileUpload, setAudioFileUpload] = useState(null)
+  const [audioFileDescription, setAudioFileDescription] = useState('')
+  const [audioInputKey, setAudioInputKey] = useState(0)
   const [noteContent, setNoteContent] = useState('')
   const [uploading, setUploading] = useState(false)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [initialPassword, setInitialPassword] = useState('')
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
+  const [coachingUiLoading, setCoachingUiLoading] = useState(null)
 
   useEffect(() => {
     loadCustomer()
@@ -37,6 +106,32 @@ function CustomerPage() {
       toast.error('שגיאה בטעינת פרטי הלקוח')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleOpenCustomerCase = async () => {
+    try {
+      setCoachingUiLoading('case')
+      await customerService.openCase(id)
+      await loadCustomer()
+      toast.success('תיק הלקוח נפתח')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'שגיאה בפתיחת התיק')
+    } finally {
+      setCoachingUiLoading(null)
+    }
+  }
+
+  const handleSetPurchaseCoaching = async (purchaseId) => {
+    try {
+      setCoachingUiLoading(purchaseId)
+      await customerService.setPurchaseCoachingWindow(id, purchaseId)
+      await loadCustomer()
+      toast.success('תקופת הליווי נקבעה לפי משך המסלול')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'שגיאה בקביעת תקופת הליווי')
+    } finally {
+      setCoachingUiLoading(null)
     }
   }
 
@@ -62,6 +157,31 @@ function CustomerPage() {
     } catch (error) {
       console.error('Error uploading file:', error)
       toast.error('שגיאה בהעלאת הקובץ')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleAudioUpload = async (e) => {
+    e.preventDefault()
+    if (!audioFileUpload) {
+      toast.error('אנא בחר קובץ אודיו')
+      return
+    }
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', audioFileUpload)
+    formData.append('description', audioFileDescription)
+    try {
+      await customerService.uploadAudio(id, formData)
+      await loadCustomer()
+      setAudioFileUpload(null)
+      setAudioFileDescription('')
+      setAudioInputKey((k) => k + 1)
+      toast.success('קובץ אודיו הועלה בהצלחה!')
+    } catch (error) {
+      console.error('Error uploading audio:', error)
+      toast.error(error.response?.data?.message || 'שגיאה בהעלאת האודיו')
     } finally {
       setUploading(false)
     }
@@ -167,10 +287,12 @@ function CustomerPage() {
   if (loading) {
     return (
       <>
-        <Navbar activeTab="customers" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} />
-        <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-          <p className="text-xl text-neutral-600">טוען...</p>
-        </div>
+        <Navbar />
+        <AdminPageShell>
+          <div className="flex min-h-[55vh] items-center justify-center py-16">
+            <p className="text-lg text-neutral-600">טוען...</p>
+          </div>
+        </AdminPageShell>
       </>
     )
   }
@@ -178,15 +300,24 @@ function CustomerPage() {
   if (!customer) {
     return (
       <>
-        <Navbar activeTab="customers" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} />
-        <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-xl text-neutral-600 mb-4">לקוח לא נמצא</p>
-            <Button onClick={() => navigate('/')} variant="primary">
-              חזור לדף הראשי
+        <Navbar />
+        <AdminPageShell>
+          <PageHeader
+            title="לקוח לא נמצא"
+            subtitle="ייתכן שהקישור לא תקף או שהרשומה נמחקה"
+            backTo="/customers"
+            backLabel="חזור לרשימת לקוחות"
+          />
+          <EmptyState
+            icon="🔍"
+            title="אין רשומה להצגה"
+            description="נסו לחזור לרשימת הלקוחות ולבחור לקוח קיים."
+          >
+            <Button onClick={() => navigate('/customers')} variant="primary">
+              מעבר ללקוחות
             </Button>
-          </div>
-        </div>
+          </EmptyState>
+        </AdminPageShell>
       </>
     )
   }
@@ -198,51 +329,82 @@ function CustomerPage() {
     totalSpent: customer.purchases?.reduce((sum, p) => sum + (p.price || 0), 0) || 0
   }
 
+  const nonAudioFiles = customer.files?.filter((f) => f.type !== 'audio') ?? []
+  const audioFiles = customer.files?.filter((f) => f.type === 'audio') ?? []
+
   return (
     <>
-      <Navbar activeTab="customers" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} />
-      <div className="min-h-screen bg-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
-            >
-              ← חזור לרשימת לקוחות
-            </button>
-            <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-              תיק לקוח: {customer.name}
-            </h1>
-            <p className="text-neutral-600">{customer.email} | {customer.phone}</p>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader
+          title={`תיק לקוח: ${customer.name}`}
+          subtitle={`${customer.email} · ${customer.phone}`}
+          backTo="/customers"
+          backLabel="חזור לרשימת לקוחות"
+        />
 
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
-            {[
-              { id: 'overview', label: 'סקירה כללית' },
-              { id: 'questionnaire', label: `שאלון ותקנון` },
-              { id: 'files', label: `קבצים (${customer.files?.length || 0})` },
-              { id: 'sessions', label: `פגישות (${customer.bookings?.length || 0})` },
-              { id: 'notes', label: `הערות (${customer.notes?.length || 0})` }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-primary-500 text-primary-600'
-                    : 'text-neutral-600 hover:text-primary-600'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="admin-tabs-bar mb-8 overflow-x-auto max-w-full">
+          {[
+            { id: 'overview', label: 'סקירה כללית' },
+            { id: 'questionnaire', label: 'שאלון ותקנון' },
+            { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
+            { id: 'audio', label: `אודיו (${audioFiles.length})` },
+            { id: 'sessions', label: `פגישות (${customer.bookings?.length || 0})` },
+            { id: 'notes', label: `הערות (${customer.notes?.length || 0})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`admin-tab-btn whitespace-nowrap ${
+                activeTab === tab.id ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              <Card
+                className={
+                  customer.caseOpenedAt
+                    ? 'border border-green-100 bg-green-50/40'
+                    : 'border border-amber-200 bg-amber-50/50'
+                }
+              >
+                <h3 className="text-lg font-semibold mb-2 text-neutral-900">תיק לקוח ותקופת ליווי</h3>
+                {customer.caseOpenedAt ? (
+                  <p className="text-sm text-neutral-700">
+                    תיק נפתח ב־
+                    {new Date(customer.caseOpenedAt).toLocaleDateString('he-IL', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                    . ניתן לקבוע לכל רכישה תקופת ליווי (תאריך התחלה = תאריך פתיחת התיק, סיום לפי משך המסלול).
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-amber-900">
+                      תאריך התחלת הליווי ללקוח נקבע רק לאחר <strong>פתיחת תיק</strong>. עד אז לא תוגדר תקופת ליווי
+                      לרכישות.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      disabled={coachingUiLoading === 'case'}
+                      onClick={handleOpenCustomerCase}
+                      className="text-sm"
+                    >
+                      {coachingUiLoading === 'case' ? 'פותח...' : 'פתיחת תיק לקוח'}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
               {/* Account Creation Section */}
               <Card>
                 <div className="flex justify-between items-center">
@@ -341,7 +503,12 @@ function CustomerPage() {
                 <Card>
                   <h3 className="text-xl font-semibold mb-4">רכישות אחרונות</h3>
                   <div className="space-y-3">
-                    {customer.purchases.slice(0, 5).map((purchase) => (
+                    {customer.purchases.slice(0, 5).map((purchase) => {
+                      const resolved = getPurchaseCoachingWindowResolved(purchase, customer)
+                      const windowLine = resolved?.line
+                      const windowDerived = resolved?.derived
+                      const plannedCourseLine = courseCoachingSecondaryLine(purchase.course)
+                      return (
                       <div key={purchase._id} className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
@@ -353,11 +520,65 @@ function CustomerPage() {
                                 day: 'numeric'
                               })}
                             </p>
-                            {purchase.course?.sessionsCount && (
-                              <p className="text-sm text-neutral-600 mt-1">
-                                כמות מפגשים: {purchase.course.sessionsCount}
+                            {windowLine && (
+                              <div className="mt-2">
+                                <p className="text-sm text-neutral-800 font-medium">
+                                  תקופת ליווי: {windowLine}
+                                  {windowDerived && (
+                                    <span className="text-xs font-normal text-neutral-500 mr-1">
+                                      {' '}
+                                      (מחושב)
+                                    </span>
+                                  )}
+                                </p>
+                                {windowDerived && (
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    לשמירה קבועה במסד הנתונים לחצו «קבע תקופת ליווי לפי המסלול» (מומלץ לאישור רשמי)
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {!windowLine && !customer.caseOpenedAt && (
+                              <p className="text-sm text-amber-800 mt-2">
+                                פתחו תיק לקוח כדי לקבוע תאריך התחלה וסיום ליווי לפי המסלול.
                               </p>
                             )}
+                            {!windowLine && customer.caseOpenedAt && (
+                              <div className="mt-2 space-y-2">
+                                {plannedCourseLine && (
+                                  <p className="text-xs text-neutral-500">
+                                    משך מסלול במערכת: {plannedCourseLine} (ישמש לחישוב תאריך הסיום)
+                                  </p>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="soft"
+                                  className="text-sm"
+                                  disabled={coachingUiLoading === purchase._id}
+                                  onClick={() => handleSetPurchaseCoaching(purchase._id)}
+                                >
+                                  {coachingUiLoading === purchase._id ? 'מעדכן...' : 'קבע תקופת ליווי לפי המסלול'}
+                                </Button>
+                              </div>
+                            )}
+                            {windowLine && windowDerived && customer.caseOpenedAt && (
+                              <div className="mt-2">
+                                <Button
+                                  type="button"
+                                  variant="soft"
+                                  className="text-sm"
+                                  disabled={coachingUiLoading === purchase._id}
+                                  onClick={() => handleSetPurchaseCoaching(purchase._id)}
+                                >
+                                  {coachingUiLoading === purchase._id ? 'מעדכן...' : 'שמור תקופה זו במערכת'}
+                                </Button>
+                              </div>
+                            )}
+                            {!windowLine && purchase.course?.sessionsCount > 0 && (
+                                <p className="text-sm text-neutral-600 mt-1">
+                                  (ישן) כמות מפגשים: {purchase.course.sessionsCount}
+                                </p>
+                              )}
                           </div>
                           <div className="text-left ml-4">
                             <p className="font-semibold text-lg mb-2">₪{purchase.price}</p>
@@ -375,7 +596,7 @@ function CustomerPage() {
                         
                         {/* Status Change Dropdown */}
                         <div className="mt-3 pt-3 border-t border-neutral-200">
-                          <label className="block text-sm font-medium text-neutral-700 mb-2">
+                          <label className="admin-label">
                             שנה סטטוס:
                           </label>
                           <div className="flex gap-2 flex-wrap">
@@ -415,7 +636,7 @@ function CustomerPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </Card>
               )}
@@ -434,27 +655,30 @@ function CustomerPage() {
             <div className="space-y-6">
               <Card>
                 <h3 className="text-xl font-semibold mb-4">העלאת קובץ חדש</h3>
+                <p className="text-sm text-neutral-600 mb-4">
+                  להקלטות והודעות קוליות השתמשו בלשונית <strong>אודיו</strong>.
+                </p>
                 <form onSubmit={handleFileUpload} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-neutral-700">
+                    <label className="admin-label">
                       בחר קובץ
                     </label>
                     <input
                       type="file"
                       onChange={(e) => setFileUpload(e.target.files[0])}
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg"
+                      className="admin-input"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-neutral-700">
+                    <label className="admin-label">
                       תיאור הקובץ (אופציונלי)
                     </label>
                     <textarea
                       value={fileDescription}
                       onChange={(e) => setFileDescription(e.target.value)}
                       placeholder="תיאור הקובץ..."
-                      className="w-full px-4 py-2 border border-neutral-300 rounded-lg"
+                      className="admin-textarea"
                       rows="3"
                     />
                   </div>
@@ -464,9 +688,9 @@ function CustomerPage() {
                 </form>
               </Card>
 
-              {customer.files && customer.files.length > 0 ? (
+              {nonAudioFiles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {customer.files.map((file) => (
+                  {nonAudioFiles.map((file) => (
                     <Card key={file._id}>
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-neutral-900 break-words">{file.name}</h4>
@@ -485,7 +709,7 @@ function CustomerPage() {
                           {file.type} | {(file.size / 1024).toFixed(1)} KB
                         </span>
                         <a
-                          href={file.url}
+                          href={staticUploadSrc(file.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary-600 hover:underline text-sm"
@@ -497,9 +721,87 @@ function CustomerPage() {
                   ))}
                 </div>
               ) : (
-                <Card>
-                  <p className="text-center text-neutral-500 py-8">אין קבצים עדיין</p>
-                </Card>
+                <EmptyState
+                  icon="📁"
+                  title="אין קבצים עדיין"
+                  description="העלו מסמכים רלוונטיים כדי שיופיעו כאן."
+                />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'audio' && (
+            <div className="space-y-6">
+              <Card>
+                <h3 className="text-xl font-semibold mb-4">העלאת אודיו ללקוח</h3>
+                <p className="text-sm text-neutral-600 mb-4">
+                  קבצי אודיו יופיעו אצל הלקוח בלשונית «אודיו» בתיק האישי (השמעה בלבד).
+                </p>
+                <form onSubmit={handleAudioUpload} className="space-y-4">
+                  <div>
+                    <label className="admin-label">בחר קובץ אודיו</label>
+                    <input
+                      key={audioInputKey}
+                      type="file"
+                      accept="audio/*"
+                      onChange={(e) => setAudioFileUpload(e.target.files?.[0] || null)}
+                      className="admin-input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-label">תיאור (אופציונלי)</label>
+                    <textarea
+                      value={audioFileDescription}
+                      onChange={(e) => setAudioFileDescription(e.target.value)}
+                      placeholder="למשל: הדרכת נשימה מהפגישה..."
+                      className="admin-textarea"
+                      rows="3"
+                    />
+                  </div>
+                  <Button type="submit" variant="primary" disabled={uploading}>
+                    {uploading ? 'מעלה...' : 'העלה אודיו'}
+                  </Button>
+                </form>
+              </Card>
+
+              {audioFiles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {audioFiles.map((file) => (
+                    <Card key={file._id}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold text-neutral-900 break-words">{file.name}</h4>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFile(file._id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          מחק
+                        </button>
+                      </div>
+                      {file.description && (
+                        <p className="text-sm text-neutral-600 mb-2">{file.description}</p>
+                      )}
+                      <audio
+                        className="w-full mt-3"
+                        controls
+                        preload="metadata"
+                        src={staticUploadSrc(file.url)}
+                      >
+                        הדפדפן שלך לא תומך בהשמעת אודיו.
+                      </audio>
+                      <p className="text-xs text-neutral-500 mt-2">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon="🎧"
+                  title="אין קבצי אודיו"
+                  description="העלו כאן הקלטות או קבצי אודיו עבור הלקוח."
+                />
               )}
             </div>
           )}
@@ -563,9 +865,11 @@ function CustomerPage() {
                   </Card>
                 ))
               ) : (
-                <Card>
-                  <p className="text-center text-neutral-500 py-8">אין פגישות עדיין</p>
-                </Card>
+                <EmptyState
+                  icon="📅"
+                  title="אין פגישות עדיין"
+                  description="לא נמצאו הזמנות פגישות עבור לקוח זה."
+                />
               )}
             </div>
           )}
@@ -580,7 +884,7 @@ function CustomerPage() {
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
                     placeholder="כתוב הערה..."
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="admin-textarea"
                     rows="4"
                     required
                   />
@@ -608,64 +912,74 @@ function CustomerPage() {
                   ))}
                 </div>
               ) : (
-                <Card>
-                  <p className="text-center text-neutral-500 py-8">אין הערות עדיין</p>
-                </Card>
+                <EmptyState
+                  icon="📝"
+                  title="אין הערות עדיין"
+                  description="הוסיפו הערה פנימית — היא תופיע כאן בסדר כרונולוגי."
+                />
               )}
             </div>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
 
       {/* Password Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="max-w-md w-full mx-4">
-            <h3 className="text-2xl font-serif font-bold text-neutral-900 mb-4">
-              {isResetPassword ? 'סיסמה ראשונית חדשה נוצרה!' : 'משתמש נוצר בהצלחה!'}
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-neutral-600 mb-2">אימייל:</p>
-                <p className="font-semibold text-lg">{customer.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-neutral-600 mb-2">סיסמה ראשונית:</p>
-                <div className="bg-neutral-100 p-4 rounded-lg border-2 border-primary-500">
-                  <p className="font-mono text-xl font-bold text-center text-primary-700">
-                    {initialPassword}
-                  </p>
-                </div>
-                <p className="text-xs text-neutral-500 mt-2">
-                  ⚠ אנא העבר את הסיסמה ללקוח. הוא יוכל לשנות אותה בהתחברות הראשונה.
+        <AdminModalLayout
+          title={
+            isResetPassword ? 'סיסמה ראשונית חדשה נוצרה' : 'משתמש נוצר בהצלחה'
+          }
+          maxWidthClass="max-w-md"
+          onClose={() => {
+            setShowPasswordModal(false)
+            setInitialPassword('')
+            setIsResetPassword(false)
+          }}
+          footer={
+            <>
+              <Button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(initialPassword)
+                  toast.success('סיסמה הועתקה ללוח!')
+                }}
+                variant="soft"
+                className="flex-1"
+              >
+                העתק סיסמה
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowPasswordModal(false)
+                  setInitialPassword('')
+                  setIsResetPassword(false)
+                }}
+                variant="primary"
+                className="flex-1"
+              >
+                סגור
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-neutral-600 mb-2">אימייל:</p>
+              <p className="font-semibold text-lg">{customer.email}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-600 mb-2">סיסמה ראשונית:</p>
+              <div className="rounded-xl border-2 border-primary-500 bg-neutral-100 p-4">
+                <p className="text-center font-mono text-xl font-bold text-primary-700">
+                  {initialPassword}
                 </p>
               </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(initialPassword)
-                    toast.success('סיסמה הועתקה ללוח!')
-                  }}
-                  variant="soft"
-                  className="flex-1"
-                >
-                  העתק סיסמה
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowPasswordModal(false)
-                    setInitialPassword('')
-                    setIsResetPassword(false)
-                  }}
-                  variant="primary"
-                  className="flex-1"
-                >
-                  סגור
-                </Button>
-              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                אנא העברו את הסיסמה ללקוח. הוא יוכל לשנות אותה בהתחברות הראשונה.
+              </p>
             </div>
-          </Card>
-        </div>
+          </div>
+        </AdminModalLayout>
       )}
     </>
   )

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { bookingService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import AdminModalLayout from '../components/AdminModalLayout'
 import toast from 'react-hot-toast'
 
 function BookingsPage() {
-  const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -188,62 +189,43 @@ function BookingsPage() {
 
   return (
     <>
-      <Navbar activeTab="bookings" onTabChange={() => {}} purchasesCount={0} bookingsCount={bookings.length} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← חזור לדף הראשי
-            </button>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
-                ניהול פגישות
-              </h1>
-              <p className="text-neutral-600">כל הפגישות והזמנות</p>
-            </div>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader title="ניהול פגישות" subtitle="כל הפגישות והזמנות במערכת" />
 
-          {/* Tabs */}
-          <div className="mb-6 flex gap-2 border-b border-neutral-200">
+          <div className="admin-tabs-bar mb-8">
             <button
+              type="button"
               onClick={() => {
                 setActiveTab('intro')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
-                activeTab === 'intro'
-                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
-                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
+              className={`admin-tab-btn ${
+                activeTab === 'intro' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
               פגישות היכרות ({bookings.filter(b => b.isIntroMeeting && b.status !== 'completed').length})
             </button>
             <button
+              type="button"
               onClick={() => {
                 setActiveTab('regular')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
-                activeTab === 'regular'
-                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
-                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
+              className={`admin-tab-btn ${
+                activeTab === 'regular' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
               פגישות רגילות ({bookings.filter(b => !b.isIntroMeeting && b.status !== 'completed').length})
             </button>
             <button
+              type="button"
               onClick={() => {
                 setActiveTab('history')
                 setFilterStatus('all')
               }}
-              className={`px-4 py-2.5 font-medium transition-all duration-200 rounded-t-xl ${
-                activeTab === 'history'
-                  ? 'border-b-2 border-primary-500 text-primary-600 bg-primary-50/30'
-                  : 'text-neutral-600 hover:text-primary-600 hover:bg-neutral-50'
+              className={`admin-tab-btn ${
+                activeTab === 'history' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
               היסטוריית פגישות ({stats.completed})
@@ -512,83 +494,65 @@ function BookingsPage() {
               })}
             </div>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
 
       {/* Session Summary Modal */}
       {showSummaryModal && summaryBooking && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={handleCancelSummary}
-        >
-          <div 
-            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-soft-xl border border-neutral-100"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6 border-b border-neutral-200/60 bg-gradient-to-r from-primary-50/30 to-white flex justify-between items-center">
-              <h2 className="text-2xl font-serif font-semibold text-neutral-900">
-                {summaryBooking?.sessionSummary ? 'ערוך סיכום פגישה' : 'הוסף סיכום פגישה'}
-              </h2>
+        <AdminModalLayout
+          title={
+            summaryBooking?.sessionSummary ? 'ערוך סיכום פגישה' : 'הוסף סיכום פגישה'
+          }
+          onClose={handleCancelSummary}
+          footer={
+            <>
               <button
+                type="button"
                 onClick={handleCancelSummary}
-                className="text-neutral-400 hover:text-neutral-600 text-2xl transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-4 p-4 bg-neutral-50 rounded-lg">
-                <p className="text-sm text-neutral-600 mb-1">
-                  <strong>לקוח:</strong> {summaryBooking.name}
-                </p>
-                <p className="text-sm text-neutral-600 mb-1">
-                  <strong>תאריך:</strong> {new Date(summaryBooking.preferredDate).toLocaleDateString('he-IL', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-                <p className="text-sm text-neutral-600">
-                  <strong>סוג פגישה:</strong> {summaryBooking.meetingType === 'zoom' ? 'זום' : 'פרונטאלי'}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  סיכום הפגישה *
-                </label>
-                <textarea
-                  value={sessionSummary}
-                  onChange={(e) => setSessionSummary(e.target.value)}
-                  rows="10"
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none bg-white transition-all duration-200"
-                  placeholder="תאר את מה שקרה בפגישה, נושאים שדוברו, התקדמות, המלצות להמשך..."
-                  required
-                />
-                <p className="text-xs text-neutral-500 mt-1">
-                  {sessionSummary.length}/5000 תווים
-                </p>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-neutral-200/60 bg-neutral-50/30 flex gap-4">
-              <button
-                onClick={handleCancelSummary}
-                className="flex-1 px-4 py-2.5 bg-white text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all duration-200 border border-neutral-200 shadow-soft font-medium"
+                className="btn-secondary flex-1 px-4 py-2.5"
               >
                 ביטול
               </button>
               <button
+                type="button"
                 onClick={handleSaveSummary}
                 disabled={!sessionSummary.trim()}
-                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-200 disabled:bg-neutral-300 disabled:cursor-not-allowed shadow-soft-lg font-medium"
+                className="btn-primary flex-1 px-4 py-2.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 שמור סיכום
               </button>
-            </div>
+            </>
+          }
+        >
+          <div className="mb-4 rounded-xl bg-neutral-50 p-4">
+            <p className="mb-1 text-sm text-neutral-600">
+              <strong>לקוח:</strong> {summaryBooking.name}
+            </p>
+            <p className="mb-1 text-sm text-neutral-600">
+              <strong>תאריך:</strong>{' '}
+              {new Date(summaryBooking.preferredDate).toLocaleDateString('he-IL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+            <p className="text-sm text-neutral-600">
+              <strong>סוג פגישה:</strong> {summaryBooking.meetingType === 'zoom' ? 'זום' : 'פרונטאלי'}
+            </p>
           </div>
-        </div>
+
+          <div className="mb-4">
+            <label className="admin-label">סיכום הפגישה *</label>
+            <textarea
+              value={sessionSummary}
+              onChange={(e) => setSessionSummary(e.target.value)}
+              rows="10"
+              className="admin-textarea resize-none"
+              placeholder="תאר את מה שקרה בפגישה, נושאים שדוברו, התקדמות, המלצות להמשך..."
+              required
+            />
+            <p className="mt-1 text-xs text-neutral-500">{sessionSummary.length}/5000 תווים</p>
+          </div>
+        </AdminModalLayout>
       )}
     </>
   )

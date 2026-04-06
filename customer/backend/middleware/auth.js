@@ -19,7 +19,7 @@ export const authenticateToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     
     // מצא את הלקוח לפי ID מה-token
-    const customer = await Customer.findById(decoded.customerId).select('+passwordHash')
+    const customer = await Customer.findById(decoded.customerId)
     
     if (!customer) {
       return res.status(401).json({ message: 'משתמש לא נמצא' })

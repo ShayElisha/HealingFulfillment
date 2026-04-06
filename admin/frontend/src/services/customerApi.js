@@ -5,12 +5,33 @@ export const customerService = {
     const response = await api.get('/admin/customers')
     return response.data
   },
+  create: async (payload) => {
+    const response = await api.post('/admin/customers', payload)
+    return response.data
+  },
+  openCase: async (id, body = {}) => {
+    const response = await api.post(`/admin/customers/${id}/open-case`, body)
+    return response.data
+  },
+  setPurchaseCoachingWindow: async (customerId, purchaseId, body = {}) => {
+    const response = await api.post(
+      `/admin/customers/${customerId}/purchases/${purchaseId}/coaching-window`,
+      body
+    )
+    return response.data
+  },
   getById: async (id) => {
     const response = await api.get(`/admin/customers/${id}`)
     return response.data
   },
   uploadFile: async (id, formData) => {
     const response = await api.post(`/admin/customers/${id}/files`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  },
+  uploadAudio: async (id, formData) => {
+    const response = await api.post(`/admin/customers/${id}/audio`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     return response.data

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo } from 'react'
 
 const PurchaseContext = createContext()
 
@@ -14,27 +14,25 @@ export const PurchaseProvider = ({ children }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
 
-  const openPurchaseModal = (course = null) => {
+  const openPurchaseModal = useCallback((course = null) => {
     setSelectedCourse(course)
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const closePurchaseModal = () => {
+  const closePurchaseModal = useCallback(() => {
     setIsModalOpen(false)
     setSelectedCourse(null)
-  }
+  }, [])
 
-  return (
-    <PurchaseContext.Provider
-      value={{
-        isModalOpen,
-        selectedCourse,
-        openPurchaseModal,
-        closePurchaseModal,
-      }}
-    >
-      {children}
-    </PurchaseContext.Provider>
+  const value = useMemo(
+    () => ({
+      isModalOpen,
+      selectedCourse,
+      openPurchaseModal,
+      closePurchaseModal,
+    }),
+    [isModalOpen, selectedCourse, openPurchaseModal, closePurchaseModal]
   )
-}
 
+  return <PurchaseContext.Provider value={value}>{children}</PurchaseContext.Provider>
+}

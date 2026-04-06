@@ -3,6 +3,17 @@ import Category from '../models/Category.js'
 
 const router = express.Router()
 
+function sortCategories(categories) {
+  return [...categories].sort((a, b) => {
+    const ao = Number(a.order) || 0
+    const bo = Number(b.order) || 0
+    if (ao !== bo) return ao - bo
+    const da = a.createdAt ? new Date(a.createdAt).getTime() : 0
+    const db = b.createdAt ? new Date(b.createdAt).getTime() : 0
+    return db - da
+  })
+}
+
 // GET /api/categories - Get all active categories
 router.get('/', async (req, res, next) => {
   try {
@@ -17,9 +28,7 @@ router.get('/', async (req, res, next) => {
     }
 
     console.log('[Categories] Fetching categories from database...')
-    const categories = await Category.find({ isActive: true })
-      .sort({ order: 1, createdAt: -1 })
-      .lean()
+    const categories = sortCategories(await Category.find({ isActive: true }).lean())
     
     console.log('[Categories] Found', categories.length, 'categories')
     

@@ -2,17 +2,24 @@ import express from 'express'
 import Customer from '../models/Customer.js'
 import Purchase from '../models/Purchase.js'
 import Booking from '../models/Booking.js'
+import Course from '../models/Course.js'
 import multer from 'multer'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import bcrypt from 'bcrypt'
 import { sendAccountCreationEmail } from '../services/emailService.js'
+import {
+  addCalendarMonths,
+  applyAutoCoachingWindowForAllCompletedPurchases,
+} from '../utils/coachingPurchaseWindow.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const router = express.Router()
+
+const DEFAULT_COACHING_MONTHS = 3
 
 // Configure multer for customer files
 const storage = multer.diskStorage({
@@ -36,6 +43,29 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024 // 100MB
   }
 })
+
+const uploadAudio = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('audio/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('מותר להעלות רק קבצי אודיו (למשל MP3, WAV, M4A)'))
+    }
+  }
+})
+
+function handleMulterAudioUpload(req, res, next) {
+  uploadAudio.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        message: err.message || 'שגיאה בהעלאת האודיו'
+      })
+    }
+    next()
+  })
+}
 
 // GET /api/admin/customers - Get all customers
 router.get('/admin/customers', async (req, res, next) => {
@@ -94,6 +124,38 @@ router.get('/admin/customers', async (req, res, next) => {
   }
 })
 
+// POST /api/admin/customers - יצירת תיק לקוח (תאריך פתיחת תיק נרשם אוטומטית)
+router.post('/admin/customers', async (req, res, next) => {
+  try {
+    const { name, email, phone } = req.body
+    if (!name || !email || !phone) {
+      return res.status(400).json({
+        message: 'נדרשים שם, אימייל וטלפון'
+      })
+    }
+    const emailLower = String(email).toLowerCase().trim()
+    const existing = await Customer.findOne({ email: emailLower })
+    if (existing) {
+      return res.status(409).json({ message: 'לקוח עם אימייל זה כבר קיים במערכת' })
+    }
+    const opened = new Date()
+    const customer = new Customer({
+      name: String(name).trim(),
+      email: emailLower,
+      phone: String(phone).trim(),
+      status: 'active',
+      caseOpenedAt: opened
+    })
+    await customer.save()
+    res.status(201).json({
+      message: 'תיק לקוח נוצר בהצלחה',
+      data: customer
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // GET /api/admin/customers/:id - Get single customer
 router.get('/admin/customers/:id', async (req, res, next) => {
   try {
@@ -102,7 +164,7 @@ router.get('/admin/customers/:id', async (req, res, next) => {
         path: 'purchases',
         populate: {
           path: 'course',
-          select: 'title price sessionsCount'
+          select: 'title price sessionsCount coachingProcessMonths coachingProcessStartAt coachingProcessEndAt'
         }
       })
       .populate('bookings')
@@ -120,6 +182,88 @@ router.get('/admin/customers/:id', async (req, res, next) => {
     next(error)
   }
 })
+
+// POST /api/admin/customers/:id/open-case - אישור פתיחת תיק (חובה לפני קביעת תקופת ליווי לרכישות)
+router.post('/admin/customers/:id/open-case', async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id)
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+    if (!customer.caseOpenedAt) {
+      const raw = req.body?.openedAt
+      const opened = raw ? new Date(raw) : new Date()
+      if (Number.isNaN(opened.getTime())) {
+        return res.status(400).json({ message: 'תאריך פתיחת תיק לא תקין' })
+      }
+      customer.caseOpenedAt = opened
+      await customer.save()
+    }
+    await applyAutoCoachingWindowForAllCompletedPurchases(customer._id)
+    const refreshed = await Customer.findById(req.params.id)
+    res.json({
+      message: 'תיק לקוח פעיל',
+      data: refreshed || customer
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// POST /api/admin/customers/:id/purchases/:purchaseId/coaching-window
+router.post(
+  '/admin/customers/:id/purchases/:purchaseId/coaching-window',
+  async (req, res, next) => {
+    try {
+      const customer = await Customer.findById(req.params.id)
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer not found' })
+      }
+      if (!customer.caseOpenedAt) {
+        return res.status(400).json({
+          message: 'יש לפתוח תיק לקוח לפני קביעת תקופת ליווי'
+        })
+      }
+      const purchase = await Purchase.findOne({
+        _id: req.params.purchaseId,
+        customer: customer._id
+      })
+      if (!purchase) {
+        return res.status(404).json({ message: 'רכישה לא נמצאה או שאינה שייכת ללקוח' })
+      }
+      const course = await Course.findById(purchase.course).select('coachingProcessMonths')
+      const months =
+        course?.coachingProcessMonths != null && Number(course.coachingProcessMonths) >= 1
+          ? Math.min(120, Number(course.coachingProcessMonths))
+          : DEFAULT_COACHING_MONTHS
+
+      let start
+      if (req.body?.startedAt) {
+        start = new Date(req.body.startedAt)
+        if (Number.isNaN(start.getTime())) {
+          return res.status(400).json({ message: 'תאריך התחלה לא תקין' })
+        }
+      } else {
+        start = new Date(customer.caseOpenedAt)
+      }
+
+      const end = addCalendarMonths(start, months)
+      purchase.coachingStartedAt = start
+      purchase.coachingEndsAt = end
+      await purchase.save()
+      await purchase.populate({
+        path: 'course',
+        select: 'title price coachingProcessMonths sessionsCount'
+      })
+      res.json({
+        message: 'תקופת הליווי עודכנה',
+        data: purchase
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+)
 
 // POST /api/admin/customers/:id/files - Upload file for customer
 router.post('/admin/customers/:id/files', upload.single('file'), async (req, res, next) => {
@@ -161,6 +305,36 @@ router.post('/admin/customers/:id/files', upload.single('file'), async (req, res
     })
   } catch (error) {
     console.error('Error uploading file:', error)
+    next(error)
+  }
+})
+
+// POST /api/admin/customers/:id/audio — העלאת אודיו בלבד (נשמר ב־files עם type: audio)
+router.post('/admin/customers/:id/audio', handleMulterAudioUpload, async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id)
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'לא הועלה קובץ אודיו' })
+    }
+    const fileUrl = `/uploads/customers/${req.params.id}/${req.file.filename}`
+    customer.files.push({
+      name: req.file.originalname,
+      url: fileUrl,
+      type: 'audio',
+      size: req.file.size,
+      description: req.body.description || '',
+      uploadedBy: 'admin'
+    })
+    await customer.save()
+    res.json({
+      message: 'קובץ אודיו הועלה בהצלחה',
+      data: customer.files[customer.files.length - 1]
+    })
+  } catch (error) {
+    console.error('Error uploading audio:', error)
     next(error)
   }
 })

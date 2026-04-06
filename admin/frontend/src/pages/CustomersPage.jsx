@@ -4,6 +4,8 @@ import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 
 function CustomersPage() {
@@ -47,23 +49,9 @@ function CustomersPage() {
 
   return (
     <>
-      <Navbar activeTab="customers" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← חזור לדף הראשי
-            </button>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
-                לקוחות
-              </h1>
-              <p className="text-neutral-600">כל הלקוחות שרכשו מסלולים</p>
-            </div>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader title="לקוחות" subtitle="כל הלקוחות שרכשו מסלולים" />
 
           {loading ? (
             <div className="text-center py-12">
@@ -135,8 +123,7 @@ function CustomersPage() {
               ))}
             </div>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

@@ -122,6 +122,8 @@ categorySchema.pre('save', function(next) {
   }
 })
 
+categorySchema.index({ isActive: 1, order: 1, createdAt: -1 })
+
 const Category = mongoose.model('Category', categorySchema)
 
 export default Category

@@ -8,7 +8,7 @@
   }
   
   body {
-    @apply bg-gradient-to-br from-neutral-50 via-white to-neutral-50 text-neutral-800 font-sans;
+    @apply bg-neutral-50 text-neutral-800 font-sans;
     font-family: 'Rubik', system-ui, -apple-system, sans-serif;
     direction: rtl;
     line-height: 1.6;
@@ -21,6 +21,10 @@
     font-family: 'Cormorant Garamond', 'Georgia', serif;
     font-weight: 600;
     letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    @apply bg-primary-200/60 text-neutral-900;
   }
 }
 
@@ -52,8 +56,171 @@
   }
   
   .card-soft {
-    @apply bg-white rounded-2xl shadow-soft p-6 md:p-8 
-           transition-all duration-200 hover:shadow-soft-lg border border-neutral-100;
+    @apply bg-white/85 backdrop-blur-sm rounded-2xl shadow-soft-md p-6 md:p-8 
+           transition-all duration-300 hover:shadow-soft-lg border border-neutral-200/70
+           hover:border-primary-200/50;
+  }
+
+  /* —— Admin app shell (מסכי ניהול) —— */
+  .admin-page-main {
+    position: relative;
+    isolation: isolate;
+    background-color: #f4f6f9;
+    background-image:
+      radial-gradient(ellipse 120% 70% at 50% -35%, rgba(14, 165, 233, 0.16), transparent 58%),
+      radial-gradient(ellipse 70% 50% at 100% 0%, rgba(168, 85, 247, 0.09), transparent 55%),
+      radial-gradient(ellipse 55% 45% at 0% 95%, rgba(2, 132, 199, 0.07), transparent 50%),
+      linear-gradient(165deg, #f8fafc 0%, #ffffff 42%, #f1f5f9 100%);
+  }
+
+  .admin-page-noise {
+    position: fixed;
+    inset: 0;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .admin-inner {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12;
+  }
+
+  .admin-page-title {
+    @apply text-3xl md:text-4xl lg:text-[2.45rem] font-serif font-semibold text-neutral-900 tracking-tight leading-[1.15];
+  }
+
+  .admin-page-subtitle {
+    @apply text-neutral-600 text-base md:text-lg max-w-2xl leading-relaxed;
+  }
+
+  .admin-page-header {
+    @apply rounded-2xl border border-neutral-200/60 bg-white/50 backdrop-blur-md px-5 py-5 md:px-7 md:py-6 shadow-soft;
+  }
+
+  .admin-back-link {
+    @apply text-primary-700 hover:text-primary-800 transition-colors rounded-lg
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2
+           py-0.5 text-sm font-medium;
+  }
+
+  .admin-tabs-bar {
+    @apply inline-flex flex-wrap gap-1 p-1 rounded-2xl border border-neutral-200/70 bg-white/60 backdrop-blur-sm shadow-soft;
+  }
+
+  .admin-tab-btn {
+    @apply px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200;
+  }
+
+  .admin-tab-btn-active {
+    @apply bg-white text-primary-700 shadow-soft border border-primary-100/80;
+  }
+
+  .admin-tab-btn-idle {
+    @apply text-neutral-600 hover:text-neutral-900 hover:bg-white/70;
+  }
+
+  .admin-stat-pill {
+    @apply rounded-2xl border border-neutral-200/60 bg-white/70 backdrop-blur-sm shadow-soft p-5 md:p-6 text-center;
+  }
+
+  .admin-dashboard-hero {
+    @apply border-b border-neutral-200/60 bg-white/55 backdrop-blur-xl shadow-soft;
+  }
+
+  .admin-label {
+    @apply block text-sm font-medium text-neutral-700 mb-2 tracking-wide;
+  }
+
+  .admin-input,
+  .admin-select,
+  .admin-textarea {
+    @apply w-full rounded-xl border border-neutral-200/90 bg-white/95 px-4 py-2.5 text-neutral-900 shadow-sm
+           transition-all duration-200 placeholder:text-neutral-400
+           focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/25;
+  }
+
+  .admin-textarea {
+    @apply resize-y min-h-[6rem];
+  }
+
+  .admin-table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-neutral-200/60 bg-white/80 shadow-soft;
+  }
+
+  .admin-table {
+    @apply w-full text-sm text-neutral-800;
+  }
+
+  .admin-table thead tr {
+    @apply border-b border-neutral-200/80 bg-gradient-to-l from-neutral-50/90 to-white;
+  }
+
+  .admin-table th {
+    @apply py-3.5 px-4 text-right font-semibold text-neutral-700 whitespace-nowrap;
+  }
+
+  .admin-table tbody tr {
+    @apply border-b border-neutral-100/90 transition-colors duration-150 hover:bg-primary-50/40;
+  }
+
+  .admin-table td {
+    @apply py-3.5 px-4 align-middle;
+  }
+
+  .admin-chip {
+    @apply inline-flex items-center rounded-xl border border-neutral-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-neutral-700
+           shadow-sm transition-all duration-200 hover:border-primary-200 hover:bg-primary-50/50;
+  }
+
+  .admin-chip-active {
+    @apply border-primary-300 bg-primary-50 text-primary-800 shadow-premium-sm;
+  }
+
+  .admin-modal-backdrop {
+    @apply fixed inset-0 flex items-center justify-center bg-neutral-900/45 p-4 backdrop-blur-sm;
+  }
+
+  .admin-modal-panel {
+    @apply flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-premium;
+  }
+
+  .admin-modal-header {
+    @apply flex items-center justify-between border-b border-neutral-200/60 bg-gradient-to-l from-luxe-50/80 via-white to-primary-50/30 px-6 py-4;
+  }
+
+  .admin-modal-body {
+    @apply flex-1 overflow-y-auto p-6;
+  }
+
+  .admin-modal-footer {
+    @apply flex gap-3 border-t border-neutral-200/60 bg-neutral-50/50 px-6 py-4;
+  }
+
+  .admin-empty {
+    @apply flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300/80 bg-white/60 px-8 py-16 text-center shadow-soft;
+  }
+
+  .admin-empty-icon {
+    @apply mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100/80 to-luxe-100/80 text-3xl shadow-soft;
+  }
+
+  .admin-empty-title {
+    @apply font-serif text-lg font-semibold text-neutral-900;
+  }
+
+  .admin-empty-desc {
+    @apply mt-2 max-w-sm text-sm text-neutral-600 leading-relaxed;
+  }
+
+  .btn-ghost {
+    @apply border border-transparent bg-transparent text-neutral-700 px-6 py-3 rounded-xl font-medium
+           transition-all duration-200 hover:bg-neutral-100/90 active:scale-[0.98];
+  }
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-medium
+           transition-all duration-200 hover:from-red-700 hover:to-red-800 shadow-soft active:scale-[0.98];
   }
 }
 

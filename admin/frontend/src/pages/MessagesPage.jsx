@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { messageService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 
 function MessagesPage() {
-  const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [selectedCustomers, setSelectedCustomers] = useState([])
   const [messages, setMessages] = useState([])
@@ -128,32 +128,17 @@ function MessagesPage() {
 
   return (
     <>
-      <Navbar activeTab="messages" onTabChange={() => {}} purchasesCount={0} bookingsCount={0} customersCount={customers.length} contactsCount={0} />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              ← חזור לדף הראשי
-            </button>
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-serif font-semibold text-neutral-900 mb-2">
-                  ניהול הודעות
-                </h1>
-                <p className="text-neutral-600">שליחת הודעות ללקוחות במייל או במערכת</p>
-              </div>
-              <Button
-                onClick={() => setShowSendForm(!showSendForm)}
-                variant="primary"
-              >
-                {showSendForm ? 'ביטול' : 'שלח הודעה חדשה'}
-              </Button>
-            </div>
-          </div>
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader
+          title="ניהול הודעות"
+          subtitle="שליחת הודעות ללקוחות במייל או במערכת"
+          actions={
+            <Button onClick={() => setShowSendForm(!showSendForm)} variant="primary">
+              {showSendForm ? 'ביטול' : 'שלח הודעה חדשה'}
+            </Button>
+          }
+        />
 
           {/* Send Form */}
           {showSendForm && (
@@ -334,8 +319,7 @@ function MessagesPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

@@ -260,28 +260,44 @@ function DashboardPage() {
   }
 
   const StatCard = ({ title, value, subtitle, icon, gradient, trend, trendValue, onClick }) => (
-    <div 
-      className={`relative overflow-hidden rounded-2xl bg-white p-6 shadow-soft hover:shadow-soft-lg transition-all duration-200 transform hover:-translate-y-0.5 cursor-pointer border border-neutral-100 group`}
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onClick()
+              }
+            }
+          : undefined
+      }
+      className="admin-stat-pill group relative cursor-pointer overflow-hidden text-right transition-all duration-200 hover:-translate-y-0.5 hover:shadow-premium-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2"
       onClick={onClick}
     >
-      <div className={`absolute top-0 right-0 w-32 h-32 ${gradient} opacity-5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:opacity-10 transition-opacity duration-300`}></div>
+      <div className={`pointer-events-none absolute top-0 right-0 h-36 w-36 ${gradient} rounded-full opacity-[0.12] blur-3xl transition-opacity duration-300 group-hover:opacity-[0.2] -mt-12 -mr-12`} />
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`p-3 ${gradient} rounded-xl shadow-soft-md group-hover:scale-110 transition-transform duration-200`}>
-            <span className="text-2xl">{icon}</span>
+        <div className="mb-4 flex flex-row-reverse items-start justify-between gap-3">
+          <div className={`rounded-xl p-3 ${gradient} shadow-soft-md transition-transform duration-200 group-hover:scale-105`}>
+            <span className="text-2xl" aria-hidden>
+              {icon}
+            </span>
           </div>
-          {trend && (
-            <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-              trendValue >= 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
+          {trend ? (
+            <div
+              className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                trendValue >= 0 ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
               <span>{trendValue >= 0 ? '↑' : '↓'}</span>
               <span>{Math.abs(trendValue)}%</span>
             </div>
-          )}
+          ) : null}
         </div>
-        <h3 className="text-sm font-medium text-neutral-600 mb-1">{title}</h3>
-        <p className="text-3xl font-bold text-neutral-900 mb-1">{value}</p>
-        {subtitle && <p className="text-xs text-neutral-500 mt-1">{subtitle}</p>}
+        <h3 className="mb-1 text-sm font-medium text-neutral-600">{title}</h3>
+        <p className="mb-1 font-serif text-3xl font-semibold tracking-tight text-neutral-900">{value}</p>
+        {subtitle ? <p className="mt-1 text-xs text-neutral-500 leading-relaxed">{subtitle}</p> : null}
       </div>
     </div>
   )
@@ -303,22 +319,24 @@ function DashboardPage() {
 
   return (
     <>
-      <Navbar activeTab="dashboard" onTabChange={() => {}} purchasesCount={stats.purchases.pending} bookingsCount={stats.bookings.pending} customersCount={stats.customers.total} contactsCount={stats.contacts.unread} />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50">
-        {/* Header Section */}
-        <div className="bg-gradient-to-br from-primary-50 via-white to-primary-50/30 border-b border-neutral-200/60 shadow-soft">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-serif font-semibold mb-2 text-neutral-900">לוח בקרה</h1>
-                <p className="text-neutral-600 text-base">סקירה כללית של המערכת</p>
+      <Navbar />
+      <main className="admin-page-main min-h-screen">
+        <div className="admin-page-noise" aria-hidden="true" />
+        <div className="relative z-[1]">
+        <div className="admin-dashboard-hero">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 space-y-3">
+                <h1 className="admin-page-title">לוח בקרה</h1>
+                <p className="admin-page-subtitle max-w-xl">סקירה כללית של המערכת — לקוחות, פגישות, הכנסות וביקורות במקום אחד.</p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 {/* Date Range Picker */}
                 <div className="relative date-picker-container">
                   <button
+                    type="button"
                     onClick={() => setShowDatePicker(!showDatePicker)}
-                    className="bg-white hover:bg-neutral-50 backdrop-blur-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200 border border-neutral-200 shadow-soft text-neutral-700 hover:text-neutral-900"
+                    className="flex items-center gap-2 rounded-xl border border-neutral-200/80 bg-white/90 px-4 py-2.5 text-neutral-700 shadow-soft backdrop-blur-sm transition-all duration-200 hover:border-primary-200 hover:bg-white hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2"
                   >
                     <span className="text-base">📅</span>
                     <span className="text-sm font-medium">
@@ -333,7 +351,7 @@ function DashboardPage() {
                           setDateRange({ startDate: null, endDate: null })
                           setShowDatePicker(false)
                         }}
-                        className="text-neutral-400 hover:text-neutral-600 ml-2"
+                        className="rounded-lg p-0.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
                       >
                         ✕
                       </button>
@@ -341,23 +359,23 @@ function DashboardPage() {
                   </button>
                   
                   {showDatePicker && (
-                    <div className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-2xl p-6 z-50 min-w-[320px] border border-neutral-200">
+                    <div className="absolute left-0 top-full z-50 mt-2 min-w-[320px] rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-premium">
                       <div className="mb-4">
-                        <h3 className="text-lg font-bold text-neutral-900 mb-4">בחר טווח תאריכים</h3>
+                        <h3 className="mb-4 font-serif text-lg font-semibold text-neutral-900">בחר טווח תאריכים</h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            <label className="admin-label">
                               מתאריך
                             </label>
                             <input
                               type="date"
                               value={dateRange.startDate || ''}
                               onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className="admin-input"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">
+                            <label className="admin-label">
                               עד תאריך
                             </label>
                             <input
@@ -365,7 +383,7 @@ function DashboardPage() {
                               value={dateRange.endDate || ''}
                               onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                               min={dateRange.startDate || ''}
-                              className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className="admin-input"
                             />
                           </div>
                         </div>
@@ -395,6 +413,7 @@ function DashboardPage() {
                           <p className="text-xs font-medium text-neutral-600 mb-2">בחירות מהירות:</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button
+                              type="button"
                               onClick={() => {
                                 const today = new Date()
                                 const weekAgo = new Date()
@@ -405,11 +424,12 @@ function DashboardPage() {
                                 })
                                 setShowDatePicker(false)
                               }}
-                              className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-neutral-700 transition-colors"
+                              className="admin-chip text-xs"
                             >
                               שבוע אחרון
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 const today = new Date()
                                 const monthAgo = new Date()
@@ -420,11 +440,12 @@ function DashboardPage() {
                                 })
                                 setShowDatePicker(false)
                               }}
-                              className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-neutral-700 transition-colors"
+                              className="admin-chip text-xs"
                             >
                               30 יום אחרונים
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 const today = new Date()
                                 const threeMonthsAgo = new Date()
@@ -435,11 +456,12 @@ function DashboardPage() {
                                 })
                                 setShowDatePicker(false)
                               }}
-                              className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-neutral-700 transition-colors"
+                              className="admin-chip text-xs"
                             >
                               3 חודשים אחרונים
                             </button>
                             <button
+                              type="button"
                               onClick={() => {
                                 const today = new Date()
                                 const yearAgo = new Date()
@@ -450,7 +472,7 @@ function DashboardPage() {
                                 })
                                 setShowDatePicker(false)
                               }}
-                              className="text-xs px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 rounded-lg text-neutral-700 transition-colors"
+                              className="admin-chip text-xs"
                             >
                               שנה אחרונה
                             </button>
@@ -493,9 +515,9 @@ function DashboardPage() {
               </div>
             )}
           </div>
-          </div>
+        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="admin-inner !pt-8 md:!pt-10 !pb-12">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">
@@ -506,8 +528,8 @@ function DashboardPage() {
           ) : (
             <>
               {/* Financial Balance Card */}
-              <div className="mb-8">
-                <Card className="bg-gradient-to-br from-blue-50 via-white to-blue-50/30 border-blue-200 shadow-soft-lg">
+              <div className="mb-10">
+                <Card className="border border-primary-100/60 bg-gradient-to-br from-primary-50/40 via-white to-luxe-50/30 shadow-soft-lg">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold text-neutral-900">מאזן תזרימי</h2>
                     <Button
@@ -567,7 +589,7 @@ function DashboardPage() {
                   gradient="bg-violet-50"
                   trend={!dateRange.startDate && !dateRange.endDate}
                   trendValue={stats.purchases.revenueGrowth}
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/purchase')}
                 />
                 <StatCard
                   title="ביקורות"
@@ -775,7 +797,7 @@ function DashboardPage() {
                 <h2 className="text-xl font-semibold text-neutral-900 mb-4">פעולות מהירות</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Button
-                    onClick={() => navigate('/admin?tab=categories')}
+                    onClick={() => navigate('/categories')}
                     variant="secondary"
                     className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
@@ -783,7 +805,7 @@ function DashboardPage() {
                     <span className="text-sm">ניהול טיפולים</span>
                   </Button>
                   <Button
-                    onClick={() => navigate('/admin?tab=courses')}
+                    onClick={() => navigate('/courses')}
                     variant="secondary"
                     className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
@@ -791,7 +813,7 @@ function DashboardPage() {
                     <span className="text-sm">ניהול מסלולים</span>
                   </Button>
                   <Button
-                    onClick={() => navigate('/admin?tab=new-booking')}
+                    onClick={() => navigate('/new-booking')}
                     variant="secondary"
                     className="flex flex-col items-center gap-2 py-4 hover:bg-primary-50"
                   >
@@ -811,7 +833,8 @@ function DashboardPage() {
             </>
           )}
         </div>
-      </div>
+        </div>
+      </main>
     </>
   )
 }

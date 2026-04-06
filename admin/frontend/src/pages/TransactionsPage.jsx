@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { transactionService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
+import AdminPageShell from '../components/AdminPageShell'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
 import toast from 'react-hot-toast'
 
 function TransactionsPage() {
-  const navigate = useNavigate()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -247,90 +248,68 @@ function TransactionsPage() {
 
   return (
     <>
-      <Navbar 
-        activeTab="transactions" 
-        onTabChange={() => {}} 
-        purchasesCount={0} 
-        bookingsCount={0} 
-        customersCount={0}
-        contactsCount={0}
-      />
-      <div className="min-h-screen bg-neutral-50 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="mb-8">
-            <button
-              onClick={() => navigate('/')}
-              className="mb-4 text-primary-600 hover:text-primary-700 flex items-center gap-2"
+      <Navbar />
+      <AdminPageShell>
+        <PageHeader
+          title="ניהול הכנסות והוצאות"
+          subtitle="מעקב אחר כל ההכנסות וההוצאות"
+          actions={
+            <Button
+              onClick={() => {
+                setEditingTransaction(null)
+                setFormData({
+                  type: 'income',
+                  category: 'course_sales',
+                  amount: '',
+                  description: '',
+                  date: new Date().toISOString().split('T')[0],
+                  paymentMethod: 'bank_transfer',
+                  reference: '',
+                  customer: '',
+                  notes: ''
+                })
+                setShowForm(true)
+              }}
+              variant="primary"
             >
-              ← חזור לדף הראשי
-            </button>
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-serif font-bold text-neutral-900 mb-2">
-                  ניהול הכנסות והוצאות
-                </h1>
-                <p className="text-neutral-600">מעקב אחר כל ההכנסות וההוצאות</p>
+              + הוסף רשומה
+            </Button>
+          }
+        />
+
+          {/* Summary Cards */}
+          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="admin-stat-pill text-center">
+              <div className="mb-1 font-serif text-3xl font-semibold text-green-600">
+                {formatCurrency(totalIncome)}
               </div>
-              <Button
-                onClick={() => {
-                  setEditingTransaction(null)
-                  setFormData({
-                    type: 'income',
-                    category: 'course_sales',
-                    amount: '',
-                    description: '',
-                    date: new Date().toISOString().split('T')[0],
-                    paymentMethod: 'bank_transfer',
-                    reference: '',
-                    customer: '',
-                    notes: ''
-                  })
-                  setShowForm(true)
-                }}
-                variant="primary"
+              <div className="text-sm font-medium text-neutral-600">סה"כ הכנסות</div>
+            </div>
+            <div className="admin-stat-pill text-center">
+              <div className="mb-1 font-serif text-3xl font-semibold text-red-600">
+                {formatCurrency(totalExpense)}
+              </div>
+              <div className="text-sm font-medium text-neutral-600">סה"כ הוצאות</div>
+            </div>
+            <div className="admin-stat-pill text-center">
+              <div
+                className={`mb-1 font-serif text-3xl font-semibold ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}
               >
-                + הוסף רשומה
-              </Button>
+                {formatCurrency(balance)}
+              </div>
+              <div className="text-sm font-medium text-neutral-600">מאזן תזרימי</div>
             </div>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-green-50 to-white border-green-200">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 mb-1">
-                  {formatCurrency(totalIncome)}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">סה"כ הכנסות</div>
-              </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-red-600 mb-1">
-                  {formatCurrency(totalExpense)}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">סה"כ הוצאות</div>
-              </div>
-            </Card>
-            <Card className={`bg-gradient-to-br ${balance >= 0 ? 'from-blue-50 to-white border-blue-200' : 'from-orange-50 to-white border-orange-200'}`}>
-              <div className="text-center">
-                <div className={`text-3xl font-bold mb-1 ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                  {formatCurrency(balance)}
-                </div>
-                <div className="text-sm text-neutral-600 font-medium">מאזן תזרימי</div>
-              </div>
-            </Card>
-          </div>
-
           {/* Filters */}
-          <Card className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="mb-6 rounded-2xl border border-neutral-200/70 shadow-soft">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
               <div>
-                <label className="block text-sm font-medium mb-2">סוג</label>
+                <label className="admin-label">סוג</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                  className="admin-select"
                 >
                   <option value="all">הכל</option>
                   <option value="income">הכנסות</option>
@@ -338,41 +317,45 @@ function TransactionsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">קטגוריה</label>
+                <label className="admin-label">קטגוריה</label>
                 <select
                   value={filters.category}
                   onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                  className="admin-select"
                 >
                   <option value="all">הכל</option>
-                  {filters.type === 'income' || filters.type === 'all' ? (
-                    incomeCategories.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))
-                  ) : null}
-                  {filters.type === 'expense' || filters.type === 'all' ? (
-                    expenseCategories.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))
-                  ) : null}
+                  {filters.type === 'income' || filters.type === 'all'
+                    ? incomeCategories.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))
+                    : null}
+                  {filters.type === 'expense' || filters.type === 'all'
+                    ? expenseCategories.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))
+                    : null}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">מתאריך</label>
+                <label className="admin-label">מתאריך</label>
                 <input
                   type="date"
                   value={filters.startDate}
                   onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                  className="admin-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">עד תאריך</label>
+                <label className="admin-label">עד תאריך</label>
                 <input
                   type="date"
                   value={filters.endDate}
                   onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                  className="w-full px-4 py-2 rounded-lg border border-neutral-300"
+                  className="admin-input"
                 />
               </div>
             </div>
@@ -532,104 +515,125 @@ function TransactionsPage() {
               </div>
             </Card>
           ) : filteredTransactions.length === 0 ? (
-            <Card>
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">📊</div>
-                <p className="text-neutral-700 font-medium mb-2">אין רשומות להצגה</p>
-                <p className="text-neutral-500 text-sm mb-4">
-                  {filters.type !== 'all' || filters.category !== 'all' || filters.startDate || filters.endDate
-                    ? 'לא נמצאו רשומות לפי הפילטרים שנבחרו'
-                    : 'עדיין לא נוצרו רשומות הכנסות או הוצאות'}
-                </p>
-                {filters.type !== 'all' || filters.category !== 'all' || filters.startDate || filters.endDate ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setFilters({ type: 'all', category: 'all', startDate: '', endDate: '' })}
-                    className="mt-4"
-                  >
-                    נקה פילטרים
-                  </Button>
-                ) : null}
-              </div>
-            </Card>
+            <EmptyState
+              icon="📊"
+              title="אין רשומות להצגה"
+              description={
+                filters.type !== 'all' ||
+                filters.category !== 'all' ||
+                filters.startDate ||
+                filters.endDate
+                  ? 'לא נמצאו רשומות לפי הפילטרים שנבחרו.'
+                  : 'עדיין לא נוצרו רשומות הכנסות או הוצאות.'
+              }
+            >
+              {filters.type !== 'all' ||
+              filters.category !== 'all' ||
+              filters.startDate ||
+              filters.endDate ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => setFilters({ type: 'all', category: 'all', startDate: '', endDate: '' })}
+                >
+                  נקה פילטרים
+                </Button>
+              ) : null}
+            </EmptyState>
           ) : (
-            <div className="space-y-4">
-              {filteredTransactions.map((transaction) => (
-                <Card key={transaction._id}>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          transaction.type === 'income' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
+            <div className="admin-table-wrap">
+              <table className="admin-table min-w-[960px]">
+                <thead>
+                  <tr>
+                    <th>תאריך</th>
+                    <th>סוג</th>
+                    <th>קטגוריה</th>
+                    <th>תיאור</th>
+                    <th>לקוח</th>
+                    <th>סכום</th>
+                    <th>תשלום</th>
+                    <th>פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTransactions.map((transaction) => (
+                    <tr key={transaction._id}>
+                      <td className="whitespace-nowrap text-sm text-neutral-600">
+                        {formatDate(transaction.date)}
+                      </td>
+                      <td>
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                            transaction.type === 'income'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
                           {transaction.type === 'income' ? 'הכנסה' : 'הוצאה'}
                         </span>
-                        <span className="px-3 py-1 bg-neutral-100 text-neutral-700 rounded-full text-xs">
-                          {getCategoryLabel(transaction.category)}
-                        </span>
-                        <span className="text-sm text-neutral-500">
-                          {formatDate(transaction.date)}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-semibold text-neutral-900 mb-1">
-                        {transaction.description}
-                      </h3>
-                      {transaction.customer && (
-                        <p className="text-sm text-neutral-600 mb-1">
-                          לקוח: {transaction.customer.name || transaction.customer.email}
-                        </p>
-                      )}
-                      {transaction.reference && (
-                        <p className="text-xs text-neutral-500">
-                          הפניה: {transaction.reference}
-                        </p>
-                      )}
-                      {transaction.notes && (
-                        <p className="text-sm text-neutral-600 mt-2">
-                          {transaction.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className={`text-2xl font-bold ${
+                      </td>
+                      <td className="text-sm text-neutral-700">
+                        {getCategoryLabel(transaction.category)}
+                      </td>
+                      <td className="max-w-[220px]">
+                        <div className="font-medium text-neutral-900">{transaction.description}</div>
+                        {transaction.reference ? (
+                          <div className="mt-0.5 text-xs text-neutral-500">הפניה: {transaction.reference}</div>
+                        ) : null}
+                        {transaction.notes ? (
+                          <div className="mt-1 line-clamp-2 text-xs text-neutral-600">{transaction.notes}</div>
+                        ) : null}
+                      </td>
+                      <td className="text-sm text-neutral-700">
+                        {transaction.customer
+                          ? transaction.customer.name || transaction.customer.email || '—'
+                          : '—'}
+                      </td>
+                      <td
+                        className={`whitespace-nowrap font-semibold ${
                           transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        }`}
+                      >
+                        {transaction.type === 'income' ? '+' : '-'}
+                        {formatCurrency(transaction.amount)}
+                      </td>
+                      <td className="text-xs text-neutral-500">
+                        {transaction.paymentMethod === 'cash'
+                          ? 'מזומן'
+                          : transaction.paymentMethod === 'credit_card'
+                            ? 'כרטיס אשראי'
+                            : transaction.paymentMethod === 'bank_transfer'
+                              ? 'העברה בנקאית'
+                              : transaction.paymentMethod === 'check'
+                                ? "צ'ק"
+                                : 'אחר'}
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => handleEdit(transaction)}
+                            className="px-3 py-1.5 text-sm"
+                          >
+                            ערוך
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="soft"
+                            onClick={() => handleDelete(transaction._id)}
+                            className="px-3 py-1.5 text-sm"
+                          >
+                            מחק
+                          </Button>
                         </div>
-                        <div className="text-xs text-neutral-500">
-                          {transaction.paymentMethod === 'cash' ? 'מזומן' :
-                           transaction.paymentMethod === 'credit_card' ? 'כרטיס אשראי' :
-                           transaction.paymentMethod === 'bank_transfer' ? 'העברה בנקאית' :
-                           transaction.paymentMethod === 'check' ? 'צ\'ק' : 'אחר'}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleEdit(transaction)}
-                          className="text-sm px-3 py-1"
-                        >
-                          ערוך
-                        </Button>
-                        <Button
-                          variant="soft"
-                          onClick={() => handleDelete(transaction._id)}
-                          className="text-sm px-3 py-1"
-                        >
-                          מחק
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-      </div>
+      </AdminPageShell>
     </>
   )
 }

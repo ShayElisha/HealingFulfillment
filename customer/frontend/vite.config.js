@@ -16,6 +16,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true
+      },
+      // קבצי תיק לקוח נשמרים בשרת המנהל
+      '/uploads': {
+        target: 'http://localhost:5001',
+        changeOrigin: true
       }
     }
   }

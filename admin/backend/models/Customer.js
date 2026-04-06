@@ -116,6 +116,12 @@ const customerSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'completed'],
     default: 'active'
   },
+
+  /** נקבע כשהמנהל פותח/מאשר תיק לקוח — לפני כן לא מוגדרת תקופת ליווי לרכישות */
+  caseOpenedAt: {
+    type: Date,
+    default: null
+  },
   
   // שדות אימות
   passwordHash: {

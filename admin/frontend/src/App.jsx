@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import AdminPage from './pages/AdminPage'
 import DashboardPage from './pages/DashboardPage'
@@ -11,6 +11,7 @@ import ReviewsPage from './pages/ReviewsPage'
 import LeadsPage from './pages/LeadsPage'
 import TransactionsPage from './pages/TransactionsPage'
 import ErrorBoundary from './components/ErrorBoundary'
+import { NavCountsProvider } from './context/NavCountsContext'
 
 function App() {
   return (
@@ -46,18 +47,24 @@ function App() {
       />
       <ErrorBoundary>
         <Router>
-        <Routes>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/" element={<AdminPage />} />
-          <Route path="/customer/:id" element={<CustomerPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/reviews" element={<ReviewsPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-        </Routes>
+          <NavCountsProvider>
+            <Routes>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/" element={<Navigate to="/categories" replace />} />
+              <Route path="/categories" element={<AdminPage />} />
+              <Route path="/courses" element={<AdminPage />} />
+              <Route path="/purchase" element={<AdminPage />} />
+              <Route path="/new-booking" element={<AdminPage />} />
+              <Route path="/customer/:id" element={<CustomerPage />} />
+              <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/bookings" element={<BookingsPage />} />
+              <Route path="/contacts" element={<ContactsPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/leads" element={<LeadsPage />} />
+              <Route path="/transactions" element={<TransactionsPage />} />
+            </Routes>
+          </NavCountsProvider>
         </Router>
       </ErrorBoundary>
     </>

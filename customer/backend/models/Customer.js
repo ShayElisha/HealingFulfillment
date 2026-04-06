@@ -117,6 +117,11 @@ const customerSchema = new mongoose.Schema({
     enum: ['active', 'inactive', 'completed'],
     default: 'active'
   },
+
+  caseOpenedAt: {
+    type: Date,
+    default: null
+  },
   
   // שדות אימות
   passwordHash: {

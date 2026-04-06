@@ -13,6 +13,71 @@ import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 import { reviewsService } from '../services/reviewsApi'
 
+const dateShortHe = { year: 'numeric', month: 'short', day: 'numeric' }
+const dateLongHe = { year: 'numeric', month: 'long', day: 'numeric' }
+
+/** כמו בשרת (admin): הוספת חודשים לתאריך */
+function addCalendarMonths(date, months) {
+  const m = Math.min(120, Math.max(1, parseInt(months, 10) || 1))
+  const d = new Date(date.getTime())
+  const day = d.getDate()
+  d.setMonth(d.getMonth() + m)
+  if (d.getDate() < day) d.setDate(0)
+  return d
+}
+
+/**
+ * חלון ליווי: שמור → תאריכי מסלול; אחרת חישוב מ־coachingProcessMonths + תאריך בסיס
+ * (כמו «קבע תקופת ליווי» במנהל: עדיפות ל־caseOpenedAt, אחרת חיוב/רכישה)
+ */
+function getCoachingWindow(purchase, customer) {
+  const c = purchase?.course
+  const exStart = purchase?.coachingStartedAt || c?.coachingProcessStartAt
+  const exEnd = purchase?.coachingEndsAt || c?.coachingProcessEndAt
+  if (exStart && exEnd) {
+    return { start: new Date(exStart), end: new Date(exEnd), derived: false }
+  }
+
+  const months = c?.coachingProcessMonths
+  if (purchase?.status !== 'completed' || months == null || Number(months) < 1) {
+    return null
+  }
+
+  const anchorRaw = customer?.caseOpenedAt || purchase?.paidAt || purchase?.createdAt
+  if (!anchorRaw) return null
+
+  const start = new Date(anchorRaw)
+  const end = addCalendarMonths(start, Number(months))
+  return { start, end, derived: true }
+}
+
+function isCoachingCurrentlyActive(purchase, customer) {
+  if (purchase?.status !== 'completed') return false
+  const w = getCoachingWindow(purchase, customer)
+  if (!w) return false
+  const now = Date.now()
+  return now >= w.start.getTime() && now <= w.end.getTime()
+}
+
+function purchaseDisplayDate(purchase) {
+  if (purchase?.paidAt && purchase?.status === 'completed') {
+    return new Date(purchase.paidAt)
+  }
+  return purchase?.createdAt ? new Date(purchase.createdAt) : null
+}
+
+/** קבצי תיק לקוח מגיעים משרת המנהל; בפיתוח פרוקסי Vite מפנה /uploads ל־5001 */
+function resolveCustomerUploadUrl(urlPath) {
+  if (!urlPath) return ''
+  if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath
+  if (import.meta.env.DEV) return urlPath
+  const adminBase = import.meta.env.VITE_ADMIN_ASSET_URL?.replace(/\/$/, '')
+  if (adminBase) return `${adminBase}${urlPath}`
+  const apiBase = import.meta.env.VITE_API_URL
+  if (apiBase) return apiBase.replace(/\/api\/?$/, '') + urlPath
+  return urlPath
+}
+
 function CustomerProfilePage() {
   const navigate = useNavigate()
   const { user, logout, isAuthenticated } = useAuth()
@@ -39,6 +104,11 @@ function CustomerProfilePage() {
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
 
+  const nonAudioFiles =
+    customerData?.files?.filter((f) => f.type !== 'audio') ?? []
+  const audioOnlyFiles =
+    customerData?.files?.filter((f) => f.type === 'audio') ?? []
+
   useEffect(() => {
     // Unlock based on server value (DB) instead of localStorage
     const completed = Boolean(customerData?.regulationsQuestionnaire?.completed)
@@ -56,13 +126,6 @@ function CustomerProfilePage() {
     loadMessages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
-
-  useEffect(() => {
-    if (activeTab === 'messages') {
-      loadMessages()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
 
   const loadMyReview = async () => {
     try {
@@ -191,6 +254,10 @@ function CustomerProfilePage() {
   const hasAnyBooking = (customerData.bookings || []).some((b) => b.status !== 'cancelled')
   const shouldGateFirstBooking = !hasAnyBooking && !isFirstBookingUnlocked
 
+  const activeCoachingPurchases = (customerData.purchases || []).filter((p) =>
+    isCoachingCurrentlyActive(p, customerData)
+  )
+
   return (
     <>
       <Helmet>
@@ -230,7 +297,8 @@ function CustomerProfilePage() {
               { id: 'history', label: `היסטוריית פגישות (${customerData.bookings?.filter(b => b.status === 'completed').length || 0})` },
               { id: 'messages', label: `הודעות (${messages.length})` },
               { id: 'new-booking', label: 'קבע פגישה' },
-              { id: 'files', label: `קבצים (${customerData.files?.length || 0})` }
+              { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
+              { id: 'audio', label: `אודיו (${audioOnlyFiles.length})` }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -281,6 +349,52 @@ function CustomerProfilePage() {
                   </div>
                 </div>
               </Card>
+
+              {customerData.activeSubscription && (
+                <Card className="border border-green-200 bg-green-50/40">
+                  <h3 className="text-xl font-semibold mb-2 text-neutral-900">מנוי פעיל</h3>
+                  <p className="font-medium text-neutral-800">
+                    {customerData.activeSubscription.planSnapshot?.title || 'מסלול'}
+                  </p>
+                  <p className="text-sm text-neutral-600 mt-2">
+                    תקופה:{' '}
+                    {new Date(customerData.activeSubscription.startedAt).toLocaleDateString(
+                      'he-IL',
+                      dateLongHe
+                    )}
+                    {' – '}
+                    {new Date(customerData.activeSubscription.endsAt).toLocaleDateString(
+                      'he-IL',
+                      dateLongHe
+                    )}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-2">
+                    פרטי המנוי נשמרו בעת הרכישה ואינם משתנים כשמעדכנים את המסלול במערכת.
+                  </p>
+                </Card>
+              )}
+
+              {activeCoachingPurchases.length > 0 && (
+                <Card className="border-2 border-primary-200 bg-primary-50/50">
+                  <h3 className="text-xl font-semibold mb-3 text-primary-900">תהליך ליווי בתוקף</h3>
+                  <ul className="space-y-3">
+                    {activeCoachingPurchases.map((p) => {
+                      const w = getCoachingWindow(p, customerData)
+                      return (
+                        <li key={p._id} className="text-neutral-800 border-b border-primary-100 last:border-0 pb-3 last:pb-0">
+                          <p className="font-medium">{p.course?.title || 'מסלול'}</p>
+                          {w && (
+                            <p className="text-sm text-neutral-600 mt-1">
+                              {w.start.toLocaleDateString('he-IL', dateShortHe)} –{' '}
+                              {w.end.toLocaleDateString('he-IL', dateShortHe)}
+                            </p>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </Card>
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -365,15 +479,44 @@ function CustomerProfilePage() {
                           {purchase.course?.title || 'מסלול'}
                         </h3>
                         <p className="text-sm text-neutral-600">
-                          תאריך רכישה: {new Date(purchase.createdAt).toLocaleDateString('he-IL', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          תאריך רכישה:{' '}
+                          {purchaseDisplayDate(purchase)?.toLocaleDateString('he-IL', dateLongHe) ?? '—'}
                         </p>
-                        {purchase.course?.sessionsCount && (
+                        {(() => {
+                          const w = getCoachingWindow(purchase, customerData)
+                          if (w) {
+                            return (
+                              <div className="mt-2">
+                                <p className="text-sm text-neutral-700 font-medium">
+                                  תקופת ליווי: {w.start.toLocaleDateString('he-IL', dateShortHe)} –{' '}
+                                  {w.end.toLocaleDateString('he-IL', dateShortHe)}
+                                </p>
+                                {w.derived && (
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    מחושב לפי תאריך פתיחת התיק או תאריך החיוב ומשך המסלול במערכת
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          }
+                          if (purchase.course?.coachingProcessMonths) {
+                            return (
+                              <p className="text-sm text-neutral-600 mt-2">
+                                משך ליווי במסלול: {purchase.course.coachingProcessMonths} חודשים (חסר תאריך בסיס
+                                לחישוב טווח)
+                              </p>
+                            )
+                          }
+                          return (
+                            <p className="text-sm text-neutral-500 mt-2">
+                              תקופת הליווי תופיע כאן כשהמנהל יגדיר תאריכי התחלה וסיום או משך ליווי למסלול.
+                            </p>
+                          )
+                        })()}
+                        {purchase.course?.installmentsCount != null && purchase.course.installmentsCount >= 1 && (
                           <p className="text-sm text-neutral-600 mt-1">
-                            כמות מפגשים: {purchase.course.sessionsCount}
+                            {purchase.course.installmentsCount}{' '}
+                            {purchase.course.installmentsCount === 1 ? 'תשלום' : 'תשלומים'}
                           </p>
                         )}
                       </div>
@@ -772,8 +915,8 @@ function CustomerProfilePage() {
           {/* Files Tab */}
           {activeTab === 'files' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {customerData.files && customerData.files.length > 0 ? (
-                customerData.files.map((file) => (
+              {nonAudioFiles.length > 0 ? (
+                nonAudioFiles.map((file) => (
                   <Card key={file._id}>
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-semibold">{file.name}</h4>
@@ -782,7 +925,7 @@ function CustomerProfilePage() {
                       <p className="text-sm text-neutral-600 mb-2">{file.description}</p>
                     )}
                     <a
-                      href={file.url.startsWith('http') ? file.url : (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') + file.url : file.url)}
+                      href={resolveCustomerUploadUrl(file.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:underline text-sm"
@@ -796,6 +939,40 @@ function CustomerProfilePage() {
                   <p className="text-center text-neutral-500 py-8">אין קבצים עדיין</p>
                 </Card>
               )}
+            </div>
+          )}
+
+          {activeTab === 'audio' && (
+            <div className="space-y-4">
+              <Card className="border border-neutral-200 bg-neutral-50/50">
+                <p className="text-sm text-neutral-700">
+                  כאן מוצגים קבצי אודיו שהועלו עבורך מהמטפל. ניתן להאזין בלבד — לא ניתן להעלות קבצים מכאן.
+                </p>
+              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {audioOnlyFiles.length > 0 ? (
+                  audioOnlyFiles.map((file) => (
+                    <Card key={file._id}>
+                      <h4 className="font-semibold text-neutral-900 mb-2">{file.name}</h4>
+                      {file.description && (
+                        <p className="text-sm text-neutral-600 mb-3">{file.description}</p>
+                      )}
+                      <audio
+                        className="w-full"
+                        controls
+                        preload="metadata"
+                        src={resolveCustomerUploadUrl(file.url)}
+                      >
+                        הדפדפן שלך לא תומך בהשמעת אודיו.
+                      </audio>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="col-span-full md:col-span-2">
+                    <p className="text-center text-neutral-500 py-8">אין הודעות אודיו כרגע</p>
+                  </Card>
+                )}
+              </div>
             </div>
           )}
         </div>
