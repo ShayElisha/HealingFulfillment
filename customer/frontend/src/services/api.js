@@ -1,40 +1,27 @@
 import axios from 'axios'
 
-// Use proxy in development, direct URL in production
-// In development, vite proxy will handle /api requests
-let API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000/api')
+function getApiBaseUrl() {
+  const raw = String(import.meta.env.VITE_API_URL || '').trim()
+  // Default to same-origin API in both dev/prod (Vite proxy in dev, rewrites in prod)
+  if (!raw) return '/api'
 
-// Normalize API_URL - ensure proper format
-if (API_URL) {
-  // Remove protocol if present but incomplete (e.g., "healing-fulfillment.vercel.app/api/")
-  if (API_URL.includes('.vercel.app') || API_URL.includes('.app') || API_URL.includes('localhost')) {
-    // If it looks like a domain but doesn't start with http, treat as relative
-    if (!API_URL.startsWith('http://') && !API_URL.startsWith('https://')) {
-      // Extract just the path part
-      const pathMatch = API_URL.match(/\/api.*$/)
-      if (pathMatch) {
-        API_URL = pathMatch[0]
-      } else {
-        API_URL = '/api'
-      }
-    }
+  // Keep absolute URLs untouched (except trailing slash).
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw.endsWith('/') ? raw.slice(0, -1) : raw
   }
-  
-  // Remove any double slashes
-  API_URL = API_URL.replace(/\/+/g, '/')
-  // Remove trailing slash (axios will add it when needed)
-  if (API_URL.endsWith('/') && API_URL !== '/') {
-    API_URL = API_URL.slice(0, -1)
+
+  // If someone passed only host/path without protocol, prefer same-origin /api.
+  if (raw.includes('.vercel.app') || raw.includes('.app') || raw.includes('localhost')) {
+    const pathMatch = raw.match(/\/api.*$/)
+    return pathMatch ? pathMatch[0].replace(/\/+$/, '') : '/api'
   }
-  // Ensure it starts with / for relative URLs
-  if (!API_URL.startsWith('/') && !API_URL.startsWith('http')) {
-    API_URL = '/' + API_URL
-  }
-  // Default to /api if empty
-  if (!API_URL || API_URL === '/') {
-    API_URL = '/api'
-  }
+
+  // Relative path fallback.
+  const normalized = raw.startsWith('/') ? raw : `/${raw}`
+  return normalized.endsWith('/') && normalized !== '/' ? normalized.slice(0, -1) : normalized
 }
+
+const API_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_URL,
