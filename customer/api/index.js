@@ -347,7 +347,9 @@ async function loadRoutes() {
         coursesModule,
         categoriesModule,
         purchasesModule,
-        messagesModule
+        messagesModule,
+        leadsModule,
+        forWhomAudienceModule
       ] = await Promise.all([
         import('../backend/routes/auth.js'),
         import('../backend/routes/booking.js'),
@@ -356,7 +358,9 @@ async function loadRoutes() {
         import('../backend/routes/courses.js'),
         import('../backend/routes/categories.js'),
         import('../backend/routes/purchases.js'),
-        import('../backend/routes/messages.js')
+        import('../backend/routes/messages.js'),
+        import('../backend/routes/leads.js'),
+        import('../backend/routes/forWhomAudience.js')
       ])
       
       const routes = {
@@ -367,7 +371,9 @@ async function loadRoutes() {
         courses: coursesModule.default,
         categories: categoriesModule.default,
         purchases: purchasesModule.default,
-        messages: messagesModule.default
+        messages: messagesModule.default,
+        leads: leadsModule.default,
+        forWhomAudience: forWhomAudienceModule.default
       }
       
       for (const [name, route] of Object.entries(routes)) {
@@ -384,6 +390,8 @@ async function loadRoutes() {
       app.use('/api/categories', routes.categories)
       app.use('/api/purchases', routes.purchases)
       app.use('/api/messages', routes.messages)
+      app.use('/api/leads', routes.leads)
+      app.use('/api', routes.forWhomAudience)
       
       app.use((err, req, res, next) => {
         console.error('❌ [EXPRESS] Error:', err.message)
