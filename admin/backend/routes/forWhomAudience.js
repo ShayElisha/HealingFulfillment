@@ -3,6 +3,79 @@ import ForWhomProfile from '../models/ForWhomProfile.js'
 
 const router = express.Router()
 
+function normalizeVideoUrl(v) {
+  if (v == null || String(v).trim() === '') return ''
+  const s = String(v).trim()
+  return s.length > 2048 ? s.slice(0, 2048) : s
+}
+
+const BLOCK_TYPES = new Set(['timeline', 'audio', 'images'])
+
+function normalizeDetailBlocks(raw) {
+  if (!Array.isArray(raw)) return []
+  const out = []
+  for (const b of raw) {
+    if (!b || typeof b !== 'object') continue
+    const type = b.type
+    if (!BLOCK_TYPES.has(type)) continue
+    if (out.length >= 30) break
+    if (type === 'timeline') {
+      let points = []
+      if (Array.isArray(b.timelinePoints)) {
+        points = b.timelinePoints
+          .map((p) => String(p || '').trim())
+          .filter(Boolean)
+          .map((p) => p.slice(0, 2000))
+          .slice(0, 60)
+      }
+      if (points.length === 0 && b.timelineText != null && String(b.timelineText).trim()) {
+        points = String(b.timelineText)
+          .split(/\n+/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .slice(0, 60)
+      }
+      out.push({
+        type: 'timeline',
+        timelinePoints: points,
+        audioUrl: '',
+        audioTitle: '',
+        imageItems: [],
+      })
+    } else if (type === 'audio') {
+      out.push({
+        type: 'audio',
+        timelinePoints: [],
+        audioUrl: String(b.audioUrl || '').trim().slice(0, 2048),
+        audioTitle: String(b.audioTitle || '').trim().slice(0, 200),
+        imageItems: [],
+      })
+    } else if (type === 'images') {
+      const items = Array.isArray(b.imageItems) ? b.imageItems : []
+      const imageItems = items
+        .map((i) => {
+          if (!i || typeof i !== 'object') return null
+          const url = String(i.url || '').trim()
+          if (!url) return null
+          return {
+            url: url.slice(0, 2048),
+            caption: String(i.caption || '').trim().slice(0, 500),
+          }
+        })
+        .filter(Boolean)
+        .slice(0, 24)
+      out.push({
+        type: 'images',
+        timelinePoints: [],
+        audioUrl: '',
+        audioTitle: '',
+        imageItems,
+      })
+    }
+  }
+  return out
+}
+
 function sortProfiles(list) {
   return [...list].sort((a, b) => {
     const ao = Number(a.order) || 0
@@ -80,7 +153,9 @@ router.post('/for-whom-audience/seed', async (req, res, next) => {
       })
     }
     const docs = SAMPLE_PROFILES.map((p, i) => ({
-      ...p,
+      title: p.title,
+      description: p.description,
+      detailPageContent: `${p.description}\n\n---\n\nכאן מופיע תוכן העמוד המלא — ניתן לערוך ולהעשיר בממשק המנהל.`,
       order: i,
       isActive: true,
     }))
@@ -98,9 +173,18 @@ router.post('/for-whom-audience/seed', async (req, res, next) => {
 // POST /for-whom-audience
 router.post('/for-whom-audience', async (req, res, next) => {
   try {
-    const { title, description, order, isActive } = req.body
+    const { title, description, order, isActive, detailPageContent, detailVideoUrl, detailBlocks } =
+      req.body
     if (!title || !description) {
-      return res.status(400).json({ message: 'נדרשים כותרת ותיאור' })
+      return res.status(400).json({
+        message: 'נדרשים כותרת הדלת ותקציר (התוכן שמאחורי הדלת)',
+      })
+    }
+    const pageContent = detailPageContent != null ? String(detailPageContent).trim() : ''
+    if (!pageContent) {
+      return res.status(400).json({
+        message: 'נדרש תוכן לעמוד המלא (נפרד מהתקציר שמאחורי הדלת)',
+      })
     }
     const maxOrder = await ForWhomProfile.findOne().sort({ order: -1 }).select('order').lean()
     const nextOrder =
@@ -113,6 +197,9 @@ router.post('/for-whom-audience', async (req, res, next) => {
       description: String(description).trim(),
       order: nextOrder,
       isActive: isActive !== false,
+      detailPageContent: String(detailPageContent),
+      detailVideoUrl: normalizeVideoUrl(detailVideoUrl),
+      detailBlocks: normalizeDetailBlocks(detailBlocks),
     })
     res.status(201).json({
       message: 'נוצר בהצלחה',
@@ -132,12 +219,41 @@ router.post('/for-whom-audience', async (req, res, next) => {
 // PUT /for-whom-audience/:id
 router.put('/for-whom-audience/:id', async (req, res, next) => {
   try {
-    const { title, description, order, isActive } = req.body
+    const existing = await ForWhomProfile.findById(req.params.id)
+    if (!existing) {
+      return res.status(404).json({ message: 'לא נמצא' })
+    }
+
+    const bodyKeys = Object.keys(req.body)
+    const onlyToggle =
+      bodyKeys.length === 1 &&
+      Object.prototype.hasOwnProperty.call(req.body, 'isActive') &&
+      typeof req.body.isActive === 'boolean'
+
+    if (!onlyToggle) {
+      const mergedContent =
+        req.body.detailPageContent !== undefined
+          ? String(req.body.detailPageContent).trim()
+          : String(existing.detailPageContent || '').trim()
+      if (!mergedContent) {
+        return res.status(400).json({
+          message: 'נדרש תוכן לעמוד המלא (נפרד מהתקציר מאחורי הדלת)',
+        })
+      }
+    }
+
+    const { title, description, order, isActive, detailPageContent, detailVideoUrl, detailBlocks } =
+      req.body
     const update = {}
     if (title != null) update.title = String(title).trim()
     if (description != null) update.description = String(description).trim()
     if (order != null && Number.isFinite(Number(order))) update.order = Number(order)
     if (typeof isActive === 'boolean') update.isActive = isActive
+    if (detailPageContent !== undefined)
+      update.detailPageContent =
+        detailPageContent != null ? String(detailPageContent) : ''
+    if (detailVideoUrl !== undefined) update.detailVideoUrl = normalizeVideoUrl(detailVideoUrl)
+    if (detailBlocks !== undefined) update.detailBlocks = normalizeDetailBlocks(detailBlocks)
 
     const doc = await ForWhomProfile.findByIdAndUpdate(req.params.id, update, {
       new: true,

@@ -215,11 +215,13 @@ function HomePage() {
                     ? 'פרופילים שכיחים'
                     : `${forWhomProfiles.length} פרופילים שכיחים`}
                 </strong>
-                . בכל כרטיס תמצאו נתונים, תיאור של ה«כאב» האופייני, ומידע על מוכנות לשינוי.
+                . מעל כל דלת — הכותרת; מאחורי הדלת — תקציר.{' '}
+                <span className="font-medium text-neutral-700">לחיצה על הכותרת</span> מובילה לעמוד מלא
+                בנושא (כתובת דינמית לפי כרטיס — בלי slug נפרד).
               </p>
               <p className="text-sm leading-relaxed text-neutral-500 sm:text-base md:text-lg">
-                <span className="font-medium text-neutral-600">איך לפתוח?</span>{' '}
-                במחשב — העבירו את העכבר מעל הדלת. בטלפון — לחצו על הדלת כדי לפתוח או לסגור.
+                <span className="font-medium text-neutral-600">איך לפתוח את הדלת?</span>{' '}
+                במחשב — העבירו את העכבר מעל הדלת. בטלפון — התוכן מוצג ישירות.
               </p>
             </div>
           </div>

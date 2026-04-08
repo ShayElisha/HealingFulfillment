@@ -144,6 +144,12 @@ export const forWhomAudienceService = {
     const response = await api.get('/for-whom-audience')
     return response.data
   },
+  getPageById: async (id) => {
+    const response = await api.get(
+      `/for-whom-audience/page/${encodeURIComponent(id)}`
+    )
+    return response.data
+  },
 }
 
 export default api

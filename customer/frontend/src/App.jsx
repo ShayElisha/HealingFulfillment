@@ -18,6 +18,7 @@ const CustomerProfilePage = lazy(() => import('./pages/CustomerProfilePage'))
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'))
 const PaymentFailedPage = lazy(() => import('./pages/PaymentFailedPage'))
+const ForWhomAudienceDetailPage = lazy(() => import('./pages/ForWhomAudienceDetailPage'))
 
 function RouteFallback() {
   return (
@@ -69,6 +70,7 @@ function App() {
             <Route path="/booking" element={<BookingPage />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/category/:id" element={<CategoryPage />} />
+            <Route path="/for-whom/:id" element={<ForWhomAudienceDetailPage />} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/failed" element={<PaymentFailedPage />} />
             <Route path="/customer/login" element={<CustomerLoginPage />} />

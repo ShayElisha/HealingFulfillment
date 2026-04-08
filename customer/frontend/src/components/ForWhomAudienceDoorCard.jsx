@@ -1,21 +1,7 @@
-import { useState, useEffect } from 'react'
-import AnimatedSection from './AnimatedSection'
+import { Link } from 'react-router-dom'
 
 /** איור דלתות (מוח / צמחים / טקסט בעברית + ידיות) — מוצג מפוצל לשתי דלתות */
 const DOOR_ART = '/images/for-whom-doors-art.png'
-
-/** דסקטופ: פתיחה ב־CSS :hover / focus-within. מגע: מחלקה forwhom-door-card--open */
-function useForWhomHoverMode() {
-  const [hoverMode, setHoverMode] = useState(true)
-  useEffect(() => {
-    const mq = window.matchMedia('(hover: hover) and (pointer: fine)')
-    const sync = () => setHoverMode(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
-  return hoverMode
-}
 
 function doorArtStyle(half) {
   const pos = half === 'left' ? 'left' : 'right'
@@ -37,61 +23,35 @@ function doorArtStyle(half) {
 }
 
 export default function ForWhomAudienceDoorCard({ item, index }) {
-  const hoverMode = useForWhomHoverMode()
-  const [open, setOpen] = useState(false)
-
-  const pointerHandlers = hoverMode
-    ? {}
-    : {
-        onClick: () => setOpen((o) => !o),
-      }
-
-  const onKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      if (!hoverMode) setOpen((o) => !o)
-    }
-  }
-
-  const cardClass = [
-    'group',
-    'forwhom-door-card',
-    'flex w-full flex-col items-center rounded-xl outline-none',
-    'focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
-    hoverMode ? '' : 'cursor-pointer touch-manipulation',
-    !hoverMode && open ? 'forwhom-door-card--open' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-
   return (
-    <AnimatedSection delay={Math.min(index * 0.08, 0.5)} className="h-full min-h-0">
-      <div className="mx-auto flex h-full w-full max-w-[300px] flex-col items-center">
+      <article className="mx-auto flex h-full w-full max-w-[300px] flex-col items-center">
         <h3
           className="mb-4 flex min-h-[4.5rem] items-end justify-center px-1 text-center text-lg font-serif font-semibold leading-snug text-neutral-900 sm:mb-5 sm:text-xl"
           id={`for-whom-card-title-${index}`}
         >
-          {item.title}
+          {item._id ? (
+            <Link
+              to={`/for-whom/${encodeURIComponent(String(item._id))}`}
+              className="text-primary-700 underline-offset-4 transition-colors hover:text-primary-600 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {item.title}
+            </Link>
+          ) : (
+            item.title
+          )}
         </h3>
         <div
-          {...pointerHandlers}
-          onKeyDown={onKeyDown}
-          tabIndex={0}
-          className={cardClass}
-          role={hoverMode ? undefined : 'button'}
-          aria-expanded={hoverMode ? undefined : open}
+          className="group forwhom-door-card flex w-full flex-col items-center rounded-xl"
           aria-labelledby={`for-whom-card-title-${index}`}
-          aria-label={
-            hoverMode ? undefined : `${open ? 'סגירת' : 'פתיחת'} פרטים: ${item.title}`
-          }
         >
           <p className="sr-only">{item.description}</p>
           <div
             className="relative aspect-[3/4] w-full min-h-[240px] max-h-[360px] min-[480px]:min-h-[280px] min-[480px]:max-h-[400px] sm:max-h-[440px] overflow-visible rounded-xl"
             aria-hidden
           >
-            <div className="absolute inset-0 overflow-visible rounded-xl bg-gradient-to-b from-amber-50/90 via-neutral-100 to-neutral-200/95 p-[6px] shadow-[0_12px_40px_-12px_rgba(60,40,28,0.28),0_2px_8px_rgba(0,0,0,0.07),inset_0_1px_0_rgba(255,255,255,0.9)] ring-1 ring-amber-900/10 min-[480px]:p-[7px]">
-              <div className="relative h-full w-full overflow-visible rounded-lg bg-gradient-to-b from-neutral-300/45 to-neutral-400/25 p-[3px] shadow-[inset_0_2px_6px_rgba(0,0,0,0.12)]">
+            <div className="absolute inset-0 overflow-visible rounded-xl bg-gradient-to-b from-amber-50/90 via-neutral-100 to-neutral-200/95 p-[6px] shadow-[0_8px_24px_-12px_rgba(60,40,28,0.24),0_1px_4px_rgba(0,0,0,0.06)] ring-1 ring-amber-900/10 min-[480px]:p-[7px]">
+              <div className="relative h-full w-full overflow-visible rounded-lg bg-gradient-to-b from-neutral-300/45 to-neutral-400/25 p-[3px]">
                 <div className="absolute inset-[8px] z-0 flex min-h-0 flex-col overflow-hidden rounded-md border border-amber-900/10 bg-gradient-to-b from-white via-neutral-50/98 to-amber-50/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)] min-[480px]:inset-[10px]">
                   <p className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-right text-xs leading-relaxed text-neutral-700 min-[480px]:px-5 min-[480px]:py-4 sm:px-6 sm:text-sm">
                     {item.description}
@@ -114,18 +74,11 @@ export default function ForWhomAudienceDoorCard({ item, index }) {
             </div>
           </div>
           <p
-            className={`mt-3 text-center text-xs transition-colors ${
-              hoverMode
-                ? 'text-neutral-500 group-hover:text-primary-600/80'
-                : open
-                  ? 'text-primary-600/80'
-                  : 'text-neutral-500'
-            }`}
+            className="mt-3 text-center text-xs text-neutral-500 transition-colors group-hover:text-primary-600/80"
           >
-            {hoverMode ? 'העברו את העכבר לפתיחה' : 'לחצו על הדלת לפתיחה ולסגירה'}
+            העבירו את העכבר לפתיחה
           </p>
         </div>
-      </div>
-    </AnimatedSection>
+      </article>
   )
 }

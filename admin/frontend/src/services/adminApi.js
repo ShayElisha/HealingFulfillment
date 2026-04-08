@@ -159,6 +159,26 @@ export const leadService = {
   },
 }
 
+/** העלאות לבלוקי «למי זה מתאים» — קבצים בשרת המנהל תחת /uploads/for-whom/ */
+export const forWhomUploadService = {
+  uploadAudio: async (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await api.post('/upload/for-whom/audio', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+  uploadImage: async (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await api.post('/upload/for-whom/image', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+}
+
 export const forWhomAudienceService = {
   getAll: async () => {
     const response = await api.get('/admin/for-whom-audience')

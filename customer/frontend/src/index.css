@@ -148,31 +148,25 @@
     z-index: 0;
   }
 
-  .forwhom-door-card:hover,
-  .forwhom-door-card:focus-within,
-  .forwhom-door-card.forwhom-door-card--open {
+  .forwhom-door-card:hover {
     z-index: 25;
   }
 
   .forwhom-door-card .forwhom-door {
-    transition: transform 0.72s cubic-bezier(0.33, 1, 0.68, 1);
+    will-change: transform;
+    transition: transform 0.42s ease-out;
+    contain: layout paint style;
   }
 
-  .forwhom-door-card:hover .forwhom-door-left,
-  .forwhom-door-card:focus-within .forwhom-door-left,
-  .forwhom-door-card.forwhom-door-card--open .forwhom-door-left {
-    transform: translate3d(-100%, 0, 0);
+  .forwhom-door-card:hover .forwhom-door-left {
+    transform: translateX(-100%);
   }
 
-  .forwhom-door-card:hover .forwhom-door-right,
-  .forwhom-door-card:focus-within .forwhom-door-right,
-  .forwhom-door-card.forwhom-door-card--open .forwhom-door-right {
-    transform: translate3d(100%, 0, 0);
+  .forwhom-door-card:hover .forwhom-door-right {
+    transform: translateX(100%);
   }
 
-  .forwhom-door-card:hover .forwhom-door-swing,
-  .forwhom-door-card:focus-within .forwhom-door-swing,
-  .forwhom-door-card.forwhom-door-card--open .forwhom-door-swing {
+  .forwhom-door-card:hover .forwhom-door-swing {
     pointer-events: none;
   }
 
@@ -183,6 +177,12 @@
 
     .forwhom-door-card .forwhom-door {
       transition: none;
+    }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    .forwhom-door-card .forwhom-door-swing {
+      display: none !important;
     }
   }
 }
