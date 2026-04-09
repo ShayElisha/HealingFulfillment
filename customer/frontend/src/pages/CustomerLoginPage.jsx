@@ -7,7 +7,11 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { resolveAdminRedirectUrl } from '../utils/adminPanelUrl'
-import { sanitizeAdminLoginReturnTo } from '../utils/sanitizeAdminReturnTo'
+import {
+  stripReturnToQueryFromLoginUrl,
+  resolveLoginReturnTo,
+  clearStoredLoginReturnTo,
+} from '../utils/loginReturnToSession'
 
 function EyeIcon({ closed = false }) {
   if (closed) {
@@ -54,16 +58,21 @@ function CustomerLoginPage() {
   }
 
   useEffect(() => {
+    stripReturnToQueryFromLoginUrl(location.search, navigate)
+  }, [location.search, navigate])
+
+  useEffect(() => {
     window.scrollTo(0, 0)
     // אם כבר מחובר, הפנה לפי סוג המשתמש
     if (isAuthenticated) {
       if (user?.isAdmin === true) {
-        redirectAdmin()
+        const returnTo = resolveLoginReturnTo(location.search)
+        redirectAdmin(returnTo)
         return
       }
       navigate('/customer/profile')
     }
-  }, [isAuthenticated, navigate, user])
+  }, [isAuthenticated, navigate, user, location.search])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -72,16 +81,16 @@ function CustomerLoginPage() {
 
     try {
       const result = await login(email, password)
-      const params = new URLSearchParams(location.search)
-      const returnTo = sanitizeAdminLoginReturnTo(params.get('returnTo')) ?? undefined
-      
+
       // אם צריך לשנות סיסמה, הפנה לדף שינוי סיסמה
       if (result.mustChangePassword) {
         navigate('/customer/change-password')
       } else if (result.isAdmin) {
+        const returnTo = resolveLoginReturnTo(location.search)
         const redirected = redirectAdmin(returnTo)
         if (!redirected) navigate('/customer/profile')
       } else {
+        clearStoredLoginReturnTo()
         navigate('/customer/profile')
       }
     } catch (err) {
