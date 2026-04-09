@@ -14,6 +14,8 @@ const BookingPage = lazy(() => import('./pages/BookingPage'))
 const CoursesPage = lazy(() => import('./pages/CoursesPage'))
 const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const CustomerLoginPage = lazy(() => import('./pages/CustomerLoginPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const CustomerProfilePage = lazy(() => import('./pages/CustomerProfilePage'))
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'))
@@ -74,6 +76,8 @@ function App() {
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/failed" element={<PaymentFailedPage />} />
             <Route path="/customer/login" element={<CustomerLoginPage />} />
+            <Route path="/customer/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/customer/reset-password" element={<ResetPasswordPage />} />
             <Route
               path="/customer/profile"
               element={

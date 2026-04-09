@@ -15,6 +15,14 @@ export const authService = {
       throw error
     }
   },
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email })
+    return response.data
+  },
+  resetPassword: async (token, newPassword) => {
+    const response = await api.post('/auth/reset-password', { token, newPassword })
+    return response.data
+  },
   
   changePassword: async (oldPassword, newPassword) => {
     const response = await api.post('/auth/change-password', { 

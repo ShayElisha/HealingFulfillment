@@ -290,3 +290,27 @@ export const sendAccountCreationEmail = async (customer, initialPassword) => {
   })
 }
 
+export const sendPasswordResetEmail = async (customer, resetUrl) => {
+  const content = `
+    <h2>איפוס סיסמה</h2>
+    <p>שלום ${customer.name},</p>
+    <p>קיבלנו בקשה לאיפוס הסיסמה לחשבון שלך.</p>
+    <div class="info-box">
+      <p><strong>חשוב:</strong> הקישור תקף ל-30 דקות בלבד.</p>
+      <p><strong>אם לא ביקשת איפוס</strong> אפשר להתעלם מהמייל.</p>
+    </div>
+    <p style="text-align: center;">
+      <a href="${resetUrl}" class="button">איפוס סיסמה</a>
+    </p>
+    <p>אם הכפתור לא עובד, אפשר להעתיק את הקישור הבא לדפדפן:</p>
+    <p style="word-break: break-all; direction: ltr;">${resetUrl}</p>
+    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+  `
+
+  return await sendEmail({
+    to: customer.email,
+    subject: 'איפוס סיסמה - ריפוי והגשמה',
+    html: getBaseTemplate('איפוס סיסמה', content),
+  })
+}
+

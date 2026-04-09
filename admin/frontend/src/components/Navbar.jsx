@@ -2,6 +2,14 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNavCounts } from '../context/NavCountsContext'
 
+const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
+
+function getCustomerLoginUrl() {
+  const raw = import.meta.env.VITE_CUSTOMER_LOGIN_URL
+  if (raw && String(raw).trim()) return String(raw).trim()
+  return 'http://localhost:3000/customer/login'
+}
+
 function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -27,6 +35,14 @@ function Navbar() {
   const handleNavClick = (route) => {
     setIsMobileMenuOpen(false)
     navigate(route)
+  }
+
+  const handleLogout = () => {
+    try {
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
+    } catch {}
+    const loginUrl = getCustomerLoginUrl()
+    window.location.replace(loginUrl)
   }
 
   const getActiveTabId = () => {
@@ -87,6 +103,14 @@ function Navbar() {
                 <span className="whitespace-nowrap">{tab.label}</span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <span className="hidden navwide:inline text-sm md:text-base lg:text-base">↩️</span>
+              <span className="whitespace-nowrap">התנתקות</span>
+            </button>
           </div>
 
           <button
@@ -131,6 +155,14 @@ function Navbar() {
                   <span>{tab.label}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-right px-4 py-3 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <span className="text-lg">↩️</span>
+                <span>התנתקות</span>
+              </button>
             </div>
           </div>
         )}

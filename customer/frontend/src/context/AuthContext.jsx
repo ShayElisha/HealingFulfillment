@@ -68,7 +68,11 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true)
       localStorage.setItem('authToken', newToken)
 
-      return { success: true, mustChangePassword: customer.mustChangePassword }
+      return {
+        success: true,
+        mustChangePassword: customer.mustChangePassword,
+        isAdmin: customer.isAdmin === true,
+      }
     } catch (error) {
       console.error('Login error:', error)
       const errorMessage = error.response?.data?.message || 'שגיאה בהתחברות'

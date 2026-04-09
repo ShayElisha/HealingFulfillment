@@ -166,8 +166,35 @@
     transform: translateX(100%);
   }
 
+  .forwhom-door-card.is-open .forwhom-door-left {
+    transform: translateX(-100%);
+  }
+
+  .forwhom-door-card.is-open .forwhom-door-right {
+    transform: translateX(100%);
+  }
+
   .forwhom-door-card:hover .forwhom-door-swing {
     pointer-events: none;
+  }
+
+  .forwhom-door-card.is-open .forwhom-door-swing {
+    pointer-events: none;
+  }
+
+  /* במובייל מבטלים hover "דביק" כדי שהפתיחה/סגירה תהיה רק בלחיצה */
+  @media (hover: none) and (pointer: coarse) {
+    .forwhom-door-card:hover .forwhom-door-left {
+      transform: none;
+    }
+
+    .forwhom-door-card:hover .forwhom-door-right {
+      transform: none;
+    }
+
+    .forwhom-door-card:hover .forwhom-door-swing {
+      pointer-events: auto;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -180,10 +207,5 @@
     }
   }
 
-  @media (hover: none) and (pointer: coarse) {
-    .forwhom-door-card .forwhom-door-swing {
-      display: none !important;
-    }
-  }
 }
 

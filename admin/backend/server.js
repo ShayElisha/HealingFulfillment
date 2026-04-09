@@ -21,6 +21,7 @@ import contactRoutes from './routes/contact.js'
 import leadsRoutes from './routes/leads.js'
 import transactionsRoutes from './routes/transactions.js'
 import forWhomAudienceAdminRoutes from './routes/forWhomAudience.js'
+import { authenticateToken as authenticateAdminToken } from './middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -205,6 +206,13 @@ app.get('/health', (req, res) => {
     service: 'admin-service',
     timestamp: new Date().toISOString() 
   })
+})
+
+// Protect admin API: only authenticated admin customers can access
+app.use('/api', (req, res, next) => {
+  if (req.method === 'OPTIONS') return next()
+  if (req.path === '/health') return next()
+  return authenticateAdminToken(req, res, next)
 })
 
 // Routes - Admin Service

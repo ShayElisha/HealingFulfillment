@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../context/AuthContext'
 import Section from '../components/Section'
@@ -7,11 +7,32 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 
+function EyeIcon({ closed = false }) {
+  if (closed) {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.9 5.1A10.9 10.9 0 0 1 12 4c5.5 0 9.4 4.6 10 7.8a10.9 10.9 0 0 1-3.5 5.4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6.3A11.4 11.4 0 0 0 2 11.8C2.6 15 6.5 19.6 12 19.6c1.6 0 3.1-.4 4.4-1" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.8-8 10-8 10 8 10 8-3.8 8-10 8S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
 function CustomerLoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, isAuthenticated } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -30,10 +51,21 @@ function CustomerLoginPage() {
 
     try {
       const result = await login(email, password)
+      const params = new URLSearchParams(location.search)
+      const returnTo = params.get('returnTo')
       
       // אם צריך לשנות סיסמה, הפנה לדף שינוי סיסמה
       if (result.mustChangePassword) {
         navigate('/customer/change-password')
+      } else if (returnTo && result.isAdmin) {
+        const token = localStorage.getItem('authToken')
+        if (token) {
+          const target = new URL(returnTo, window.location.origin)
+          target.searchParams.set('token', token)
+          window.location.href = target.toString()
+        } else {
+          navigate('/customer/profile')
+        }
       } else {
         navigate('/customer/profile')
       }
@@ -101,15 +133,30 @@ function CustomerLoginPage() {
                   <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-2">
                     סיסמה
                   </label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="הכנס את הסיסמה שלך"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-20"
+                      placeholder="הכנס את הסיסמה שלך"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-900"
+                      aria-label={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+                    >
+                      <EyeIcon closed={showPassword} />
+                    </button>
+                  </div>
+                  <div className="mt-2 text-left">
+                    <Link to="/customer/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 hover:underline">
+                      שכחתי סיסמה
+                    </Link>
+                  </div>
                 </div>
 
                 <Button

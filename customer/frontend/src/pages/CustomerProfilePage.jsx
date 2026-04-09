@@ -187,6 +187,23 @@ function CustomerProfilePage() {
     }
   }
 
+  const handleGoToAdmin = () => {
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      toast.error('צריך להתחבר כדי להיכנס למנהל')
+      navigate('/customer/login')
+      return
+    }
+    const adminBase = (import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:3001/dashboard').trim()
+    try {
+      const url = new URL(adminBase, window.location.origin)
+      url.searchParams.set('token', token)
+      window.location.href = url.toString()
+    } catch {
+      window.location.href = `${adminBase}?token=${encodeURIComponent(token)}`
+    }
+  }
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault()
     setIsSubmittingBooking(true)
@@ -432,6 +449,11 @@ function CustomerProfilePage() {
 
               {/* Actions */}
               <div className="flex gap-4 flex-wrap">
+                {customerData.isAdmin ? (
+                  <Button onClick={handleGoToAdmin} variant="primary">
+                    כניסה לפלטפורמת מנהל
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => navigate('/customer/change-password')}
                   variant="soft"

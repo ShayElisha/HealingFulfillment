@@ -76,9 +76,18 @@ const api = axios.create({
   withCredentials: false, // Don't send credentials for same-origin requests
 })
 
+const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
+
 // Add request interceptor for debugging and URL normalization
 api.interceptors.request.use(
   (config) => {
+    if (typeof window !== 'undefined') {
+      const token = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)
+      if (token) {
+        config.headers = config.headers || {}
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
     // Normalize baseURL - remove trailing slash
     if (config.baseURL && config.baseURL.endsWith('/')) {
       config.baseURL = config.baseURL.slice(0, -1)

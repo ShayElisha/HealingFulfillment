@@ -142,6 +142,18 @@ const customerSchema = new mongoose.Schema({
   lastLoginAt: {
     type: Date
   },
+  resetPasswordTokenHash: {
+    type: String,
+    select: false
+  },
+  resetPasswordExpiresAt: {
+    type: Date
+  },
+  // הרשאת גישה לפאנל מנהל
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
   
   // תאריכים
   createdAt: {

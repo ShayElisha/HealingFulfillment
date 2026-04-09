@@ -1,15 +1,21 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
 import Customer from '../models/Customer.js'
 import Booking from '../models/Booking.js'
 import Purchase from '../models/Purchase.js'
 import Subscription from '../models/Subscription.js'
 import Message from '../models/Message.js'
 import { authenticateToken } from '../middleware/auth.js'
-import { sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
+import { sendPasswordResetEmail, sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
 
 const router = express.Router()
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000
+
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex')
+}
 
 // GET /api/auth/login - Return info about login endpoint
 router.get('/login', (req, res) => {
@@ -90,7 +96,8 @@ router.post('/login', async (req, res, next) => {
     const token = jwt.sign(
       { 
         customerId: customer._id,
-        email: customer.email
+        email: customer.email,
+        isAdmin: customer.isAdmin === true
       },
       process.env.JWT_SECRET,
       { expiresIn: '30d' } // Token תקף ל-30 יום
@@ -105,7 +112,8 @@ router.post('/login', async (req, res, next) => {
           name: customer.name,
           email: customer.email,
           phone: customer.phone,
-          mustChangePassword: customer.mustChangePassword
+          mustChangePassword: customer.mustChangePassword,
+          isAdmin: customer.isAdmin === true
         }
       }
     })
@@ -118,6 +126,73 @@ router.post('/login', async (req, res, next) => {
         message: 'שגיאת שרת: JWT_SECRET לא מוגדר. נא להגדיר JWT_SECRET ב-.env' 
       })
     }
+    next(error)
+  }
+})
+
+// POST /api/auth/forgot-password - send reset link (always generic response)
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    if (!email) {
+      return res.status(400).json({ message: 'נא להזין אימייל' })
+    }
+
+    const generic = {
+      message: 'אם האימייל קיים במערכת, נשלח אליו קישור לאיפוס סיסמה.',
+    }
+
+    const customer = await Customer.findOne({ email }).select('+passwordHash')
+    if (!customer || !customer.hasAccount || !customer.email) {
+      return res.json(generic)
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    customer.resetPasswordTokenHash = hashResetToken(rawToken)
+    customer.resetPasswordExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS)
+    await customer.save()
+
+    const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')
+    const resetUrl = `${frontendBase}/customer/reset-password?token=${encodeURIComponent(rawToken)}`
+    await sendPasswordResetEmail(customer, resetUrl)
+
+    return res.json(generic)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// POST /api/auth/reset-password - set new password using reset token
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const token = String(req.body?.token || '').trim()
+    const newPassword = String(req.body?.newPassword || '')
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'חסרים נתונים לאיפוס סיסמה' })
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'סיסמה חדשה חייבת להכיל לפחות 6 תווים' })
+    }
+
+    const tokenHash = hashResetToken(token)
+    const customer = await Customer.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpiresAt: { $gt: new Date() },
+    }).select('+passwordHash')
+
+    if (!customer) {
+      return res.status(400).json({ message: 'קישור האיפוס לא תקין או שפג תוקפו' })
+    }
+
+    customer.passwordHash = await bcrypt.hash(newPassword, 10)
+    customer.mustChangePassword = false
+    customer.resetPasswordTokenHash = undefined
+    customer.resetPasswordExpiresAt = undefined
+    await customer.save()
+
+    return res.json({ message: 'הסיסמה עודכנה בהצלחה' })
+  } catch (error) {
     next(error)
   }
 })

@@ -28,6 +28,9 @@ export const authenticateToken = async (req, res, next) => {
     if (!customer.hasAccount) {
       return res.status(403).json({ message: 'למשתמש אין חשבון פעיל' })
     }
+    if (customer.isAdmin !== true) {
+      return res.status(403).json({ message: 'הגישה למנהל מותרת לאדמין בלבד' })
+    }
 
     // הוסף את הלקוח ל-request
     req.customer = customer

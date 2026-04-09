@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 
 /** איור דלתות (מוח / צמחים / טקסט בעברית + ידיות) — מוצג מפוצל לשתי דלתות */
 const DOOR_ART = '/images/for-whom-doors-art.png'
@@ -23,6 +24,27 @@ function doorArtStyle(half) {
 }
 
 export default function ForWhomAudienceDoorCard({ item, index }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isMobileMode, setIsMobileMode] = useState(false)
+
+  const toggleDoor = () => setIsOpen((v) => !v)
+  const opened = isMobileMode ? isOpen : isHovered
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const query = window.matchMedia('(hover: none) and (pointer: coarse)')
+    const apply = () => setIsMobileMode(query.matches)
+    apply()
+    const handler = () => apply()
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', handler)
+      return () => query.removeEventListener('change', handler)
+    }
+    query.addListener(handler)
+    return () => query.removeListener(handler)
+  }, [])
+
   return (
       <article className="mx-auto flex h-full w-full max-w-[300px] flex-col items-center">
         <h3
@@ -42,15 +64,26 @@ export default function ForWhomAudienceDoorCard({ item, index }) {
           )}
         </h3>
         <div
-          className="group forwhom-door-card flex w-full flex-col items-center rounded-xl"
+          className={`group forwhom-door-card flex w-full flex-col items-center rounded-xl ${isOpen ? 'is-open' : ''}`}
           aria-labelledby={`for-whom-card-title-${index}`}
+          onMouseEnter={() => {
+            if (!isMobileMode) setIsHovered(true)
+          }}
+          onMouseLeave={() => {
+            if (!isMobileMode) setIsHovered(false)
+          }}
         >
           <p className="sr-only">{item.description}</p>
-          <div
-            className="relative aspect-[3/4] w-full min-h-[240px] max-h-[360px] min-[480px]:min-h-[280px] min-[480px]:max-h-[400px] sm:max-h-[440px] overflow-visible rounded-xl"
-            aria-hidden
+          <button
+            type="button"
+            onClick={() => {
+              if (isMobileMode) toggleDoor()
+            }}
+            aria-label={isOpen ? 'סגירת הדלת' : 'פתיחת הדלת'}
+            aria-expanded={opened}
+            className="relative aspect-[3/4] w-full min-h-[240px] max-h-[360px] min-[480px]:min-h-[280px] min-[480px]:max-h-[400px] sm:max-h-[440px] overflow-visible rounded-xl cursor-pointer"
           >
-            <div className="absolute inset-0 overflow-visible rounded-xl bg-gradient-to-b from-amber-50/90 via-neutral-100 to-neutral-200/95 p-[6px] shadow-[0_8px_24px_-12px_rgba(60,40,28,0.24),0_1px_4px_rgba(0,0,0,0.06)] ring-1 ring-amber-900/10 min-[480px]:p-[7px]">
+            <div aria-hidden className="absolute inset-0 overflow-visible rounded-xl bg-gradient-to-b from-amber-50/90 via-neutral-100 to-neutral-200/95 p-[6px] shadow-[0_8px_24px_-12px_rgba(60,40,28,0.24),0_1px_4px_rgba(0,0,0,0.06)] ring-1 ring-amber-900/10 min-[480px]:p-[7px]">
               <div className="relative h-full w-full overflow-visible rounded-lg bg-gradient-to-b from-neutral-300/45 to-neutral-400/25 p-[3px]">
                 <div className="absolute inset-[8px] z-0 flex min-h-0 flex-col overflow-hidden rounded-md border border-amber-900/10 bg-gradient-to-b from-white via-neutral-50/98 to-amber-50/30 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)] min-[480px]:inset-[10px]">
                   <p className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-right text-xs leading-relaxed text-neutral-700 min-[480px]:px-5 min-[480px]:py-4 sm:px-6 sm:text-sm">
@@ -63,20 +96,26 @@ export default function ForWhomAudienceDoorCard({ item, index }) {
                 >
                   <div
                     className="forwhom-door forwhom-door-left relative h-full min-h-0 w-1/2 min-w-[50%] max-w-[50%] flex-[1_1_50%] shrink-0 overflow-hidden rounded-l-lg"
-                    style={doorArtStyle('left')}
+                    style={{
+                      ...doorArtStyle('left'),
+                      transform: opened ? 'translateX(-100%)' : 'translateX(0)',
+                    }}
                   />
                   <div
                     className="forwhom-door forwhom-door-right relative h-full min-h-0 w-1/2 min-w-[50%] max-w-[50%] flex-[1_1_50%] shrink-0 overflow-hidden rounded-r-lg"
-                    style={doorArtStyle('right')}
+                    style={{
+                      ...doorArtStyle('right'),
+                      transform: opened ? 'translateX(100%)' : 'translateX(0)',
+                    }}
                   />
                 </div>
               </div>
             </div>
-          </div>
+          </button>
           <p
             className="mt-3 text-center text-xs text-neutral-500 transition-colors group-hover:text-primary-600/80"
           >
-            העבירו את העכבר לפתיחה
+            במחשב: ריחוף. במובייל: לחיצה לפתיחה
           </p>
         </div>
       </article>

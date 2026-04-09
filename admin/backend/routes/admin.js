@@ -20,6 +20,19 @@ const router = express.Router()
 
 const COACHING_DEFAULT_MONTHS = 3
 
+// GET /api/admin/auth/verify - verify admin access token
+router.get('/auth/verify', (req, res) => {
+  res.json({
+    message: 'Admin token is valid',
+    data: {
+      customerId: req.customer?._id || req.customerId,
+      email: req.customer?.email,
+      name: req.customer?.name,
+      isAdmin: req.customer?.isAdmin === true,
+    },
+  })
+})
+
 /** משך ליווי בחודשים; תאריכי ליווי ישנים מתאפסים (מקור האמת הוא חודשים) */
 function normalizeCoursePayload(body) {
   if (!body || typeof body !== 'object') return body
