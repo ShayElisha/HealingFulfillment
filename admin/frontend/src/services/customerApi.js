@@ -1,8 +1,8 @@
 import api from './api'
 
 export const customerService = {
-  getAll: async () => {
-    const response = await api.get('/admin/customers')
+  getAll: async (params = {}) => {
+    const response = await api.get('/admin/customers', { params })
     return response.data
   },
   create: async (payload) => {

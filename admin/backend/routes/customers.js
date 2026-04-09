@@ -70,49 +70,112 @@ function handleMulterAudioUpload(req, res, next) {
 // GET /api/admin/customers - Get all customers
 router.get('/admin/customers', async (req, res, next) => {
   try {
-    const customers = await Customer.find()
-      .populate({
-        path: 'purchases',
-        select: 'course price status createdAt',
-        options: { lean: true }
-      })
-      .populate({
-        path: 'bookings',
-        select: 'preferredDate preferredTime status meetingType',
-        options: { lean: true }
-      })
+    const hasPagingParams = req.query.page !== undefined || req.query.limit !== undefined
+    const pageRaw = Number.parseInt(req.query.page, 10)
+    const limitRaw = Number.parseInt(req.query.limit, 10)
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 25
+    const includeDetails = hasPagingParams
+      ? req.query.includeDetails === '1' || req.query.includeDetails === 'true'
+      : true
+    const skip = (page - 1) * limit
+
+    const filter = { isAdmin: { $ne: true } }
+    const createdAt = {}
+    if (req.query.startDate) {
+      const start = new Date(String(req.query.startDate))
+      if (!Number.isNaN(start.getTime())) {
+        start.setHours(0, 0, 0, 0)
+        createdAt.$gte = start
+      }
+    }
+    if (req.query.endDate) {
+      const end = new Date(String(req.query.endDate))
+      if (!Number.isNaN(end.getTime())) {
+        end.setHours(23, 59, 59, 999)
+        createdAt.$lte = end
+      }
+    }
+    if (createdAt.$gte || createdAt.$lte) filter.createdAt = createdAt
+
+    let query = Customer.find(filter)
       .sort({ createdAt: -1 })
-      .lean()
-    
-    // Calculate statistics and filter out null references
-    const customersWithStats = customers.map(customer => {
-      // Filter out null references from populate
-      const bookings = Array.isArray(customer.bookings) 
-        ? customer.bookings.filter(b => b !== null && b !== undefined && b._id)
+      .select('name email phone status hasAccount files bookings purchases createdAt caseOpenedAt accountCreatedAt lastLoginAt mustChangePassword')
+
+    if (hasPagingParams) {
+      query = query.skip(skip).limit(limit)
+    }
+
+    if (includeDetails) {
+      query = query
+        .populate({
+          path: 'purchases',
+          select: 'course price status createdAt',
+          options: { lean: true }
+        })
+        .populate({
+          path: 'bookings',
+          select: 'preferredDate preferredTime status meetingType',
+          options: { lean: true }
+        })
+    }
+
+    const [customers, total, activeCount, newLast7Days] = await Promise.all([
+      query.lean(),
+      Customer.countDocuments(filter),
+      Customer.countDocuments({ ...filter, hasAccount: true }),
+      Customer.countDocuments({
+        ...filter,
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      })
+    ])
+
+    const customersWithStats = customers.map((customer) => {
+      const bookings = Array.isArray(customer.bookings)
+        ? customer.bookings.filter((b) => b !== null && b !== undefined)
         : []
-      const purchases = Array.isArray(customer.purchases) 
-        ? customer.purchases.filter(p => p !== null && p !== undefined && p._id)
+      const purchases = Array.isArray(customer.purchases)
+        ? customer.purchases.filter((p) => p !== null && p !== undefined)
         : []
-      
-      const confirmedBookings = bookings.filter(b => b && b.status === 'confirmed').length
-      const completedPurchases = purchases.filter(p => p && p.status === 'completed').length
-      
+
+      const confirmedBookings = includeDetails
+        ? bookings.filter((b) => b && b.status === 'confirmed').length
+        : 0
+      const completedPurchases = includeDetails
+        ? purchases.filter((p) => p && p.status === 'completed').length
+        : 0
+      const totalSpent = includeDetails
+        ? purchases.reduce((sum, p) => sum + (p && p.price ? p.price : 0), 0)
+        : 0
+
       return {
         ...customer,
-        bookings: bookings, // Return filtered bookings
-        purchases: purchases, // Return filtered purchases
+        bookings,
+        purchases,
         stats: {
           totalSessions: bookings.length,
           confirmedSessions: confirmedBookings,
           completedCourses: completedPurchases,
-          totalSpent: purchases.reduce((sum, p) => sum + (p && p.price ? p.price : 0), 0)
+          totalSpent,
+          totalPurchases: purchases.length
         }
       }
     })
-    
+
     res.json({
       message: 'Customers retrieved successfully',
-      data: customersWithStats
+      data: customersWithStats,
+      pagination: {
+        page,
+        limit: hasPagingParams ? limit : total,
+        total,
+        totalPages: hasPagingParams ? Math.max(1, Math.ceil(total / limit)) : 1
+      },
+      meta: {
+        total,
+        activeCount,
+        newLast7Days
+      }
     })
   } catch (error) {
     console.error('Error fetching customers:', error)

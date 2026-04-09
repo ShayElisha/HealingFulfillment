@@ -64,7 +64,12 @@ function DashboardPage() {
         contactsRes,
         transactionsStatsRes
       ] = await Promise.all([
-        customerService.getAll(),
+        customerService.getAll({
+          page: 1,
+          limit: 1,
+          startDate: dateRange.startDate || undefined,
+          endDate: dateRange.endDate || undefined
+        }),
         bookingService.getAll(),
         purchaseService.getAll(),
         reviewService.getAll(),
@@ -84,13 +89,7 @@ function DashboardPage() {
       let purchases = purchasesRes?.data || []
       let reviewsData = reviewsRes?.data || []
       let contacts = contactsRes?.data || []
-      
-      // Debug transaction stats
-      console.log('📊 Dashboard - Transaction Stats Response:', transactionsStatsRes)
-      console.log('📊 Dashboard - Transaction Stats Data:', transactionsStatsRes?.data)
-      console.log('📊 Dashboard - Total Income:', transactionsStatsRes?.data?.totalIncome)
-      console.log('📊 Dashboard - Total Expense:', transactionsStatsRes?.data?.totalExpense)
-      console.log('📊 Dashboard - Balance:', transactionsStatsRes?.data?.balance)
+      const customersMeta = customersRes?.meta || {}
       
       // Filter by date range if selected
       if (dateRange.startDate || dateRange.endDate) {
@@ -120,17 +119,6 @@ function DashboardPage() {
             const purchaseDate = new Date(p.createdAt)
             if (startDate && purchaseDate < startDate) return false
             if (endDate && purchaseDate > endDate) return false
-            return true
-          })
-        }
-
-        // Filter customers by createdAt
-        if (startDate || endDate) {
-          customers = customers.filter(c => {
-            if (!c.createdAt) return false
-            const customerDate = new Date(c.createdAt)
-            if (startDate && customerDate < startDate) return false
-            if (endDate && customerDate > endDate) return false
             return true
           })
         }
@@ -210,9 +198,9 @@ function DashboardPage() {
 
       setStats({
         customers: {
-          total: customers.length,
-          active: customers.filter(c => c.hasAccount === true).length,
-          new: customers.filter(c => {
+          total: customersMeta.total ?? customers.length,
+          active: customersMeta.activeCount ?? customers.filter(c => c.hasAccount === true).length,
+          new: customersMeta.newLast7Days ?? customers.filter(c => {
             if (!c.createdAt) return false
             const createdDate = new Date(c.createdAt)
             const weekAgo = new Date()

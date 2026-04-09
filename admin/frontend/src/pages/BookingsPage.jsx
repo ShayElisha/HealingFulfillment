@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { bookingService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
@@ -10,6 +11,7 @@ import AdminModalLayout from '../components/AdminModalLayout'
 import toast from 'react-hot-toast'
 
 function BookingsPage() {
+  const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,6 +23,7 @@ function BookingsPage() {
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const [summaryBooking, setSummaryBooking] = useState(null) // הפגישה שעבורה נוסיף סיכום
   const [sessionSummary, setSessionSummary] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     loadData()
@@ -57,44 +60,62 @@ function BookingsPage() {
     }
   }
 
+  const normalize = (value) => String(value || '').trim().toLowerCase()
+
+  const customerLookup = useMemo(() => {
+    const map = new Map()
+    customers.forEach((c) => {
+      const keys = [c?.email, c?.phone, c?.name].map(normalize).filter(Boolean)
+      keys.forEach((k) => {
+        if (!map.has(k)) map.set(k, c)
+      })
+    })
+    return map
+  }, [customers])
+
   const getCustomerForBooking = (booking) => {
-    return customers.find(c => 
-      c.email === booking.email || 
-      c.phone === booking.phone ||
-      c.name === booking.name
-    )
+    const keys = [booking?.email, booking?.phone, booking?.name].map(normalize).filter(Boolean)
+    for (const key of keys) {
+      const match = customerLookup.get(key)
+      if (match) return match
+    }
+    return null
   }
 
   const filteredBookings = bookings.filter(booking => {
     // סינון לפי טאב (פגישת היכרות, רגילה, או היסטוריה)
     if (activeTab === 'intro') {
-      if (booking.isIntroMeeting && booking.status !== 'completed') {
-        // פגישות היכרות פעילות בלבד
-        if (filterStatus !== 'all' && booking.status !== filterStatus) return false
-        if (filterType !== 'all' && booking.meetingType !== filterType) return false
-        return true
-      }
-      return false
+      if (!booking.isIntroMeeting || booking.status === 'completed') return false
+      if (filterStatus !== 'all' && booking.status !== filterStatus) return false
+      if (filterType !== 'all' && booking.meetingType !== filterType) return false
     }
     if (activeTab === 'regular') {
-      if (!booking.isIntroMeeting && booking.status !== 'completed') {
-        // פגישות רגילות פעילות בלבד
-        if (filterStatus !== 'all' && booking.status !== filterStatus) return false
-        if (filterType !== 'all' && booking.meetingType !== filterType) return false
-        return true
-      }
-      return false
+      if (booking.isIntroMeeting || booking.status === 'completed') return false
+      if (filterStatus !== 'all' && booking.status !== filterStatus) return false
+      if (filterType !== 'all' && booking.meetingType !== filterType) return false
     }
     if (activeTab === 'history') {
       // רק פגישות שהושלמו
-      if (booking.status === 'completed') {
-        if (filterType !== 'all' && booking.meetingType !== filterType) return false
-        return true
-      }
-      return false
+      if (booking.status !== 'completed') return false
+      if (filterType !== 'all' && booking.meetingType !== filterType) return false
     }
-    
-    return false
+
+    const q = normalize(searchTerm)
+    if (!q) return true
+    const customer = getCustomerForBooking(booking)
+    const haystack = [
+      booking?.name,
+      booking?.email,
+      booking?.phone,
+      customer?.name,
+      customer?.email,
+      customer?.phone
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(q)
   })
 
   const handleEditZoomLink = (booking) => {
@@ -302,6 +323,17 @@ function BookingsPage() {
               </div>
             </div>
           )}
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2 text-neutral-700">חיפוש פגישה</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="חיפוש לפי שם, טלפון או אימייל"
+              className="w-full md:w-[420px] px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
+            />
+          </div>
 
           {/* Bookings List */}
           {loading ? (

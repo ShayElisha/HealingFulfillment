@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
@@ -12,6 +12,7 @@ function CustomersPage() {
   const navigate = useNavigate()
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     loadCustomers()
@@ -20,18 +21,13 @@ function CustomersPage() {
   const loadCustomers = async () => {
     try {
       setLoading(true)
-      const response = await customerService.getAll()
-      console.log('CustomersPage - Raw response:', response)
-      
-      // customerService.getAll() returns response.data from axios
-      // which is already { message: "...", data: [...] }
-      // So we need to extract the data property
+      const response = await customerService.getAll({
+        page: 1,
+        limit: 100,
+        includeDetails: true
+      })
       const customersData = response?.data || []
-      console.log('CustomersPage - Extracted data:', customersData)
-      console.log('CustomersPage - Is array?', Array.isArray(customersData))
-      
       const finalCustomers = Array.isArray(customersData) ? customersData : []
-      console.log('CustomersPage - Final customers count:', finalCustomers.length)
       setCustomers(finalCustomers)
     } catch (error) {
       console.error('Error loading customers:', error)
@@ -47,23 +43,48 @@ function CustomersPage() {
     }
   }
 
+  const filteredCustomers = useMemo(() => {
+    const q = String(searchTerm || '').trim().toLowerCase()
+    if (!q) return customers
+    return customers.filter((customer) => {
+      const haystack = [customer?.name, customer?.email, customer?.phone]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [customers, searchTerm])
+
   return (
     <>
       <Navbar />
       <AdminPageShell>
         <PageHeader title="לקוחות" subtitle="כל הלקוחות שרכשו מסלולים" />
 
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2 text-neutral-700">חיפוש לקוח</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="חיפוש לפי שם, טלפון או אימייל"
+              className="w-full md:w-[420px] px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
+            />
+          </div>
+
           {loading ? (
             <div className="text-center py-12">
               <p className="text-xl text-neutral-600">טוען...</p>
             </div>
-          ) : customers.length === 0 ? (
+          ) : filteredCustomers.length === 0 ? (
             <Card>
-              <p className="text-center text-neutral-500 py-8">אין לקוחות עדיין</p>
+              <p className="text-center text-neutral-500 py-8">
+                {customers.length === 0 ? 'אין לקוחות עדיין' : 'לא נמצאו לקוחות לפי החיפוש'}
+              </p>
             </Card>
           ) : (
             <div className="space-y-4">
-              {customers.map((customer) => (
+              {filteredCustomers.map((customer) => (
                 <Card key={customer._id} className="hover:shadow-soft-lg transition-all duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">

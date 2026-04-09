@@ -21,14 +21,14 @@ export function NavCountsProvider({ children }) {
   const refreshNavCounts = useCallback(async () => {
     try {
       const [customersRes, bookingsRes, contactsRes] = await Promise.all([
-        customerService.getAll(),
+        customerService.getAll({ page: 1, limit: 1 }),
         bookingService.getAll(),
         contactService.getAll()
       ])
       const customers = extractDataArray(customersRes)
       const bookings = extractDataArray(bookingsRes)
       const contacts = extractDataArray(contactsRes)
-      setCustomersCount(customers.length)
+      setCustomersCount(customersRes?.meta?.total ?? customers.length)
       setBookingsCount(bookings.length)
       setContactsCount(contacts.length)
     } catch (e) {

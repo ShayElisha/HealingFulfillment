@@ -29,20 +29,60 @@ function EyeIcon({ closed = false }) {
 function CustomerLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, user } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  /** בפיתוח מקומי לא מפנים ל־production בגלל returnTo מהקישור (למשל אחרי העתקה מ־Vercel). */
+  const resolveAdminTargetUrl = (returnTo) => {
+    const fallback =
+      (import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:3001/dashboard').trim()
+    const raw = (returnTo || fallback).trim()
+    if (
+      import.meta.env.DEV &&
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ) {
+      try {
+        const u = new URL(raw, window.location.origin)
+        const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1'
+        if (!isLocal) return fallback
+      } catch {
+        return fallback
+      }
+    }
+    return raw
+  }
+
+  const redirectAdmin = (returnTo) => {
+    const token = localStorage.getItem('authToken')
+    if (!token) return false
+    const adminBase = resolveAdminTargetUrl(returnTo)
+    try {
+      const target = new URL(adminBase, window.location.origin)
+      target.searchParams.set('token', token)
+      window.location.href = target.toString()
+      return true
+    } catch {
+      window.location.href = `${adminBase}?token=${encodeURIComponent(token)}`
+      return true
+    }
+  }
+
   useEffect(() => {
     window.scrollTo(0, 0)
-    // אם כבר מחובר, הפנה לתיק הלקוח
+    // אם כבר מחובר, הפנה לפי סוג המשתמש
     if (isAuthenticated) {
+      if (user?.isAdmin === true) {
+        redirectAdmin()
+        return
+      }
       navigate('/customer/profile')
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, navigate, user])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -57,15 +97,9 @@ function CustomerLoginPage() {
       // אם צריך לשנות סיסמה, הפנה לדף שינוי סיסמה
       if (result.mustChangePassword) {
         navigate('/customer/change-password')
-      } else if (returnTo && result.isAdmin) {
-        const token = localStorage.getItem('authToken')
-        if (token) {
-          const target = new URL(returnTo, window.location.origin)
-          target.searchParams.set('token', token)
-          window.location.href = target.toString()
-        } else {
-          navigate('/customer/profile')
-        }
+      } else if (result.isAdmin) {
+        const redirected = redirectAdmin(returnTo)
+        if (!redirected) navigate('/customer/profile')
       } else {
         navigate('/customer/profile')
       }

@@ -1,20 +1,21 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
-import AdminPage from './pages/AdminPage'
-import DashboardPage from './pages/DashboardPage'
-import CustomerPage from './pages/CustomerPage'
-import CustomersPage from './pages/CustomersPage'
-import BookingsPage from './pages/BookingsPage'
-import ContactsPage from './pages/ContactsPage'
-import MessagesPage from './pages/MessagesPage'
-import ReviewsPage from './pages/ReviewsPage'
-import LeadsPage from './pages/LeadsPage'
-import TransactionsPage from './pages/TransactionsPage'
-import ForWhomAudiencePage from './pages/ForWhomAudiencePage'
 import ErrorBoundary from './components/ErrorBoundary'
 import { NavCountsProvider } from './context/NavCountsContext'
 import api from './services/api'
+
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const CustomerPage = lazy(() => import('./pages/CustomerPage'))
+const CustomersPage = lazy(() => import('./pages/CustomersPage'))
+const BookingsPage = lazy(() => import('./pages/BookingsPage'))
+const ContactsPage = lazy(() => import('./pages/ContactsPage'))
+const MessagesPage = lazy(() => import('./pages/MessagesPage'))
+const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
+const LeadsPage = lazy(() => import('./pages/LeadsPage'))
+const TransactionsPage = lazy(() => import('./pages/TransactionsPage'))
+const ForWhomAudiencePage = lazy(() => import('./pages/ForWhomAudiencePage'))
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 
@@ -113,23 +114,25 @@ function App() {
         <AdminAccessGate>
           <Router>
             <NavCountsProvider>
-              <Routes>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/" element={<Navigate to="/categories" replace />} />
-                <Route path="/categories" element={<AdminPage />} />
-                <Route path="/courses" element={<AdminPage />} />
-                <Route path="/purchase" element={<AdminPage />} />
-                <Route path="/new-booking" element={<AdminPage />} />
-                <Route path="/customer/:id" element={<CustomerPage />} />
-                <Route path="/customers" element={<CustomersPage />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/contacts" element={<ContactsPage />} />
-                <Route path="/messages" element={<MessagesPage />} />
-                <Route path="/reviews" element={<ReviewsPage />} />
-                <Route path="/for-whom-audience" element={<ForWhomAudiencePage />} />
-                <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/transactions" element={<TransactionsPage />} />
-              </Routes>
+              <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-neutral-600">טוען…</div>}>
+                <Routes>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/" element={<Navigate to="/categories" replace />} />
+                  <Route path="/categories" element={<AdminPage />} />
+                  <Route path="/courses" element={<AdminPage />} />
+                  <Route path="/purchase" element={<AdminPage />} />
+                  <Route path="/new-booking" element={<AdminPage />} />
+                  <Route path="/customer/:id" element={<CustomerPage />} />
+                  <Route path="/customers" element={<CustomersPage />} />
+                  <Route path="/bookings" element={<BookingsPage />} />
+                  <Route path="/contacts" element={<ContactsPage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/reviews" element={<ReviewsPage />} />
+                  <Route path="/for-whom-audience" element={<ForWhomAudiencePage />} />
+                  <Route path="/leads" element={<LeadsPage />} />
+                  <Route path="/transactions" element={<TransactionsPage />} />
+                </Routes>
+              </Suspense>
             </NavCountsProvider>
           </Router>
         </AdminAccessGate>
