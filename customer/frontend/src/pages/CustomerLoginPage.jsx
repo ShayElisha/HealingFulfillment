@@ -7,6 +7,7 @@ import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { resolveAdminRedirectUrl } from '../utils/adminPanelUrl'
+import { sanitizeAdminLoginReturnTo } from '../utils/sanitizeAdminReturnTo'
 
 function EyeIcon({ closed = false }) {
   if (closed) {
@@ -72,7 +73,7 @@ function CustomerLoginPage() {
     try {
       const result = await login(email, password)
       const params = new URLSearchParams(location.search)
-      const returnTo = params.get('returnTo')
+      const returnTo = sanitizeAdminLoginReturnTo(params.get('returnTo')) ?? undefined
       
       // אם צריך לשנות סיסמה, הפנה לדף שינוי סיסמה
       if (result.mustChangePassword) {

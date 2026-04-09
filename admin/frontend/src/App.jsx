@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { NavCountsProvider } from './context/NavCountsContext'
 import api from './services/api'
 import { getCustomerLoginUrl } from './utils/customerPortalUrl'
+import { getSafeAdminReturnToUrl } from './utils/safeAdminReturnTo'
 
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -23,7 +24,7 @@ const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 function redirectToCustomerLogin() {
   if (typeof window === 'undefined') return
   const loginUrl = getCustomerLoginUrl()
-  const returnTo = encodeURIComponent(window.location.href)
+  const returnTo = encodeURIComponent(getSafeAdminReturnToUrl())
   window.location.replace(`${loginUrl}?returnTo=${returnTo}`)
 }
 

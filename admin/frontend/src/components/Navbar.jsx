@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNavCounts } from '../context/NavCountsContext'
-import { getCustomerLoginUrl } from '../utils/customerPortalUrl'
+import { getCustomerPublicHomeUrl } from '../utils/customerPortalUrl'
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 
@@ -36,8 +36,7 @@ function Navbar() {
     try {
       window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
     } catch {}
-    const loginUrl = getCustomerLoginUrl()
-    window.location.replace(loginUrl)
+    window.location.replace(getCustomerPublicHomeUrl())
   }
 
   const getActiveTabId = () => {

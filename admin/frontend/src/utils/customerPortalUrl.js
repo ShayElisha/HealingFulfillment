@@ -29,3 +29,37 @@ export function getCustomerLoginUrl() {
 
   return '/customer/login'
 }
+
+/**
+ * דף הבית הציבורי של אתר הלקוחות (אחרי התנתקות מהאדמין).
+ * בפרודקשן: הגדר VITE_CUSTOMER_SITE_URL (למשל https://healing-fulfillment.vercel.app).
+ */
+export function getCustomerPublicHomeUrl() {
+  const site = import.meta.env.VITE_CUSTOMER_SITE_URL
+  if (site && String(site).trim()) {
+    return `${String(site).replace(/\/$/, '')}/`
+  }
+
+  const full = import.meta.env.VITE_CUSTOMER_LOGIN_URL
+  if (full && String(full).trim()) {
+    try {
+      let s = String(full).trim()
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(s) && s.startsWith('//')) s = `https:${s}`
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = `https://${s.replace(/^\/*/, '')}`
+      const u = new URL(s)
+      return `${u.origin}/`
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000/'
+  }
+
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/`
+  }
+
+  return '/'
+}
