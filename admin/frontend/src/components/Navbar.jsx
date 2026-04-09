@@ -1,14 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNavCounts } from '../context/NavCountsContext'
+import { getCustomerLoginUrl } from '../utils/customerPortalUrl'
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
-
-function getCustomerLoginUrl() {
-  const raw = import.meta.env.VITE_CUSTOMER_LOGIN_URL
-  if (raw && String(raw).trim()) return String(raw).trim()
-  return 'http://localhost:3000/customer/login'
-}
 
 function Navbar() {
   const navigate = useNavigate()

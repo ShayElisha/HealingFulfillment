@@ -11,6 +11,7 @@ import RegulationsQuestionnaireModal from '../components/RegulationsQuestionnair
 import RegulationsQuestionnaireTab from '../components/RegulationsQuestionnaireTab'
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
+import { getAdminPanelBaseUrl } from '../utils/adminPanelUrl'
 import { reviewsService } from '../services/reviewsApi'
 
 const dateShortHe = { year: 'numeric', month: 'short', day: 'numeric' }
@@ -194,7 +195,7 @@ function CustomerProfilePage() {
       navigate('/customer/login')
       return
     }
-    const adminBase = (import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:3001/dashboard').trim()
+    const adminBase = getAdminPanelBaseUrl()
     try {
       const url = new URL(adminBase, window.location.origin)
       url.searchParams.set('token', token)

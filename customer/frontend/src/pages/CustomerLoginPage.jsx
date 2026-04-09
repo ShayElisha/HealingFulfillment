@@ -6,6 +6,7 @@ import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
+import { resolveAdminRedirectUrl } from '../utils/adminPanelUrl'
 
 function EyeIcon({ closed = false }) {
   if (closed) {
@@ -36,31 +37,10 @@ function CustomerLoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  /** בפיתוח מקומי לא מפנים ל־production בגלל returnTo מהקישור (למשל אחרי העתקה מ־Vercel). */
-  const resolveAdminTargetUrl = (returnTo) => {
-    const fallback =
-      (import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:3001/dashboard').trim()
-    const raw = (returnTo || fallback).trim()
-    if (
-      import.meta.env.DEV &&
-      typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ) {
-      try {
-        const u = new URL(raw, window.location.origin)
-        const isLocal = u.hostname === 'localhost' || u.hostname === '127.0.0.1'
-        if (!isLocal) return fallback
-      } catch {
-        return fallback
-      }
-    }
-    return raw
-  }
-
   const redirectAdmin = (returnTo) => {
     const token = localStorage.getItem('authToken')
     if (!token) return false
-    const adminBase = resolveAdminTargetUrl(returnTo)
+    const adminBase = resolveAdminRedirectUrl(returnTo)
     try {
       const target = new URL(adminBase, window.location.origin)
       target.searchParams.set('token', token)

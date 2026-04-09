@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import ErrorBoundary from './components/ErrorBoundary'
 import { NavCountsProvider } from './context/NavCountsContext'
 import api from './services/api'
+import { getCustomerLoginUrl } from './utils/customerPortalUrl'
 
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -18,12 +19,6 @@ const TransactionsPage = lazy(() => import('./pages/TransactionsPage'))
 const ForWhomAudiencePage = lazy(() => import('./pages/ForWhomAudiencePage'))
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
-
-function getCustomerLoginUrl() {
-  const raw = import.meta.env.VITE_CUSTOMER_LOGIN_URL
-  if (raw && String(raw).trim()) return String(raw).trim()
-  return 'http://localhost:3000/customer/login'
-}
 
 function redirectToCustomerLogin() {
   if (typeof window === 'undefined') return
