@@ -349,7 +349,8 @@ async function loadRoutes() {
         purchasesModule,
         messagesModule,
         leadsModule,
-        forWhomAudienceModule
+        forWhomAudienceModule,
+        triggerJournalModule
       ] = await Promise.all([
         import('../backend/routes/auth.js'),
         import('../backend/routes/booking.js'),
@@ -360,7 +361,8 @@ async function loadRoutes() {
         import('../backend/routes/purchases.js'),
         import('../backend/routes/messages.js'),
         import('../backend/routes/leads.js'),
-        import('../backend/routes/forWhomAudience.js')
+        import('../backend/routes/forWhomAudience.js'),
+        import('../backend/routes/triggerJournal.js')
       ])
       
       const routes = {
@@ -392,6 +394,7 @@ async function loadRoutes() {
       app.use('/api/messages', routes.messages)
       app.use('/api/leads', routes.leads)
       app.use('/api', routes.forWhomAudience)
+      app.use('/api/auth/trigger-journal', routes.triggerJournal)
       
       app.use((err, req, res, next) => {
         console.error('❌ [EXPRESS] Error:', err.message)

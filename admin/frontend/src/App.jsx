@@ -25,18 +25,31 @@ const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 function redirectToCustomerLogin() {
   if (typeof window === 'undefined') return
   const loginUrl = getCustomerLoginUrl()
-  const returnTo = encodeURIComponent(getSafeAdminReturnToUrl())
-  window.location.replace(`${loginUrl}?returnTo=${returnTo}`)
+  const returnToRaw = getSafeAdminReturnToUrl()
+  try {
+    const abs = /^[a-z][a-z0-9+.-]*:/i.test(loginUrl)
+      ? loginUrl
+      : new URL(loginUrl, window.location.origin).toString()
+    const u = new URL(abs)
+    u.searchParams.set('returnTo', returnToRaw)
+    window.location.replace(u.toString())
+  } catch {
+    const sep = loginUrl.includes('?') ? '&' : '?'
+    window.location.replace(`${loginUrl}${sep}returnTo=${encodeURIComponent(returnToRaw)}`)
+  }
 }
 
+/**
+ * אימות ראשוני בלבד: בלי טוקן או 401/403 → הפניה להתחברות.
+ * שגיאת שרת / רשת / 500 על verify — לא חוסמים את הממשק; קריאות API יציגו שגיאות מקומית.
+ */
 function AdminAccessGate({ children }) {
-  const [allowed, setAllowed] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
 
-    async function verifyAccess() {
+    async function bootstrap() {
       try {
         const current = new URL(window.location.href)
         const tokenFromQuery = current.searchParams.get('token')
@@ -50,28 +63,49 @@ function AdminAccessGate({ children }) {
           redirectToCustomerLogin()
           return
         }
-        await api.get('/admin/auth/verify')
-        if (!cancelled) setAllowed(true)
-      } catch (error) {
+
         try {
-          window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
-        } catch {}
-        redirectToCustomerLogin()
-      } finally {
-        if (!cancelled) setChecking(false)
+          await api.get('/admin/auth/verify')
+        } catch (error) {
+          if (cancelled) return
+          const st = error.response?.status
+          if (st === 401 || st === 403) {
+            try {
+              window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY)
+            } catch {}
+            redirectToCustomerLogin()
+            return
+          }
+          console.warn(
+            'Admin verify non-fatal:',
+            st ?? error.code,
+            error.response?.data?.message || error.message
+          )
+        }
+
+        if (!cancelled) setReady(true)
+      } catch (e) {
+        if (!cancelled) {
+          console.warn('Admin gate bootstrap:', e)
+          setReady(true)
+        }
       }
     }
 
-    verifyAccess()
+    bootstrap()
     return () => {
       cancelled = true
     }
   }, [])
 
-  if (checking) {
-    return <div className="flex min-h-screen items-center justify-center text-neutral-600">מאמת הרשאות…</div>
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 text-neutral-600">
+        טוען…
+      </div>
+    )
   }
-  if (!allowed) return null
+
   return children
 }
 
@@ -140,4 +174,3 @@ function App() {
 }
 
 export default App
-

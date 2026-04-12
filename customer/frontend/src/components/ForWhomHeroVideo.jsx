@@ -1,5 +1,4 @@
 import { parseVideoEmbedUrl } from '../utils/videoEmbed'
-import { resolveAdminAssetUrl } from '../utils/resolveAdminAssetUrl'
 
 /**
  * סרטון/הטמעה בולטת מתחת לכותרת — YouTube, Vimeo או קישור ישיר ל־mp4/webm/ogg.
@@ -8,8 +7,7 @@ export default function ForWhomHeroVideo({ url, title }) {
   if (!url || !String(url).trim()) return null
 
   const trimmed = String(url).trim()
-  const resolved = resolveAdminAssetUrl(trimmed)
-  const embed = parseVideoEmbedUrl(resolved)
+  const embed = parseVideoEmbedUrl(trimmed)
   const label = title ? `סרטון: ${title}` : 'סרטון'
 
   if (embed?.kind === 'iframe') {
@@ -54,7 +52,7 @@ export default function ForWhomHeroVideo({ url, title }) {
         הקישור לא זוהה כהטמעת YouTube/Vimeo או קובץ וידאו ישיר. אפשר לצפות בדף המקורי:
       </p>
       <a
-        href={resolved}
+        href={trimmed}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 inline-flex text-base font-semibold text-primary-700 underline-offset-2 hover:text-primary-600 hover:underline"

@@ -24,15 +24,19 @@ export const customerService = {
     const response = await api.get(`/admin/customers/${id}`)
     return response.data
   },
+  /** קובץ ללקוח — נשמר ב-Cloudinary */
   uploadFile: async (id, formData) => {
     const response = await api.post(`/admin/customers/${id}/files`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
     })
     return response.data
   },
+  /** אודיו ללקוח — נשמר ב-Cloudinary */
   uploadAudio: async (id, formData) => {
     const response = await api.post(`/admin/customers/${id}/audio`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 15 * 60 * 1000,
     })
     return response.data
   },
@@ -55,6 +59,10 @@ export const customerService = {
   resetPassword: async (id) => {
     const response = await api.post(`/admin/customers/${id}/reset-password`)
     return response.data
-  }
+  },
+  getTriggerJournal: async (id, params = {}) => {
+    const response = await api.get(`/admin/customers/${id}/trigger-journal`, { params })
+    return response.data
+  },
 }
 

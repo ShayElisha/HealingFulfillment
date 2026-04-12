@@ -1,4 +1,5 @@
 import './load-env.js'
+import './registerModels.js'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -24,20 +25,37 @@ import forWhomAudienceAdminRoutes from './routes/forWhomAudience.js'
 import availabilitySettingsRoutes from './routes/availabilitySettings.js'
 import statsRoutes from './routes/stats.js'
 import { authenticateToken as authenticateAdminToken } from './middleware/auth.js'
+import { isCloudinaryConfigured } from './services/cloudinaryUpload.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Set default JWT_SECRET if not defined (for development only)
+// JWT חייב להיות זהה בין customer/backend (התחברות) ל-admin/backend (אימות).
+// בלי JWT_SECRET ב-.env — שימוש ב-fallback קבוע לפיתוח בלבד (לא Date.now() — כל שרת קיבל סוד אחר והפאנל נפל).
+const DEV_JWT_FALLBACK = 'healingfulfillment-local-dev-jwt-secret-not-for-production'
 if (!process.env.JWT_SECRET) {
-  console.warn('⚠️  WARNING: JWT_SECRET is not defined in .env file')
-  console.warn('⚠️  Using a default secret for development. DO NOT use this in production!')
-  process.env.JWT_SECRET = 'dev-secret-key-change-in-production-' + Date.now()
+  const isProd =
+    process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+  if (isProd) {
+    console.error('❌ JWT_SECRET חובה בפרודקשן. הגדר משתנה סביבה ב-Vercel/שרת.')
+    process.exit(1)
+  }
+  console.warn('⚠️  JWT_SECRET לא מוגדר ב-.env — משתמשים ב-fallback לפיתוח בלבד.')
+  console.warn('⚠️  הגדר JWT_SECRET זהה בשני השרתים (ולא לשתף את הערך בקוד).')
+  process.env.JWT_SECRET = DEV_JWT_FALLBACK
 }
 
 const app = express()
 const PORT = process.env.ADMIN_PORT || 5001
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/healing-fulfillment'
+
+if (isCloudinaryConfigured()) {
+  console.log('☁️ Cloudinary: מוגדר (העלאות קבצים/אודיו ללקוחות)')
+} else {
+  console.warn(
+    '⚠️ Cloudinary: לא מוגדר — POST ל-/api/admin/customers/.../files ו-.../audio יחזירו 503. הגדר CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET'
+  )
+}
 
 // Trust proxy - Required for Vercel and other proxy environments
 // This fixes X-Forwarded-For errors and ensures correct IP addresses
@@ -53,13 +71,20 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
     if (!origin) return callback(null, true)
-    
+
+    // פיתוח: IP מקומי / דומיינים שלא ברשימה חתמו בעבר ב-CORS וגרמו לכשל שקשה לאבחן
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true)
+    }
+
     const allowedOrigins = [
     process.env.ADMIN_FRONTEND_URL,
     process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
     process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined,
     'http://localhost:3001',
-    'http://127.0.0.1:3001'
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002',
     ].filter(Boolean)
     
     // In Vercel production, allow same-origin requests (frontend and API on same domain)
@@ -110,7 +135,7 @@ const connectDB = async () => {
     isConnected = true
       isConnecting = false
       connectionPromise = null
-    console.log('✅ Admin Service: Connected to MongoDB')
+      console.log('✅ Admin Service: Connected to MongoDB')
   } catch (error) {
       isConnecting = false
       connectionPromise = null
@@ -122,22 +147,35 @@ const connectDB = async () => {
   return connectionPromise
 }
 
+mongoose.connection.on('disconnected', () => {
+  isConnected = false
+  console.warn('⚠️  Admin Service: MongoDB disconnected')
+})
+mongoose.connection.on('error', (err) => {
+  console.error('⚠️  Admin Service: MongoDB connection error event:', err?.message || err)
+})
+
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
   // Skip if already sent response
   if (res.headersSent) {
     return next()
   }
-  
+
+  if (mongoose.connection.readyState !== 1) {
+    isConnected = false
+  }
+
   if (!isConnected && !isConnecting) {
     try {
       await connectDB()
     } catch (error) {
       // Only send error if response hasn't been sent
       if (!res.headersSent) {
-        return res.status(500).json({ 
-          message: 'Database connection failed',
-          error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        return res.status(500).json({
+          message:
+            'התחברות למסד הנתונים נכשלה. ודא ש-MongoDB רץ וש-MONGODB_URI נכון (זהה לשרת הלקוחות).',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined,
         })
       }
       return
@@ -148,19 +186,20 @@ app.use(async (req, res, next) => {
       await connectionPromise
     } catch (error) {
       if (!res.headersSent) {
-      return res.status(500).json({ 
-        message: 'Database connection failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      })
+        return res.status(500).json({
+          message:
+            'התחברות למסד הנתונים נכשלה. ודא ש-MongoDB רץ וש-MONGODB_URI נכון (זהה לשרת הלקוחות).',
+          error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        })
       }
       return
     }
   }
-  
+
   next()
 })
 
-// Serve uploaded files
+// קבצים ישנים מתיקיית uploads בלבד; העלאות חדשות נשמרות ב-Cloudinary (URL מלא במסד)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 app.use('/uploads/videos', express.static(path.join(__dirname, 'uploads/videos')))
 app.use('/uploads/customers', express.static(path.join(__dirname, 'uploads/customers')))
@@ -210,10 +249,24 @@ app.get('/health', (req, res) => {
   })
 })
 
+/** בדיקת מוכנות בלי JWT — לאבחון כשהפאנל לא נטען */
+app.get('/api/ready', (req, res) => {
+  const rs = mongoose.connection.readyState
+  const stateNames = ['disconnected', 'connected', 'connecting', 'disconnecting']
+  const mongoOk = rs === 1
+  res.status(mongoOk ? 200 : 503).json({
+    ok: mongoOk,
+    service: 'admin-service',
+    mongo: { readyState: rs, state: stateNames[rs] ?? String(rs) },
+    jwtSecretConfigured: Boolean(process.env.JWT_SECRET),
+    timestamp: new Date().toISOString(),
+  })
+})
+
 // Protect admin API: only authenticated admin customers can access
 app.use('/api', (req, res, next) => {
   if (req.method === 'OPTIONS') return next()
-  if (req.path === '/health') return next()
+  if (req.path === '/health' || req.path === '/ready') return next()
   return authenticateAdminToken(req, res, next)
 })
 
@@ -238,7 +291,29 @@ app.use('/api/transactions', transactionsRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Admin Service Error:', err)
+  console.error(
+    '[Admin API]',
+    req.method,
+    req.originalUrl,
+    '|',
+    err?.name || 'Error',
+    '|',
+    err?.message || String(err)
+  )
+  if (process.env.NODE_ENV === 'development' && err?.stack) {
+    console.error(err.stack)
+  }
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      message:
+        'הקובץ גדול מדי מהמותר. הקטן את הקובץ או העלה קובץ קטן יותר.',
+    })
+  }
+  if (err.name === 'MulterError') {
+    return res.status(400).json({
+      message: err.message || 'שגיאה בהעלאת הקובץ',
+    })
+  }
   res.status(err.status || 500).json({
     message: err.message || 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })

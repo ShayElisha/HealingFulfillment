@@ -300,7 +300,7 @@ function ForWhomAudiencePage() {
       <AdminPageShell>
         <PageHeader
           title="למי זה מתאים — כרטיסי דלתות"
-          subtitle="ניתן להוסיף בלוקים: ציר זמן (נקודות), אודיו ותמונות — העלאת קבצים או כתובת ישירה."
+          subtitle="ניתן להוסיף בלוקים: ציר זמן (נקודות), אודיו ותמונות — העלאה ל-Cloudinary או כתובת ישירה."
           backTo="/dashboard"
           backLabel="חזור ללוח הבקרה"
         />
@@ -443,7 +443,7 @@ function ForWhomAudiencePage() {
             <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/80 p-4">
               <p className="admin-label mb-2">בלוקים נוספים בעמוד (אופציונלי)</p>
               <p className="mb-3 text-xs text-neutral-600">
-                מופיעים באתר אחרי «המשך לקריאה». ציר זמן = רשימת נקודות. אודיו ותמונות — העלאת קבצים לשרת (או כתובת
+                מופיעים באתר אחרי «המשך לקריאה». ציר זמן = רשימת נקודות. אודיו ותמונות — העלאה ל-Cloudinary (או כתובת
                 ישירה).
               </p>
               <div className="mb-4 flex flex-wrap gap-2">
@@ -574,7 +574,7 @@ function ForWhomAudiencePage() {
                               htmlFor={`forwhom-audio-${idx}`}
                               className="cursor-pointer rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                             >
-                              העלאת קובץ אודיו
+                              העלאת אודיו ל-Cloudinary
                             </label>
                             {block.audioUrl ? (
                               <span className="max-w-[min(100%,280px)] truncate text-xs text-green-800" dir="ltr" title={block.audioUrl}>
@@ -589,7 +589,7 @@ function ForWhomAudiencePage() {
                             className="admin-input"
                             dir="ltr"
                             type="text"
-                            placeholder="https://... או /uploads/for-whom/audio/..."
+                            placeholder="כתובת URL מלאה (למשל מ-Cloudinary)"
                             value={block.audioUrl}
                             onChange={(e) => patchBlock(idx, { audioUrl: e.target.value })}
                           />
@@ -627,7 +627,7 @@ function ForWhomAudiencePage() {
                                     htmlFor={`forwhom-img-${idx}-${j}`}
                                     className="cursor-pointer rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium hover:bg-neutral-50"
                                   >
-                                    העלאת תמונה
+                                    העלאת תמונה ל-Cloudinary
                                   </label>
                                 </div>
                                 <button

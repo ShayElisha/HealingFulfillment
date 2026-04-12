@@ -18,6 +18,7 @@ export default defineConfig({
         changeOrigin: true
       },
       // קבצי תיק לקוח נשמרים בשרת המנהל
+      // נתיבי /uploads ישנים; קבצי לקוח חדשים מ-Cloudinary
       '/uploads': {
         target: 'http://localhost:5001',
         changeOrigin: true

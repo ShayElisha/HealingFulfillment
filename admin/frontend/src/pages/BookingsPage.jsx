@@ -152,13 +152,20 @@ function BookingsPage() {
 
   const handleStatusChange = async (booking, newStatus) => {
     try {
-      // עדכן את הסטטוס ישירות
       await bookingService.updateStatus(booking._id, newStatus)
       await loadData()
+      if (newStatus === 'confirmed') toast.success('הפגישה אושרה')
+      if (newStatus === 'cancelled') toast.success('הפגישה נדחתה')
+      if (newStatus === 'completed') toast.success('הפגישה סומנה כבוצעה — ניתן להוסיף סיכום')
     } catch (error) {
       console.error('Error updating status:', error)
       toast.error('שגיאה בעדכון הסטטוס')
     }
+  }
+
+  const handleRejectBooking = (booking) => {
+    if (!window.confirm('לדחות את בקשת הפגישה?')) return
+    handleStatusChange(booking, 'cancelled')
   }
 
   const handleOpenSummaryModal = (booking) => {
@@ -465,30 +472,23 @@ function BookingsPage() {
                           {booking.notes && (
                             <p className="mt-2 text-neutral-500">📝 הערות: {booking.notes}</p>
                           )}
-                          {booking.status === 'completed' && (
-                            <div className="mt-3">
-                              {booking.sessionSummary ? (
-                                <div className="p-3 bg-green-50 rounded border border-green-200">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs text-green-700 font-medium">📋 סיכום פגישה:</p>
-                                    <button
-                                      onClick={() => handleOpenSummaryModal(booking)}
-                                      className="text-xs text-green-600 hover:text-green-800 underline"
-                                    >
-                                      ערוך
-                                    </button>
-                                  </div>
-                                  <p className="text-sm text-neutral-700 whitespace-pre-wrap">{booking.sessionSummary}</p>
-                                </div>
-                              ) : (
+                          {booking.status === 'completed' && booking.sessionSummary && (
+                            <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-xs text-green-700 font-medium">📋 סיכום פגישה:</p>
                                 <button
+                                  type="button"
                                   onClick={() => handleOpenSummaryModal(booking)}
-                                  className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                                  className="text-xs text-green-600 hover:text-green-800 underline"
                                 >
-                                  + הוסף סיכום פגישה
+                                  ערוך
                                 </button>
-                              )}
+                              </div>
+                              <p className="text-sm text-neutral-700 whitespace-pre-wrap">{booking.sessionSummary}</p>
                             </div>
+                          )}
+                          {booking.status === 'completed' && !booking.sessionSummary && (
+                            <p className="mt-3 text-xs text-neutral-500">לא הוזן סיכום — ניתן להוסיף בכפתור מימין.</p>
                           )}
                           <p className="text-xs text-neutral-400 mt-2">
                             נרשם ב: {new Date(booking.createdAt).toLocaleDateString('he-IL', {
@@ -501,35 +501,78 @@ function BookingsPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2 items-end ml-4">
-                        <span className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium border ${
-                          booking.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :
-                          booking.status === 'completed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          booking.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                          {booking.status === 'confirmed' ? 'אושר' :
-                           booking.status === 'completed' ? 'בוצע' :
-                           booking.status === 'cancelled' ? 'בוטל' :
-                           'ממתין'}
-                        </span>
-                        <select
-                          value={booking.status}
-                          onChange={(e) => handleStatusChange(booking, e.target.value)}
-                          className="text-xs px-3 py-1.5 border border-neutral-200 rounded-lg bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
+                      <div className="flex flex-col gap-2 items-end ml-4 shrink-0 min-w-[9rem]">
+                        <span
+                          className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium border ${
+                            booking.status === 'confirmed'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : booking.status === 'completed'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : booking.status === 'cancelled'
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
                         >
-                          <option value="pending">ממתין</option>
-                          <option value="confirmed">אושר</option>
-                          <option value="completed">בוצע</option>
-                          <option value="cancelled">בוטל</option>
-                        </select>
-                        {booking.status === 'completed' && (
-                          <button
+                          {booking.status === 'confirmed'
+                            ? 'אושר'
+                            : booking.status === 'completed'
+                              ? 'בוצע'
+                              : booking.status === 'cancelled'
+                                ? 'בוטל'
+                                : 'ממתין'}
+                        </span>
+                        {activeTab !== 'history' && booking.status === 'pending' && (
+                          <div className="flex flex-row-reverse flex-wrap gap-2 justify-end">
+                            <Button
+                              type="button"
+                              variant="primary"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleStatusChange(booking, 'confirmed')}
+                            >
+                              אשר
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleRejectBooking(booking)}
+                            >
+                              דחה
+                            </Button>
+                          </div>
+                        )}
+                        {activeTab !== 'history' && booking.status === 'confirmed' && (
+                          <Button
+                            type="button"
+                            variant="primary"
+                            className="!px-3 !py-1.5 text-xs w-full"
+                            onClick={() => handleStatusChange(booking, 'completed')}
+                          >
+                            בוצע
+                          </Button>
+                        )}
+                        {activeTab !== 'history' && booking.status === 'completed' && (
+                          <Button
+                            type="button"
+                            variant="soft"
+                            className="!px-3 !py-1.5 text-xs w-full border border-green-200 text-green-800"
                             onClick={() => handleOpenSummaryModal(booking)}
-                            className="text-xs px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors mt-2"
                           >
                             {booking.sessionSummary ? 'ערוך סיכום' : 'הוסף סיכום'}
-                          </button>
+                          </Button>
+                        )}
+                        {activeTab !== 'history' && booking.status === 'cancelled' && (
+                          <p className="text-xs text-neutral-500 text-right leading-snug">הפגישה בוטלה</p>
+                        )}
+                        {activeTab === 'history' && (
+                          <Button
+                            type="button"
+                            variant="soft"
+                            className="!px-3 !py-1.5 text-xs w-full border border-green-200 text-green-800"
+                            onClick={() => handleOpenSummaryModal(booking)}
+                          >
+                            {booking.sessionSummary ? 'ערוך סיכום' : 'הוסף סיכום'}
+                          </Button>
                         )}
                       </div>
                     </div>

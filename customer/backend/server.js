@@ -18,11 +18,14 @@ import purchasesRoutes from './routes/purchases.js'
 import messagesRoutes from './routes/messages.js'
 import leadsRoutes from './routes/leads.js'
 import forWhomAudienceRoutes from './routes/forWhomAudience.js'
+import triggerJournalRoutes from './routes/triggerJournal.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// JWT_SECRET: required in production; dev-only fallback otherwise
+// JWT חייב להיות זהה בין customer/backend ל-admin/backend (אימות פאנל ניהול).
+// Fallback קבוע לפיתוח — חייב להתאים ל-admin/backend/server.js (לא Date.now()).
+const DEV_JWT_FALLBACK = 'healingfulfillment-local-dev-jwt-secret-not-for-production'
 if (!process.env.JWT_SECRET) {
   const isProd =
     process.env.NODE_ENV === 'production' ||
@@ -31,8 +34,8 @@ if (!process.env.JWT_SECRET) {
     console.error('❌ JWT_SECRET is required in production. Set it in your environment.')
     process.exit(1)
   }
-  console.warn('⚠️  WARNING: JWT_SECRET is not defined — using a one-time dev default.')
-  process.env.JWT_SECRET = 'dev-secret-key-change-in-production-' + Date.now()
+  console.warn('⚠️  JWT_SECRET is not defined — using shared dev fallback (same as admin backend).')
+  process.env.JWT_SECRET = DEV_JWT_FALLBACK
 }
 
 const app = express()
@@ -75,7 +78,7 @@ app.use(cors({
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Serve uploaded files (if needed)
+// מספק רק קישורים ישנים ל-/uploads; העלאות חדשות — Cloudinary דרך שרת האדמין
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 // Rate limiting
@@ -209,6 +212,7 @@ app.use('/api', (req, res, next) => {
 
 // Routes - Customer Service
 app.use('/api/auth', authRoutes)
+app.use('/api/auth/trigger-journal', triggerJournalRoutes)
 app.use('/api/booking', bookingRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/reviews', reviewsRoutes)

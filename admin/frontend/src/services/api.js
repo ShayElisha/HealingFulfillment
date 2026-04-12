@@ -125,13 +125,18 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message
-    })
+    const method = (error.config?.method || 'GET').toUpperCase()
+    const path = `${error.config?.baseURL || ''}${error.config?.url || ''}`.replace(/\/+/g, '/')
+    const status = error.response?.status
+    const d = error.response?.data
+    let body =
+      typeof d === 'string'
+        ? d
+        : d?.message ?? (d != null ? JSON.stringify(d) : '')
+    if (body.length > 500) body = `${body.slice(0, 500)}…`
+    console.error(
+      `API Error: ${method} ${path} → ${status ?? '—'} ${error.message}${body ? ` | ${body}` : ''}`
+    )
     if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
       console.error('API Connection Error: Backend server is not running or not accessible')
       console.error('Please make sure the admin backend server is running on port 5001')

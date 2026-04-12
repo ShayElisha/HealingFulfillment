@@ -50,7 +50,7 @@ const courseSchema = new mongoose.Schema({
   },
   videos: [{
     title: { type: String, trim: true },
-    url: { type: String, trim: true },
+    url: { type: String, trim: true, maxlength: 8192 },
     description: { type: String, trim: true },
     duration: { type: Number },
     order: { type: Number, default: 0 }

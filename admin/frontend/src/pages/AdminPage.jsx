@@ -361,10 +361,18 @@ function AdminPage() {
       'new-booking': '/new-booking'
     }
     const target = tab && legacyRoutes[tab]
-    if (target) {
+    if (!target) return
+    if (location.pathname !== target) {
       navigate(target, { replace: true })
+      return
     }
-  }, [location.search, navigate])
+    const sp = new URLSearchParams(location.search)
+    if (sp.has('tab')) {
+      sp.delete('tab')
+      const qs = sp.toString()
+      navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '' }, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate])
 
   const loadData = async (retryCount = 0) => {
     setLoading(true)
@@ -595,7 +603,7 @@ function AdminPage() {
     }
 
     try {
-      // Upload file to server
+      // העלאת וידאו ל-Cloudinary דרך /api/upload
       const formData = new FormData()
       formData.append('file', file)
 
@@ -612,13 +620,15 @@ function AdminPage() {
       const result = await response.json()
       const uploadedFile = result.data
 
-      // Use the server URL instead of blob URL
-      const fileUrl = `${window.location.origin}${uploadedFile.url}`
+      const fileUrl =
+        typeof uploadedFile.url === 'string' && uploadedFile.url.startsWith('http')
+          ? uploadedFile.url
+          : `${window.location.origin}${uploadedFile.url}`
 
       const newFile = {
         name: uploadedFile.name,
         url: fileUrl,
-        type: 'video', // Always video for uploaded files
+        type: 'video', // וידאו מ-Cloudinary
         size: uploadedFile.size
       }
 
@@ -1138,7 +1148,7 @@ function AdminPage() {
                       </div>
                       <div className="border border-neutral-300 rounded-lg p-4">
                         <label className="block text-sm font-medium mb-2">
-                          העלה סרטון
+                          העלה סרטון ל-Cloudinary
                         </label>
                         <input
                           type="file"
@@ -1147,7 +1157,7 @@ function AdminPage() {
                           accept="video/*"
                         />
                         <p className="text-xs text-neutral-500 mt-2">
-                          ניתן להעלות קבצי וידאו בלבד (MP4, MOV, AVI וכו')
+                          ניתן להעלות קבצי וידאו ל-Cloudinary בלבד (MP4, MOV, AVI וכו')
                         </p>
                       </div>
                     </div>

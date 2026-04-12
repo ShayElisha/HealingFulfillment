@@ -10,6 +10,7 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true
       },
+      // נתיבי /uploads ישנים בלבד; קבצים חדשים מ-Cloudinary (URL מלא)
       '/uploads': {
         target: 'http://localhost:5001',
         changeOrigin: true

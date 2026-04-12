@@ -9,10 +9,10 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import RegulationsQuestionnaireModal from '../components/RegulationsQuestionnaireModal'
 import RegulationsQuestionnaireTab from '../components/RegulationsQuestionnaireTab'
+import TriggerJournalSection from '../components/TriggerJournalSection'
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 import { getAdminPanelBaseUrl } from '../utils/adminPanelUrl'
-import { resolveAdminAssetUrl } from '../utils/resolveAdminAssetUrl'
 import { reviewsService } from '../services/reviewsApi'
 import { bookingService } from '../services/api'
 
@@ -67,6 +67,18 @@ function purchaseDisplayDate(purchase) {
     return new Date(purchase.paidAt)
   }
   return purchase?.createdAt ? new Date(purchase.createdAt) : null
+}
+
+/** קישורי קבצים: לרוב Cloudinary (URL מלא); נתיב ישן /uploads/ — בפיתוח פרוקסי Vite לשרת האדמין */
+function resolveCustomerUploadUrl(urlPath) {
+  if (!urlPath) return ''
+  if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath
+  if (import.meta.env.DEV) return urlPath
+  const adminBase = import.meta.env.VITE_ADMIN_ASSET_URL?.replace(/\/$/, '')
+  if (adminBase) return `${adminBase}${urlPath}`
+  const apiBase = import.meta.env.VITE_API_URL
+  if (apiBase) return apiBase.replace(/\/api\/?$/, '') + urlPath
+  return urlPath
 }
 
 function toDateInputYmd(value) {
@@ -399,15 +411,16 @@ function CustomerProfilePage() {
           <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
             {[
               { id: 'overview', label: 'סקירה כללית' },
-              { id: 'questionnaire', label: 'שאלון ותקנון' },
-              { id: 'purchases', label: `רכישות (${customerData.purchases?.length || 0})` },
-              { id: 'bookings', label: `פגישות (${customerData.bookings?.filter(b => b.status !== 'completed').length || 0})` },
-              { id: 'history', label: `היסטוריית פגישות (${customerData.bookings?.filter(b => b.status === 'completed').length || 0})` },
-              { id: 'messages', label: `הודעות (${messages.length})` },
-              { id: 'new-booking', label: 'קבע פגישה' },
+              { id: 'trigger-journal', label: 'תיעוד תריגרים' },
               { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
-              { id: 'audio', label: `אודיו (${audioOnlyFiles.length})` }
-            ].map(tab => (
+              { id: 'audio', label: `אודיו (${audioOnlyFiles.length})` },
+              { id: 'bookings', label: `פגישות (${customerData.bookings?.filter((b) => b.status !== 'completed').length || 0})` },
+              { id: 'new-booking', label: 'קביעת פגישות' },
+              { id: 'purchases', label: `רכישות (${customerData.purchases?.length || 0})` },
+              { id: 'history', label: `היסטוריית פגישות (${customerData.bookings?.filter((b) => b.status === 'completed').length || 0})` },
+              { id: 'questionnaire', label: 'שאלון ותקנון' },
+              { id: 'messages', label: `הודעות (${messages.length})` },
+            ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -579,6 +592,8 @@ function CustomerProfilePage() {
               />
             </div>
           )}
+
+          {activeTab === 'trigger-journal' && <TriggerJournalSection />}
 
           {/* Purchases Tab */}
           {activeTab === 'purchases' && (
@@ -1101,7 +1116,7 @@ function CustomerProfilePage() {
                       <p className="text-sm text-neutral-600 mb-2">{file.description}</p>
                     )}
                     <a
-                      href={resolveAdminAssetUrl(file.url)}
+                      href={resolveCustomerUploadUrl(file.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:underline text-sm"
@@ -1137,7 +1152,7 @@ function CustomerProfilePage() {
                         className="w-full"
                         controls
                         preload="metadata"
-                        src={resolveAdminAssetUrl(file.url)}
+                        src={resolveCustomerUploadUrl(file.url)}
                       >
                         הדפדפן שלך לא תומך בהשמעת אודיו.
                       </audio>

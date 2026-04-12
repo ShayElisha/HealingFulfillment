@@ -8,14 +8,19 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoBackendEnv = path.join(__dirname, '..', '..', 'backend', '.env')
+const customerBackendEnv = path.join(__dirname, '..', '..', 'customer', 'backend', '.env')
 
 dotenv.config({ path: path.join(__dirname, '.env') })
 dotenv.config({ path: repoBackendEnv, override: true })
+// ממלא משתנים חסרים (למשל JWT/Mongo) אם מוגדרים רק אצל שרת הלקוחות
+dotenv.config({ path: customerBackendEnv })
 
 if (process.env.DIAGNOSE_ENV === '1') {
   const local = path.join(__dirname, '.env')
   const repo = repoBackendEnv
   console.log('[load-env] service .env exists:', fs.existsSync(local), local)
   console.log('[load-env] repo    .env exists:', fs.existsSync(repo), repo)
+  console.log('[load-env] customer backend .env exists:', fs.existsSync(customerBackendEnv), customerBackendEnv)
   console.log('[load-env] MONGODB_URI set:', Boolean(process.env.MONGODB_URI))
+  console.log('[load-env] JWT_SECRET set:', Boolean(process.env.JWT_SECRET))
 }

@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useNavCounts } from '../context/NavCountsContext'
 import { getCustomerPublicHomeUrl } from '../utils/customerPortalUrl'
+import toast from 'react-hot-toast'
+import { statsService } from '../services/adminApi'
+import AdminNotificationsPanel from './AdminNotificationsPanel'
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 /** תואם ל־customer/frontend/src/utils/adminLogoutSync.js — התנתקות גם כשהאדמין והלקוח בדומיינים שונים */
@@ -43,8 +46,12 @@ function getActiveLeafId(pathname) {
 function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { customersCount, bookingsCount, contactsCount } = useNavCounts()
+  const { customersCount, bookingsCount, contactsCount, refreshNavCounts } = useNavCounts()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifAnchorEl, setNotifAnchorEl] = useState(null)
+  const [activityItems, setActivityItems] = useState([])
+  const [activityLoading, setActivityLoading] = useState(false)
   const [openDesktopGroup, setOpenDesktopGroup] = useState(null)
   const [mobileGroupOpen, setMobileGroupOpen] = useState(null)
   const desktopNavRef = useRef(null)
@@ -108,6 +115,74 @@ function Navbar() {
 
   const currentActiveId = getActiveLeafId(location.pathname)
 
+  const loadActivityFeed = useCallback(async () => {
+    try {
+      setActivityLoading(true)
+      const res = await statsService.getActivityFeed({ limit: 120 })
+      setActivityItems(Array.isArray(res?.data?.items) ? res.data.items : [])
+    } catch (e) {
+      console.warn('Activity feed:', e)
+      setActivityItems([])
+    } finally {
+      setActivityLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadActivityFeed()
+    const id = setInterval(loadActivityFeed, 60_000)
+    return () => clearInterval(id)
+  }, [loadActivityFeed, location.pathname])
+
+  const unreadActivityCount = useMemo(
+    () => activityItems.filter((i) => !i.isRead).length,
+    [activityItems]
+  )
+
+  const handleMarkActivityRead = useCallback(async (kind, activityId) => {
+    try {
+      await statsService.markNotificationRead({ kind, activityId })
+      setActivityItems((prev) =>
+        prev.map((it) =>
+          it.id === activityId && it.kind === kind ? { ...it, isRead: true } : it
+        )
+      )
+    } catch (e) {
+      console.warn(e)
+      toast.error(e.response?.data?.message || 'לא ניתן לשמור את הסימון')
+    }
+  }, [])
+
+  const handleMarkAllActivityRead = useCallback(async () => {
+    const unread = activityItems.filter((i) => !i.isRead)
+    if (!unread.length) return
+    try {
+      await statsService.markAllNotificationsRead({
+        items: unread.map((i) => ({ kind: i.kind, activityId: i.id })),
+      })
+      setActivityItems((prev) => prev.map((it) => (it.isRead ? it : { ...it, isRead: true })))
+    } catch (e) {
+      console.warn(e)
+      toast.error(e.response?.data?.message || 'לא ניתן לסמן הכל כנקרא')
+    }
+  }, [activityItems])
+
+  const closeNotificationsPanel = useCallback(() => {
+    setNotifOpen(false)
+    setNotifAnchorEl(null)
+    refreshNavCounts()
+  }, [refreshNavCounts])
+
+  const openNotificationsPanel = useCallback(
+    (e) => {
+      const el = e?.currentTarget
+      if (el) setNotifAnchorEl(el)
+      setNotifOpen(true)
+      loadActivityFeed()
+    },
+    [loadActivityFeed]
+  )
+
   const isGroupActive = (group) =>
     group.items.some((item) => item.id === currentActiveId)
 
@@ -154,37 +229,18 @@ function Navbar() {
   }
 
   const linkButtonClass = (active) =>
-    `px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm ${
+    `shrink-0 px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm ${
       active
         ? 'bg-gradient-to-r from-primary-50 to-primary-100/50 text-primary-700 shadow-soft border border-primary-200/50'
         : 'text-neutral-600 hover:bg-neutral-50 hover:text-primary-600'
     }`
 
-  return (
-    <nav className="sticky top-0 z-50 w-full border-b border-neutral-200/70 bg-white/80 shadow-soft backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
-      <div className="w-full px-2 sm:px-4 md:px-4 lg:px-6 xl:px-8">
-        <div className="flex justify-between items-center h-14 md:h-16">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="flex h-9 w-9 md:h-11 md:w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-sky-700 text-white shadow-soft-md ring-1 ring-white/20">
-              <span className="text-sm md:text-base" aria-hidden>
-                📊
-              </span>
-            </div>
-            <div className="leading-tight">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-primary-600/90 md:text-xs">
-                Healing Fulfillment
-              </p>
-              <h1 className="font-serif text-base font-semibold text-neutral-900 md:text-lg lg:text-xl">
-                פאנל ניהול
-              </h1>
-            </div>
-          </div>
+  const logoutButtonClass =
+    'px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0'
 
-          <div
-            ref={desktopNavRef}
-            className="hidden md:flex items-center space-x-reverse space-x-0.5 lg:space-x-1 flex-wrap justify-end gap-0.5"
-          >
-            {navItems.map((entry) => {
+  const desktopNavInner = (
+    <>
+      {navItems.map((entry) => {
               if (entry.type === 'link') {
                 const active = currentActiveId === entry.id
                 return (
@@ -205,7 +261,7 @@ function Navbar() {
               const groupHasActiveChild = isGroupActive(group)
 
               return (
-                <div key={group.id} className="relative">
+                <div key={group.id} className="relative shrink-0">
                   <button
                     type="button"
                     aria-expanded={open}
@@ -225,7 +281,7 @@ function Navbar() {
                   {open && (
                     <div
                       role="menu"
-                      className="absolute top-full right-0 mt-1 min-w-[12rem] rounded-xl border border-neutral-200/80 bg-white py-1 shadow-lg z-[60]"
+                      className="absolute top-full right-0 z-[100] mt-1 min-w-[12rem] rounded-xl border border-neutral-200/80 bg-white py-1 shadow-lg"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {group.items.map((item) => {
@@ -250,18 +306,51 @@ function Navbar() {
                 </div>
               )
             })}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-2 py-2 md:px-3 md:py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium transition-all duration-200 flex items-center gap-1 md:gap-1.5 lg:gap-2 text-xs md:text-xs lg:text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <span className="hidden navwide:inline text-sm md:text-base lg:text-base">↩️</span>
+    </>
+  )
+
+  return (
+    <>
+    <nav className="sticky top-0 z-50 w-full border-b border-neutral-200/70 bg-white/80 shadow-soft backdrop-blur-xl supports-[backdrop-filter]:bg-white/70">
+      <div className="w-full px-2 sm:px-4 md:px-4 lg:px-6 xl:px-8">
+        {/* מובייל: התנתקות + פעמון שמאל, מיתוג במרכז, תפריט ימין */}
+        <div className="flex md:hidden items-center justify-between gap-2 h-14">
+          <div className="flex shrink-0 items-center gap-1">
+            <button type="button" onClick={handleLogout} className={logoutButtonClass} aria-label="התנתקות">
+              <span className="text-base" aria-hidden>
+                ↩️
+              </span>
               <span className="whitespace-nowrap">התנתקות</span>
             </button>
+            <button
+              type="button"
+              onClick={(e) => openNotificationsPanel(e)}
+              className="relative shrink-0 rounded-xl border border-neutral-200/90 bg-white p-2 text-lg shadow-sm transition hover:bg-neutral-50"
+              aria-label="התראות"
+            >
+              <span aria-hidden>🔔</span>
+              {unreadActivityCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-[1.15rem] min-w-[1.15rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                  {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
+                </span>
+              ) : null}
+            </button>
           </div>
-
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-sky-700 text-white shadow-soft-md ring-1 ring-white/20">
+              <span className="text-sm" aria-hidden>
+                📊
+              </span>
+            </div>
+            <div className="leading-tight min-w-0 text-center">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-primary-600/90 truncate">
+                Healing Fulfillment
+              </p>
+              <h1 className="font-serif text-sm font-semibold text-neutral-900 truncate">פאנל ניהול</h1>
+            </div>
+          </div>
           <button
-            className="md:hidden p-2 text-neutral-700 hover:text-primary-600"
+            className="shrink-0 p-2 text-neutral-700 hover:text-primary-600"
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="תפריט"
@@ -282,6 +371,56 @@ function Navbar() {
               )}
             </svg>
           </button>
+        </div>
+
+        {/* דסקטופ: התנתקות + פעמון בפינה השמאלית, קישורים במרכז, מיתוג בימין */}
+        <div className="relative hidden md:flex h-16 items-center">
+          <div className="absolute left-0 top-1/2 z-20 flex -translate-y-1/2 items-center gap-1">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={logoutButtonClass}
+              aria-label="התנתקות"
+            >
+              <span className="hidden navwide:inline text-sm md:text-base lg:text-base">↩️</span>
+              <span className="whitespace-nowrap">התנתקות</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => openNotificationsPanel(e)}
+              className="relative shrink-0 rounded-xl border border-neutral-200/90 bg-white p-2 text-lg shadow-sm transition hover:bg-neutral-50 md:px-3"
+              aria-label="התראות"
+            >
+              <span aria-hidden>🔔</span>
+              {unreadActivityCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-[1.15rem] min-w-[1.15rem] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                  {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+          <div className="absolute right-0 top-1/2 z-20 flex -translate-y-1/2 items-center gap-2 md:gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-sky-700 text-white shadow-soft-md ring-1 ring-white/20">
+              <span className="text-base" aria-hidden>
+                📊
+              </span>
+            </div>
+            <div className="leading-tight text-right">
+              <p className="text-xs font-medium uppercase tracking-wider text-primary-600/90">
+                Healing Fulfillment
+              </p>
+              <h1 className="font-serif text-lg font-semibold text-neutral-900 lg:text-xl">פאנל ניהול</h1>
+            </div>
+          </div>
+          {/* בלי overflow-y-hidden / overflow על הציר האנכי — אחרת נחתכים תפריטי המשנה (absolute מתחת לכפתור) */}
+          <div className="flex min-h-[3.5rem] w-full min-w-0 items-center justify-center px-40 md:px-48 lg:px-52 xl:px-60 2xl:px-64">
+            <div
+              ref={desktopNavRef}
+              className="mx-auto flex max-w-full min-w-0 flex-nowrap items-center justify-center gap-0.5 py-1"
+            >
+              {desktopNavInner}
+            </div>
+          </div>
         </div>
 
         {isMobileMenuOpen && (
@@ -364,6 +503,16 @@ function Navbar() {
         )}
       </div>
     </nav>
+    <AdminNotificationsPanel
+      open={notifOpen}
+      anchorEl={notifAnchorEl}
+      onClose={closeNotificationsPanel}
+      onMarkRead={handleMarkActivityRead}
+      onMarkAllRead={handleMarkAllActivityRead}
+      items={activityItems}
+      loading={activityLoading && activityItems.length === 0}
+    />
+    </>
   )
 }
 

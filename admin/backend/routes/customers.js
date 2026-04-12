@@ -1,18 +1,27 @@
 import express from 'express'
 import Customer from '../models/Customer.js'
+import TriggerJournalEntry from '../models/TriggerJournalEntry.js'
 import Purchase from '../models/Purchase.js'
 import Booking from '../models/Booking.js'
 import Course from '../models/Course.js'
 import multer from 'multer'
 import path from 'path'
+import os from 'os'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
+import {
+  uploadLocalFileToCloudinary,
+  isCloudinaryConfigured,
+  deleteCloudinaryByUrl,
+  cloudinaryErrorToMessage,
+} from '../services/cloudinaryUpload.js'
 import bcrypt from 'bcrypt'
 import { sendAccountCreationEmail } from '../services/emailService.js'
 import {
   addCalendarMonths,
   applyAutoCoachingWindowForAllCompletedPurchases,
 } from '../utils/coachingPurchaseWindow.js'
+import { catchMulterUpload } from '../middleware/multerCatch.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -21,31 +30,25 @@ const router = express.Router()
 
 const DEFAULT_COACHING_MONTHS = 3
 
-// Configure multer for customer files
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const customerId = req.params.id
-    const customerDir = path.join(__dirname, `../uploads/customers/${customerId}`)
-    if (!fs.existsSync(customerDir)) {
-      fs.mkdirSync(customerDir, { recursive: true })
-    }
-    cb(null, customerDir)
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
-  }
+function customerTmpName(_req, file, cb) {
+  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
+  cb(null, `cust-${uniqueSuffix}${path.extname(file.originalname || '')}`)
+}
+
+const customerTmpStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, os.tmpdir()),
+  filename: customerTmpName,
 })
 
 const upload = multer({
-  storage: storage,
+  storage: customerTmpStorage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB
-  }
+    fileSize: 100 * 1024 * 1024, // 100MB
+  },
 })
 
 const uploadAudio = multer({
-  storage,
+  storage: customerTmpStorage,
   limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('audio/')) {
@@ -53,14 +56,28 @@ const uploadAudio = multer({
     } else {
       cb(new Error('מותר להעלות רק קבצי אודיו (למשל MP3, WAV, M4A)'))
     }
-  }
+  },
 })
+
+function safeUnlink(p) {
+  try {
+    if (p && fs.existsSync(p)) fs.unlinkSync(p)
+  } catch (e) {
+    console.warn('Temp file unlink:', e.message)
+  }
+}
 
 function handleMulterAudioUpload(req, res, next) {
   uploadAudio.single('file')(req, res, (err) => {
     if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          message:
+            'הקובץ גדול מדי מהמותר. מקסימום 100MB.',
+        })
+      }
       return res.status(400).json({
-        message: err.message || 'שגיאה בהעלאת האודיו'
+        message: err.message || 'שגיאה בהעלאת האודיו',
       })
     }
     next()
@@ -226,6 +243,40 @@ router.post('/admin/customers', async (req, res, next) => {
   }
 })
 
+// GET /api/admin/customers/:id/trigger-journal — תיעוד תריגרים יומי (למטפל)
+router.get('/admin/customers/:id/trigger-journal', async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id).select('_id').lean()
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 80))
+    const { from, to } = req.query
+    const filter = { customer: req.params.id }
+    if (from && to && typeof from === 'string' && typeof to === 'string') {
+      const mFrom = /^(\d{4})-(\d{2})-(\d{2})$/.exec(from.trim())
+      const mTo = /^(\d{4})-(\d{2})-(\d{2})$/.exec(to.trim())
+      if (!mFrom || !mTo) {
+        return res.status(400).json({ message: 'Invalid date range (use YYYY-MM-DD)' })
+      }
+      const d0 = new Date(Date.UTC(Number(mFrom[1]), Number(mFrom[2]) - 1, Number(mFrom[3]), 0, 0, 0, 0))
+      const d1 = new Date(Date.UTC(Number(mTo[1]), Number(mTo[2]) - 1, Number(mTo[3]), 0, 0, 0, 0))
+      d1.setUTCDate(d1.getUTCDate() + 1)
+      filter.entryDate = { $gte: d0, $lt: d1 }
+    }
+    const entries = await TriggerJournalEntry.find(filter)
+      .sort({ entryDate: -1, createdAt: -1 })
+      .limit(limit)
+      .lean()
+    res.json({
+      message: 'Trigger journal entries',
+      data: entries,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // GET /api/admin/customers/:id - Get single customer
 router.get('/admin/customers/:id', async (req, res, next) => {
   try {
@@ -335,77 +386,176 @@ router.post(
   }
 )
 
-// POST /api/admin/customers/:id/files - Upload file for customer
-router.post('/admin/customers/:id/files', upload.single('file'), async (req, res, next) => {
+// POST /api/admin/customers/:id/files — רק Cloudinary
+router.post('/admin/customers/:id/files', catchMulterUpload(upload.single('file')), async (req, res, next) => {
+  const cid = req.params.id
+  const log = (step, extra = '') =>
+    console.log(`[UPLOAD:files] customer=${cid} ${step}${extra ? ` ${extra}` : ''}`)
+
+  if (!isCloudinaryConfigured()) {
+    log('ביטול — Cloudinary לא מוגדר')
+    safeUnlink(req.file?.path)
+    return res.status(503).json({
+      message:
+        'העלאת קבצים דרך Cloudinary בלבד. הגדר ב-.env: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET (ללא רווחים מיותרים)',
+    })
+  }
   try {
-    const customer = await Customer.findById(req.params.id)
+    log('התחלה', req.file?.originalname ? `file="${req.file.originalname}"` : '(אין req.file)')
+    const customer = await Customer.findById(cid)
     if (!customer) {
+      log('נכשל — לקוח לא נמצא')
+      safeUnlink(req.file?.path)
       return res.status(404).json({ message: 'Customer not found' })
     }
-    
-    if (!req.file) {
+
+    if (!req.file?.path) {
+      log('נכשל — אין נתיב קובץ אחרי multer')
       return res.status(400).json({ message: 'No file uploaded' })
     }
-    
-    // Determine file type
-    const mimetype = req.file.mimetype
+
+    const mimetype = req.file.mimetype || ''
     let fileType = 'other'
     if (mimetype.startsWith('image/')) fileType = 'image'
     else if (mimetype === 'application/pdf') fileType = 'pdf'
     else if (mimetype.includes('video/')) fileType = 'video'
     else if (mimetype.includes('audio/')) fileType = 'audio'
-    else if (mimetype.includes('document') || mimetype.includes('word') || mimetype.includes('msword') || mimetype.includes('vnd.openxmlformats-officedocument')) fileType = 'document'
-    
-    const fileUrl = `/uploads/customers/${req.params.id}/${req.file.filename}`
-    
+    else if (
+      mimetype.includes('document') ||
+      mimetype.includes('word') ||
+      mimetype.includes('msword') ||
+      mimetype.includes('vnd.openxmlformats-officedocument')
+    )
+      fileType = 'document'
+
+    log(
+      'שולח ל-Cloudinary',
+      `path=${req.file.path} mimetype=${mimetype} type=${fileType} size=${req.file.size ?? '?'}`
+    )
+    const result = await uploadLocalFileToCloudinary(req.file.path, {
+      folder: `customers/${cid}`,
+      mimetype,
+    })
+    log('Cloudinary הצליח', `bytes=${result?.bytes} url_prefix=${result?.secure_url?.slice(0, 48)}…`)
+    safeUnlink(req.file.path)
+
     customer.files.push({
       name: req.file.originalname,
-      url: fileUrl,
+      url: result.secure_url,
       type: fileType,
-      size: req.file.size,
+      size: result.bytes,
       description: req.body.description || '',
-      uploadedBy: 'admin'
+      uploadedBy: 'admin',
     })
-    
+
     await customer.save()
-    
+    log('הושלם — נשמר ב-Mongo')
+
     res.json({
       message: 'File uploaded successfully',
-      data: customer.files[customer.files.length - 1]
+      data: customer.files[customer.files.length - 1],
     })
   } catch (error) {
-    console.error('Error uploading file:', error)
-    next(error)
+    safeUnlink(req.file?.path)
+    console.error(
+      `[UPLOAD:files] customer=${cid} שגיאה:`,
+      error?.name,
+      error?.message,
+      error?.http_code != null ? `http_code=${error.http_code}` : ''
+    )
+    if (error?.name === 'CastError') {
+      return res.status(400).json({ message: 'מזהה לקוח לא תקין' })
+    }
+    const code = Number(error?.http_code)
+    let status = Number.isFinite(code) && code >= 400 && code < 600 ? code : 502
+    if (error?.name === 'ValidationError') status = 400
+    return res.status(status).json({
+      message:
+        error?.name === 'ValidationError'
+          ? error.message || 'שגיאת ולידציה בשמירת הלקוח'
+          : cloudinaryErrorToMessage(error),
+      ...(process.env.NODE_ENV === 'development' && {
+        detail: error.message,
+        cloudinary: error.http_code != null ? { http_code: error.http_code, error: error.error } : undefined,
+      }),
+    })
   }
 })
 
-// POST /api/admin/customers/:id/audio — העלאת אודיו בלבד (נשמר ב־files עם type: audio)
+// POST /api/admin/customers/:id/audio — רק Cloudinary
 router.post('/admin/customers/:id/audio', handleMulterAudioUpload, async (req, res, next) => {
+  const cid = req.params.id
+  const logA = (step, extra = '') =>
+    console.log(`[UPLOAD:audio] customer=${cid} ${step}${extra ? ` ${extra}` : ''}`)
+
+  if (!isCloudinaryConfigured()) {
+    logA('ביטול — Cloudinary לא מוגדר')
+    safeUnlink(req.file?.path)
+    return res.status(503).json({
+      message:
+        'העלאת אודיו דרך Cloudinary בלבד. הגדר ב-.env: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET',
+    })
+  }
   try {
-    const customer = await Customer.findById(req.params.id)
+    logA('התחלה', req.file?.originalname ? `file="${req.file.originalname}"` : '(אין req.file)')
+    const customer = await Customer.findById(cid)
     if (!customer) {
+      logA('נכשל — לקוח לא נמצא')
+      safeUnlink(req.file?.path)
       return res.status(404).json({ message: 'Customer not found' })
     }
-    if (!req.file) {
+    if (!req.file?.path) {
+      logA('נכשל — אין נתיב קובץ אחרי multer')
       return res.status(400).json({ message: 'לא הועלה קובץ אודיו' })
     }
-    const fileUrl = `/uploads/customers/${req.params.id}/${req.file.filename}`
+    logA(
+      'שולח ל-Cloudinary',
+      `path=${req.file.path} mimetype=${req.file.mimetype} size=${req.file.size ?? '?'}`
+    )
+    const result = await uploadLocalFileToCloudinary(req.file.path, {
+      folder: `customers/${cid}`,
+      mimetype: req.file.mimetype,
+    })
+    logA('Cloudinary הצליח', `bytes=${result?.bytes}`)
+    safeUnlink(req.file.path)
     customer.files.push({
       name: req.file.originalname,
-      url: fileUrl,
+      url: result.secure_url,
       type: 'audio',
-      size: req.file.size,
+      size: result.bytes,
       description: req.body.description || '',
-      uploadedBy: 'admin'
+      uploadedBy: 'admin',
     })
     await customer.save()
+    logA('הושלם — נשמר ב-Mongo')
     res.json({
       message: 'קובץ אודיו הועלה בהצלחה',
-      data: customer.files[customer.files.length - 1]
+      data: customer.files[customer.files.length - 1],
     })
   } catch (error) {
-    console.error('Error uploading audio:', error)
-    next(error)
+    safeUnlink(req.file?.path)
+    console.error(
+      `[UPLOAD:audio] customer=${cid} שגיאה:`,
+      error?.name,
+      error?.message,
+      error?.http_code != null ? `http_code=${error.http_code}` : ''
+    )
+    if (error?.name === 'CastError') {
+      return res.status(400).json({ message: 'מזהה לקוח לא תקין' })
+    }
+    const code = Number(error?.http_code)
+    let status = Number.isFinite(code) && code >= 400 && code < 600 ? code : 502
+    if (error?.name === 'ValidationError') status = 400
+    return res.status(status).json({
+      message:
+        error?.name === 'ValidationError'
+          ? error.message || 'שגיאת ולידציה בשמירת הלקוח'
+          : cloudinaryErrorToMessage(error),
+      ...(process.env.NODE_ENV === 'development' && {
+        detail: error.message,
+        cloudinary: error.http_code != null ? { http_code: error.http_code, error: error.error } : undefined,
+      }),
+    })
   }
 })
 
@@ -422,10 +572,13 @@ router.delete('/admin/customers/:id/files/:fileId', async (req, res, next) => {
       return res.status(404).json({ message: 'File not found' })
     }
     
-    // Delete physical file
-    const filePath = path.join(__dirname, `../uploads/customers/${req.params.id}/${file.url.split('/').pop()}`)
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
+    const deletedCloud = await deleteCloudinaryByUrl(file.url)
+    // מחיקה מקומית — רק לנתיבים ישנים לפני Cloudinary
+    if (!deletedCloud && file.url?.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, `../uploads/customers/${req.params.id}/${file.url.split('/').pop()}`)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
     }
     
     customer.files.pull(req.params.fileId)

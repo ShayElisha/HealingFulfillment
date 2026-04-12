@@ -195,7 +195,7 @@ function CategoryPage() {
         </Section>
       )}
 
-      {/* Category Videos (Uploaded Files) - Also moved after title */}
+      {/* סרטוני קטגוריה — כתובות מ-Cloudinary או ישנות מ-/uploads */}
       {category.files && category.files.length > 0 && (
         <Section variant="neutral">
           <div className="max-w-7xl mx-auto">

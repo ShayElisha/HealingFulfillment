@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const detailImageItemSchema = new mongoose.Schema(
   {
-    url: { type: String, required: true, trim: true, maxlength: 2048 },
+    url: { type: String, required: true, trim: true, maxlength: 8192 },
     caption: { type: String, default: '', trim: true, maxlength: 500 },
   },
   { _id: false }
@@ -12,7 +12,7 @@ const detailBlockSchema = new mongoose.Schema(
   {
     type: { type: String, enum: ['timeline', 'audio', 'images'], required: true },
     timelinePoints: { type: [String], default: [] },
-    audioUrl: { type: String, default: '', maxlength: 2048 },
+    audioUrl: { type: String, default: '', maxlength: 8192 },
     audioTitle: { type: String, default: '', maxlength: 200 },
     imageItems: { type: [detailImageItemSchema], default: [] },
   },
@@ -47,7 +47,7 @@ const forWhomProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
-      maxlength: 2048,
+      maxlength: 8192,
     },
     detailBlocks: { type: [detailBlockSchema], default: [] },
   },

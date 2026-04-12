@@ -51,6 +51,19 @@ export const authService = {
     const response = await api.post('/auth/regulations-questionnaire', payload)
     return response.data
   },
+
+  getTriggerJournal: async (params = {}) => {
+    const response = await api.get('/auth/trigger-journal', { params })
+    return response.data
+  },
+  createTriggerJournal: async (payload) => {
+    const response = await api.post('/auth/trigger-journal', payload)
+    return response.data
+  },
+  deleteTriggerJournal: async (entryId) => {
+    const response = await api.delete(`/auth/trigger-journal/${entryId}`)
+    return response.data
+  },
 }
 
 export const messageService = {

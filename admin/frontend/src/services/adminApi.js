@@ -74,6 +74,18 @@ export const statsService = {
     const response = await api.get('/admin/stats/dashboard', { params })
     return response.data
   },
+  getActivityFeed: async (params = {}) => {
+    const response = await api.get('/admin/stats/activity-feed', { params })
+    return response.data
+  },
+  markNotificationRead: async ({ kind, activityId }) => {
+    const response = await api.post('/admin/stats/notifications/mark-read', { kind, activityId })
+    return response.data
+  },
+  markAllNotificationsRead: async ({ items }) => {
+    const response = await api.post('/admin/stats/notifications/mark-all-read', { items })
+    return response.data
+  },
 }
 
 export const purchaseService = {
@@ -184,7 +196,7 @@ export const leadService = {
   },
 }
 
-/** העלאות לבלוקי «למי זה מתאים» — קבצים בשרת המנהל תחת /uploads/for-whom/ */
+/** העלאות לבלוקי «למי זה מתאים» — נשמר ב-Cloudinary (URL מלא ב-response) */
 export const forWhomUploadService = {
   uploadAudio: async (file) => {
     const fd = new FormData()

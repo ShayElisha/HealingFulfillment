@@ -66,11 +66,28 @@ function getPurchaseCoachingWindowResolved(purchase, customer) {
   return null
 }
 
-/** כתובות קבצים מהשרת (למשל /uploads/...) — בפיתוח הפרוקסי מפנה ל־backend */
-function staticUploadSrc(urlPath) {
+/** כתובת תצוגה: בדרך כלל URL מלא מ-Cloudinary; נתיב יחסי ישן (/uploads/...) — בפיתוח פרוקסי ל-backend */
+function resolveCustomerFileUrl(urlPath) {
   if (!urlPath) return ''
   if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath
   return urlPath
+}
+
+const TRIGGER_PART_LABELS = {
+  night: 'לילה / אחרי חצות',
+  early_morning: 'שחר',
+  morning: 'בוקר',
+  noon: 'צהריים',
+  afternoon: 'אחר צהריים',
+  evening: 'ערב',
+  late_evening: 'סוף ערב / לפני שינה',
+}
+
+function formatTriggerEntryDate(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 function CustomerPage() {
@@ -91,10 +108,33 @@ function CustomerPage() {
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
   const [coachingUiLoading, setCoachingUiLoading] = useState(null)
+  const [triggerJournalEntries, setTriggerJournalEntries] = useState([])
+  const [triggerJournalLoading, setTriggerJournalLoading] = useState(false)
 
   useEffect(() => {
     loadCustomer()
   }, [id])
+
+  useEffect(() => {
+    if (activeTab !== 'trigger-journal' || !id) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        setTriggerJournalLoading(true)
+        const res = await customerService.getTriggerJournal(id, { limit: 120 })
+        if (!cancelled) setTriggerJournalEntries(Array.isArray(res?.data) ? res.data : [])
+      } catch (e) {
+        console.error(e)
+        if (!cancelled) setTriggerJournalEntries([])
+        toast.error('שגיאה בטעינת תיעוד תריגרים')
+      } finally {
+        if (!cancelled) setTriggerJournalLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, id])
 
   const loadCustomer = async () => {
     try {
@@ -156,7 +196,11 @@ function CustomerPage() {
       toast.success('קובץ הועלה בהצלחה!')
     } catch (error) {
       console.error('Error uploading file:', error)
-      toast.error('שגיאה בהעלאת הקובץ')
+      const msg =
+        error.response?.data?.message ||
+        error.message ||
+        'שגיאה בהעלאת הקובץ'
+      toast.error(msg)
     } finally {
       setUploading(false)
     }
@@ -347,6 +391,7 @@ function CustomerPage() {
           {[
             { id: 'overview', label: 'סקירה כללית' },
             { id: 'questionnaire', label: 'שאלון ותקנון' },
+            { id: 'trigger-journal', label: 'תיעוד תריגרים' },
             { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
             { id: 'audio', label: `אודיו (${audioFiles.length})` },
             { id: 'sessions', label: `פגישות (${customer.bookings?.length || 0})` },
@@ -650,11 +695,61 @@ function CustomerPage() {
             </div>
           )}
 
+          {activeTab === 'trigger-journal' && (
+            <Card>
+              <h3 className="text-xl font-semibold mb-2">תיעוד תריגרים (מהלקוח)</h3>
+              <p className="text-sm text-neutral-600 mb-6">
+                רישומים יומיים שהלקוח שומר מתיק הלקוח. לצפייה בלבד.
+              </p>
+              {triggerJournalLoading ? (
+                <p className="text-neutral-500 py-8 text-center">טוען…</p>
+              ) : triggerJournalEntries.length === 0 ? (
+                <p className="text-neutral-500 py-8 text-center">אין רשומות עדיין.</p>
+              ) : (
+                <ul className="space-y-4 text-right">
+                  {triggerJournalEntries.map((row) => (
+                    <li
+                      key={row._id}
+                      className="rounded-xl border border-neutral-200 bg-neutral-50/90 p-4"
+                    >
+                      <div className="flex flex-wrap gap-2 text-sm text-neutral-600 mb-2">
+                        <span className="font-semibold text-neutral-900">
+                          {formatTriggerEntryDate(row.entryDate)}
+                        </span>
+                        <span>·</span>
+                        <span>{TRIGGER_PART_LABELS[row.partOfDay] || row.partOfDay}</span>
+                        {row.intensity != null && (
+                          <span>עוצמה {row.intensity}/10</span>
+                        )}
+                      </div>
+                      <p className="text-neutral-800 whitespace-pre-wrap">{row.triggerDescription}</p>
+                      {row.contextOrBody ? (
+                        <p className="text-sm text-neutral-600 mt-2">
+                          <span className="font-medium">הקשר / גוף: </span>
+                          {row.contextOrBody}
+                        </p>
+                      ) : null}
+                      {row.feelingsNotes ? (
+                        <p className="text-sm text-neutral-600 mt-1">רגשות: {row.feelingsNotes}</p>
+                      ) : null}
+                      {row.copingOrWhatHelped ? (
+                        <p className="text-sm text-neutral-600 mt-1">מה עזר: {row.copingOrWhatHelped}</p>
+                      ) : null}
+                      {row.notes ? (
+                        <p className="text-sm text-neutral-500 mt-2 whitespace-pre-wrap">{row.notes}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
           {/* Files Tab */}
           {activeTab === 'files' && (
             <div className="space-y-6">
               <Card>
-                <h3 className="text-xl font-semibold mb-4">העלאת קובץ חדש</h3>
+                <h3 className="text-xl font-semibold mb-4">העלאת קובץ חדש (Cloudinary)</h3>
                 <p className="text-sm text-neutral-600 mb-4">
                   להקלטות והודעות קוליות השתמשו בלשונית <strong>אודיו</strong>.
                 </p>
@@ -709,7 +804,7 @@ function CustomerPage() {
                           {file.type} | {(file.size / 1024).toFixed(1)} KB
                         </span>
                         <a
-                          href={staticUploadSrc(file.url)}
+                          href={resolveCustomerFileUrl(file.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary-600 hover:underline text-sm"
@@ -733,7 +828,7 @@ function CustomerPage() {
           {activeTab === 'audio' && (
             <div className="space-y-6">
               <Card>
-                <h3 className="text-xl font-semibold mb-4">העלאת אודיו ללקוח</h3>
+                <h3 className="text-xl font-semibold mb-4">העלאת אודיו ללקוח (Cloudinary)</h3>
                 <p className="text-sm text-neutral-600 mb-4">
                   קבצי אודיו יופיעו אצל הלקוח בלשונית «אודיו» בתיק האישי (השמעה בלבד).
                 </p>
@@ -786,7 +881,7 @@ function CustomerPage() {
                         className="w-full mt-3"
                         controls
                         preload="metadata"
-                        src={staticUploadSrc(file.url)}
+                        src={resolveCustomerFileUrl(file.url)}
                       >
                         הדפדפן שלך לא תומך בהשמעת אודיו.
                       </audio>

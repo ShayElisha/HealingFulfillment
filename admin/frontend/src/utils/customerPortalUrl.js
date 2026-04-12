@@ -21,6 +21,15 @@ export function getCustomerLoginUrl() {
   }
 
   if (typeof window !== 'undefined' && window.location?.origin) {
+    const host = window.location.hostname
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1'
+    // build / vite preview על פורט האדמין — אסור להפנות לאותו origin: זה שוב אפליקציית האדמין → לולאת רענון
+    if (isLocalhost) {
+      console.warn(
+        '[Admin] אין VITE_CUSTOMER_LOGIN_URL — מפנה ללקוחות על פורט 3000 (לא לאותו מקור כמו הפאנל).'
+      )
+      return 'http://localhost:3000/customer/login'
+    }
     console.warn(
       '[Admin] הגדר ב-Vercel את VITE_CUSTOMER_LOGIN_URL (או VITE_CUSTOMER_SITE_URL) כדי להפנות לאתר הלקוחות הנכון. כרגע משתמשים באותו מקור כמו הפאנל.'
     )
@@ -58,6 +67,10 @@ export function getCustomerPublicHomeUrl() {
   }
 
   if (typeof window !== 'undefined' && window.location?.origin) {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:3000/'
+    }
     return `${window.location.origin}/`
   }
 

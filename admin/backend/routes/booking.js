@@ -21,7 +21,9 @@ router.get('/', async (req, res, next) => {
     }
 
     if (!usePaging) {
-      const bookings = await Booking.find(filter).sort({ createdAt: -1 }).lean()
+      const bookings = await Booking.find(filter)
+        .sort({ preferredDate: 1, preferredTime: 1 })
+        .lean()
       return res.json({
         message: 'Bookings retrieved successfully',
         data: bookings,
@@ -29,7 +31,11 @@ router.get('/', async (req, res, next) => {
     }
 
     const [bookings, total] = await Promise.all([
-      Booking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Booking.find(filter)
+        .sort({ preferredDate: 1, preferredTime: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       Booking.countDocuments(filter),
     ])
 

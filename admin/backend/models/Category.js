@@ -47,7 +47,8 @@ const categorySchema = new mongoose.Schema({
     url: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      maxlength: 8192,
     },
     description: {
       type: String,
@@ -70,7 +71,8 @@ const categorySchema = new mongoose.Schema({
     url: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
+      maxlength: 8192,
     },
     type: {
       type: String,

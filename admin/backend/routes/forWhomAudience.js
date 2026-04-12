@@ -6,7 +6,7 @@ const router = express.Router()
 function normalizeVideoUrl(v) {
   if (v == null || String(v).trim() === '') return ''
   const s = String(v).trim()
-  return s.length > 2048 ? s.slice(0, 2048) : s
+  return s.length > 8192 ? s.slice(0, 8192) : s
 }
 
 const BLOCK_TYPES = new Set(['timeline', 'audio', 'images'])
@@ -46,7 +46,7 @@ function normalizeDetailBlocks(raw) {
       out.push({
         type: 'audio',
         timelinePoints: [],
-        audioUrl: String(b.audioUrl || '').trim().slice(0, 2048),
+        audioUrl: String(b.audioUrl || '').trim().slice(0, 8192),
         audioTitle: String(b.audioTitle || '').trim().slice(0, 200),
         imageItems: [],
       })
@@ -58,7 +58,7 @@ function normalizeDetailBlocks(raw) {
           const url = String(i.url || '').trim()
           if (!url) return null
           return {
-            url: url.slice(0, 2048),
+            url: url.slice(0, 8192),
             caption: String(i.caption || '').trim().slice(0, 500),
           }
         })

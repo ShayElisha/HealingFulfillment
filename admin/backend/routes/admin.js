@@ -521,8 +521,14 @@ router.get('/bookings', async (req, res, next) => {
           : { $and: [filter, searchPart] }
     }
 
+    // מיון לפי מועד הפגישה: פעילות — מהקרוב ביותר קדימה; היסטוריה — מהאחרונה אחורה
+    const sortBySlot =
+      tab === 'history'
+        ? { preferredDate: -1, preferredTime: -1 }
+        : { preferredDate: 1, preferredTime: 1 }
+
     if (!usePaging) {
-      const bookings = await Booking.find(filter).sort({ createdAt: -1 }).lean()
+      const bookings = await Booking.find(filter).sort(sortBySlot).lean()
       return res.json({
         message: 'Bookings retrieved successfully',
         data: bookings,
@@ -542,7 +548,7 @@ router.get('/bookings', async (req, res, next) => {
       allIntro,
       allRegular,
     ] = await Promise.all([
-      Booking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Booking.find(filter).sort(sortBySlot).skip(skip).limit(limit).lean(),
       Booking.countDocuments(filter),
       Booking.countDocuments({}),
       Booking.countDocuments({ status: 'pending' }),

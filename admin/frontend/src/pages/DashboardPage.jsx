@@ -142,7 +142,8 @@ function DashboardPage() {
       <main className="admin-page-main min-h-screen">
         <div className="admin-page-noise" aria-hidden="true" />
         <div className="relative z-[1]">
-        <div className="admin-dashboard-hero">
+        {/* z-20 מול admin-inner (z-0) — כדי שחלונית טווח תאריכים (overflow) לא תיעלם מתחת לכרטיסים */}
+        <div className="admin-dashboard-hero relative z-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0 space-y-3">
@@ -151,7 +152,7 @@ function DashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 {/* Date Range Picker */}
-                <div className="relative date-picker-container">
+                <div className="relative date-picker-container isolate">
                   <button
                     type="button"
                     onClick={() => setShowDatePicker(!showDatePicker)}
@@ -178,7 +179,7 @@ function DashboardPage() {
                   </button>
                   
                   {showDatePicker && (
-                    <div className="absolute left-0 top-full z-50 mt-2 min-w-[320px] rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-premium">
+                    <div className="absolute end-0 top-full z-[110] mt-2 min-w-[320px] rounded-2xl border border-neutral-200/80 bg-white p-6 shadow-premium">
                       <div className="mb-4">
                         <h3 className="mb-4 font-serif text-lg font-semibold text-neutral-900">בחר טווח תאריכים</h3>
                         <div className="space-y-4">
@@ -336,7 +337,7 @@ function DashboardPage() {
           </div>
         </div>
 
-        <div className="admin-inner !pt-8 md:!pt-10 !pb-12">
+        <div className="admin-inner relative z-0 !pt-8 md:!pt-10 !pb-12">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="text-center">

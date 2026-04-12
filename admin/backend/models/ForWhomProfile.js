@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const detailImageItemSchema = new mongoose.Schema(
   {
-    url: { type: String, required: true, trim: true, maxlength: 2048 },
+    url: { type: String, required: true, trim: true, maxlength: 8192 },
     caption: { type: String, default: '', trim: true, maxlength: 500 },
   },
   { _id: false }
@@ -50,7 +50,7 @@ const forWhomProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: '',
-      maxlength: 2048,
+      maxlength: 8192,
     },
     /** בלוקי תוכן נוספים לעמוד הציבורי (ציר זמן, אודיו, גלריה) */
     detailBlocks: { type: [detailBlockSchema], default: [] },

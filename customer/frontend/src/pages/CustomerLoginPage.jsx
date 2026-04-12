@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../context/AuthContext'
@@ -11,6 +11,9 @@ import {
   stripReturnToQueryFromLoginUrl,
   resolveLoginReturnTo,
   clearStoredLoginReturnTo,
+  isAdminGateFailedBlocked,
+  clearAdminGateFailedSessionFlag,
+  setAdminGateFailedSessionFlag,
 } from '../utils/loginReturnToSession'
 
 function EyeIcon({ closed = false }) {
@@ -57,21 +60,29 @@ function CustomerLoginPage() {
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('adminVerifyFailed') === '1') {
+      setAdminGateFailedSessionFlag()
+      params.delete('adminVerifyFailed')
+      const q = params.toString()
+      navigate(`/customer/login${q ? `?${q}` : ''}`, { replace: true })
+      return
+    }
     stripReturnToQueryFromLoginUrl(location.search, navigate)
   }, [location.search, navigate])
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    // אם כבר מחובר, הפנה לפי סוג המשתמש
-    if (isAuthenticated) {
-      if (user?.isAdmin === true) {
-        const returnTo = resolveLoginReturnTo(location.search)
-        redirectAdmin(returnTo)
-        return
-      }
-      navigate('/customer/profile')
+    if (!isAuthenticated || !user) return
+    if (user.mustChangePassword === true) return
+    if (user.isAdmin === true) {
+      if (isAdminGateFailedBlocked()) return
+      const returnTo = resolveLoginReturnTo(location.search)
+      redirectAdmin(returnTo)
+      return
     }
+    navigate('/customer/profile')
   }, [isAuthenticated, navigate, user, location.search])
 
   const handleSubmit = async (e) => {
@@ -86,9 +97,8 @@ function CustomerLoginPage() {
       if (result.mustChangePassword) {
         navigate('/customer/change-password')
       } else if (result.isAdmin) {
-        const returnTo = resolveLoginReturnTo(location.search)
-        const redirected = redirectAdmin(returnTo)
-        if (!redirected) navigate('/customer/profile')
+        clearAdminGateFailedSessionFlag()
+        // הפניה לפאנל רק ב-useEffect — מונע קריאה כפולה ל-resolveLoginReturnTo ומצב מירוץ עם ה-effect
       } else {
         clearStoredLoginReturnTo()
         navigate('/customer/profile')
@@ -131,6 +141,39 @@ function CustomerLoginPage() {
         <div className="max-w-md mx-auto">
           <AnimatedSection>
             <Card>
+              {isAuthenticated && user?.isAdmin === true && isAdminGateFailedBlocked() && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <p className="mb-2 font-medium">לא ניתן להתחבר לפאנל הניהול כרגע</p>
+                  <p className="mb-3 text-amber-800/90">
+                    ייתכן שהשרת לא זמין או שיש בעיית הרשאות. כדי לא לרענן את הדף בלולאה, ההפניה האוטומטית הושבתה זמנית.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="py-2 text-sm"
+                      onClick={() => {
+                        clearAdminGateFailedSessionFlag()
+                        const returnTo = resolveLoginReturnTo(location.search)
+                        redirectAdmin(returnTo)
+                      }}
+                    >
+                      נסה שוב לפאנל
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="py-2 text-sm"
+                      onClick={() => {
+                        clearAdminGateFailedSessionFlag()
+                        navigate('/customer/profile')
+                      }}
+                    >
+                      המשך לתיק לקוח
+                    </Button>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
