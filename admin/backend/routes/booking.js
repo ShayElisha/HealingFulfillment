@@ -3,19 +3,45 @@ import Booking from '../models/Booking.js'
 import Customer from '../models/Customer.js'
 import { validateBooking } from '../validation/bookingValidation.js'
 import { sendIntroMeetingConfirmationEmail, sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
+import { isPreferredTimeAllowed, formatYmd } from '../services/availabilityService.js'
 
 const router = express.Router()
 
-// GET /api/booking - Get all bookings
+// GET /api/booking - Get all bookings; ?page=&limit=&status= לעימוד
 router.get('/', async (req, res, next) => {
   try {
-    const bookings = await Booking.find()
-      .sort({ createdAt: -1 })
-      .lean()
-    
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 80))
+    const skip = (page - 1) * limit
+
+    const filter = {}
+    if (req.query.status && req.query.status !== 'all') {
+      filter.status = req.query.status
+    }
+
+    if (!usePaging) {
+      const bookings = await Booking.find(filter).sort({ createdAt: -1 }).lean()
+      return res.json({
+        message: 'Bookings retrieved successfully',
+        data: bookings,
+      })
+    }
+
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Booking.countDocuments(filter),
+    ])
+
     res.json({
       message: 'Bookings retrieved successfully',
-      data: bookings
+      data: bookings,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
     })
   } catch (error) {
     console.error('Error fetching bookings:', error)
@@ -27,6 +53,8 @@ router.get('/', async (req, res, next) => {
 router.post('/', validateBooking, async (req, res, next) => {
   try {
     const { preferredDate, preferredTime } = req.body
+    const isIntroMeetingBody = req.body.isIntroMeeting === true
+    const meetingTypeBody = req.body.meetingType === 'zoom' ? 'zoom' : 'frontend'
 
     // בדוק אם יש כבר פגישה באותו תאריך ושעה (אם יש שעה)
     if (preferredDate && preferredTime) {
@@ -48,6 +76,24 @@ router.post('/', validateBooking, async (req, res, next) => {
         return res.status(400).json({
           message: 'יש כבר פגישה בתאריך ושעה זו. אנא בחר תאריך או שעה אחרת.',
           errors: [{ field: 'preferredDate', message: 'תאריך ושעה תפוסים' }]
+        })
+      }
+
+      const ymd =
+        typeof preferredDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(preferredDate.trim())
+          ? preferredDate.trim()
+          : formatYmd(new Date(preferredDate))
+
+      const allowed = await isPreferredTimeAllowed(
+        ymd,
+        preferredTime,
+        meetingTypeBody,
+        isIntroMeetingBody
+      )
+      if (!allowed) {
+        return res.status(400).json({
+          message: 'השעה שבחרת אינה זמינה לפי הגדרות היומן.',
+          errors: [{ field: 'preferredTime', message: 'שעה לא זמינה' }]
         })
       }
     } else if (preferredDate) {

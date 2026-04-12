@@ -5,25 +5,42 @@ import { sendEmail, getBaseTemplate } from '../services/emailService.js'
 
 const router = express.Router()
 
-// GET /api/messages - Get all messages (admin)
+// GET /api/messages - Get all messages (admin); ?page=&limit= לעימוד
 router.get('/', async (req, res, next) => {
   try {
-    const messages = await Message.find()
-      .populate('recipients', 'name email phone')
-      .sort({ createdAt: -1 })
-      .lean()
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(150, Math.max(1, parseInt(req.query.limit, 10) || 50))
+    const skip = (page - 1) * limit
 
-    // Ensure sendResults is always an array
-    const messagesWithSafeData = messages.map(msg => ({
+    let query = Message.find().populate('recipients', 'name email phone').sort({ createdAt: -1 })
+    if (usePaging) {
+      query = query.skip(skip).limit(limit)
+    }
+
+    const [messages, total] = await Promise.all([
+      query.lean(),
+      usePaging ? Message.countDocuments({}) : Promise.resolve(0),
+    ])
+
+    const messagesWithSafeData = messages.map((msg) => ({
       ...msg,
       sendResults: Array.isArray(msg.sendResults) ? msg.sendResults : [],
       recipients: Array.isArray(msg.recipients) ? msg.recipients : [],
-      channels: Array.isArray(msg.channels) ? msg.channels : []
+      channels: Array.isArray(msg.channels) ? msg.channels : [],
     }))
 
     res.json({
       message: 'Messages retrieved successfully',
-      data: messagesWithSafeData
+      data: messagesWithSafeData,
+      ...(usePaging && {
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.max(1, Math.ceil(total / limit)),
+        },
+      }),
     })
   } catch (error) {
     console.error('Error fetching messages:', error)

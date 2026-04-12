@@ -3,13 +3,29 @@ import Booking from '../models/Booking.js'
 import Customer from '../models/Customer.js'
 import { validateBooking } from '../validation/bookingValidation.js'
 import { sendIntroMeetingConfirmationEmail, sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
+import {
+  computeAvailabilityForDate,
+  isPreferredTimeAllowed,
+  formatYmd,
+  getPublicWorkingHoursWeek,
+} from '../services/availabilityService.js'
 
 const router = express.Router()
 
-// GET /api/booking/availability?date=YYYY-MM-DD
+// GET /api/booking/public-working-hours — שבוע לפי שעות "כללי" בניהול זמינות (לדף צור קשר)
+router.get('/public-working-hours', async (req, res, next) => {
+  try {
+    const data = await getPublicWorkingHoursWeek()
+    res.json({ data })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// GET /api/booking/availability?date=YYYY-MM-DD&meetingType=frontend|zoom&isIntroMeeting=true|false
 router.get('/availability', async (req, res, next) => {
   try {
-    const { date } = req.query
+    const { date, meetingType, isIntroMeeting } = req.query
 
     if (!date) {
       return res.status(400).json({
@@ -17,39 +33,27 @@ router.get('/availability', async (req, res, next) => {
       })
     }
 
-    const selectedDate = new Date(date)
-    if (Number.isNaN(selectedDate.getTime())) {
+    const mt = meetingType === 'zoom' ? 'zoom' : 'frontend'
+    const intro =
+      isIntroMeeting === true ||
+      isIntroMeeting === 'true' ||
+      isIntroMeeting === '1'
+
+    const computed = await computeAvailabilityForDate(String(date), mt, intro)
+
+    if (computed.error) {
       return res.status(400).json({
-        message: 'Invalid date format'
+        message: computed.error === 'Invalid date' ? 'Invalid date format' : computed.error
       })
     }
 
-    const dateStart = new Date(selectedDate)
-    dateStart.setHours(0, 0, 0, 0)
-    const dateEnd = new Date(selectedDate)
-    dateEnd.setHours(23, 59, 59, 999)
-
-    const activeBookings = await Booking.find({
-      preferredDate: {
-        $gte: dateStart,
-        $lte: dateEnd
-      },
-      status: { $in: ['pending', 'confirmed'] }
-    }).select('preferredTime')
-
-    const unavailableTimes = activeBookings
-      .map((booking) => booking.preferredTime)
-      .filter((time) => typeof time === 'string' && time.trim() !== '')
-
-    const isDateUnavailable = activeBookings.some(
-      (booking) => !booking.preferredTime || booking.preferredTime.trim() === ''
-    )
-
     res.json({
       data: {
-        date,
-        unavailableTimes,
-        isDateUnavailable
+        date: computed.date,
+        treatmentKey: computed.treatmentKey,
+        availableTimes: computed.availableTimes,
+        unavailableTimes: computed.unavailableTimes,
+        isDateUnavailable: computed.isDateUnavailable
       }
     })
   } catch (error) {
@@ -61,6 +65,9 @@ router.get('/availability', async (req, res, next) => {
 router.post('/', validateBooking, async (req, res, next) => {
   try {
     const { preferredDate, preferredTime } = req.body
+
+    const isIntroMeetingBody = req.body.isIntroMeeting === true
+    const meetingTypeBody = req.body.meetingType === 'zoom' ? 'zoom' : 'frontend'
 
     // בדוק אם יש כבר פגישה באותו תאריך ושעה (אם יש שעה)
     if (preferredDate && preferredTime) {
@@ -82,6 +89,24 @@ router.post('/', validateBooking, async (req, res, next) => {
         return res.status(400).json({
           message: 'יש כבר פגישה בתאריך ושעה זו. אנא בחר תאריך או שעה אחרת.',
           errors: [{ field: 'preferredDate', message: 'תאריך ושעה תפוסים' }]
+        })
+      }
+
+      const ymd =
+        typeof preferredDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(preferredDate.trim())
+          ? preferredDate.trim()
+          : formatYmd(new Date(preferredDate))
+
+      const allowed = await isPreferredTimeAllowed(
+        ymd,
+        preferredTime,
+        meetingTypeBody,
+        isIntroMeetingBody
+      )
+      if (!allowed) {
+        return res.status(400).json({
+          message: 'השעה שבחרת אינה זמינה יותר. אנא בחר תאריך או שעה אחרת.',
+          errors: [{ field: 'preferredTime', message: 'שעה לא זמינה' }]
         })
       }
     } else if (preferredDate) {

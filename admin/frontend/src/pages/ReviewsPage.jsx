@@ -1,27 +1,45 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { reviewService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
 import AdminPageShell from '../components/AdminPageShell'
 import PageHeader from '../components/PageHeader'
+import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
 
+const REVIEWS_PAGE_SIZE = 50
+
 function ReviewsPage() {
+  const navigate = useNavigate()
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+  const [listSummary, setListSummary] = useState(null)
   const [filterStatus, setFilterStatus] = useState('all')
 
   useEffect(() => {
+    setPage(1)
+  }, [filterStatus])
+
+  useEffect(() => {
     loadReviews()
-  }, [])
+  }, [page, filterStatus])
 
   const loadReviews = async () => {
     try {
       setLoading(true)
-      const response = await reviewService.getAll()
+      const response = await reviewService.getAll({
+        page,
+        limit: REVIEWS_PAGE_SIZE,
+        ...(filterStatus !== 'all' ? { reviewStatus: filterStatus } : {}),
+      })
       const reviewsData = response?.data || []
       setReviews(Array.isArray(reviewsData) ? reviewsData : [])
+      setPagination(response?.pagination || null)
+      setListSummary(response?.summary || null)
     } catch (error) {
       console.error('Error loading reviews:', error)
       toast.error('שגיאה בטעינת הביקורות')
@@ -41,16 +59,11 @@ function ReviewsPage() {
     }
   }
 
-  const filteredReviews = reviews.filter(review => {
-    if (filterStatus === 'all') return true
-    return review.status === filterStatus
-  })
-
-  const stats = {
-    total: reviews.length,
-    pending: reviews.filter(r => r.status === 'pending').length,
-    approved: reviews.filter(r => r.status === 'approved').length,
-    rejected: reviews.filter(r => r.status === 'rejected').length
+  const stats = listSummary || {
+    total: pagination?.total ?? reviews.length,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
   }
 
   return (
@@ -84,7 +97,10 @@ function ReviewsPage() {
             <label className="block text-sm font-medium mb-2 text-neutral-700">סטטוס</label>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setPage(1)
+                setFilterStatus(e.target.value)
+              }}
               className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
             >
               <option value="all">הכל</option>
@@ -99,15 +115,15 @@ function ReviewsPage() {
             <div className="text-center py-12">
               <p className="text-neutral-600">טוען ביקורות...</p>
             </div>
-          ) : filteredReviews.length === 0 ? (
+          ) : reviews.length === 0 ? (
             <Card>
               <p className="text-center text-neutral-500 py-8">
-                {reviews.length === 0 ? 'אין ביקורות עדיין' : 'אין ביקורות התואמות לסינון'}
+                {(listSummary?.total ?? 0) === 0 ? 'אין ביקורות עדיין' : 'אין ביקורות התואמות לסינון'}
               </p>
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredReviews.map((review) => (
+              {reviews.map((review) => (
                 <Card key={review._id} className="hover:shadow-soft-lg transition-all duration-200">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -233,6 +249,14 @@ function ReviewsPage() {
               ))}
             </div>
           )}
+
+          <AdminPager
+            page={pagination?.page ?? page}
+            pages={pagination?.pages ?? 1}
+            total={pagination?.total}
+            loading={loading}
+            onPageChange={setPage}
+          />
       </AdminPageShell>
     </>
   )

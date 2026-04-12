@@ -3,16 +3,52 @@ import Lead from '../models/Lead.js'
 
 const router = express.Router()
 
-// GET /api/leads - Get all leads (admin)
+// GET /api/leads - Get all leads (admin); ?page=&limit=&status=
 router.get('/', async (req, res, next) => {
   try {
-    const leads = await Lead.find()
-      .sort({ createdAt: -1 })
-      .lean()
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 60))
+    const skip = (page - 1) * limit
+
+    const st = String(req.query.status || 'all').trim()
+    const listFilter = {}
+    if (st !== 'all') listFilter.status = st
+
+    if (!usePaging) {
+      const leads = await Lead.find(listFilter).sort({ createdAt: -1 }).lean()
+      return res.json({
+        message: 'Leads retrieved successfully',
+        data: leads,
+      })
+    }
+
+    const [leads, total, totalAll, newC, contactedC, convertedC, notInterestedC] = await Promise.all([
+      Lead.find(listFilter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Lead.countDocuments(listFilter),
+      Lead.countDocuments({}),
+      Lead.countDocuments({ status: 'new' }),
+      Lead.countDocuments({ status: 'contacted' }),
+      Lead.countDocuments({ status: 'converted' }),
+      Lead.countDocuments({ status: 'not_interested' }),
+    ])
 
     res.json({
       message: 'Leads retrieved successfully',
-      data: leads
+      data: leads,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+      summary: {
+        total: totalAll,
+        new: newC,
+        contacted: contactedC,
+        converted: convertedC,
+        not_interested: notInterestedC,
+      },
     })
   } catch (error) {
     next(error)

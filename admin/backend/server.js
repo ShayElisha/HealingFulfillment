@@ -21,6 +21,8 @@ import contactRoutes from './routes/contact.js'
 import leadsRoutes from './routes/leads.js'
 import transactionsRoutes from './routes/transactions.js'
 import forWhomAudienceAdminRoutes from './routes/forWhomAudience.js'
+import availabilitySettingsRoutes from './routes/availabilitySettings.js'
+import statsRoutes from './routes/stats.js'
 import { authenticateToken as authenticateAdminToken } from './middleware/auth.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -220,6 +222,8 @@ app.use('/api', (req, res, next) => {
 // which would otherwise be caught by /api/admin prefix
 app.use('/api', customersRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/admin', statsRoutes)
+app.use('/api/admin', availabilitySettingsRoutes)
 app.use('/api/admin', forWhomAudienceAdminRoutes)
 app.use('/api/courses', coursesRoutes)
 app.use('/api/categories', categoriesRoutes)

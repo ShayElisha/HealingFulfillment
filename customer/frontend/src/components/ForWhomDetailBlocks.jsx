@@ -1,3 +1,5 @@
+import { resolveAdminAssetUrl } from '../utils/resolveAdminAssetUrl'
+
 /**
  * רינדור בלוקי תוכן מ־detailBlocks (ציר זמן בנקודות, אודיו, תמונות).
  */
@@ -64,7 +66,7 @@ export default function ForWhomDetailBlocks({ blocks }) {
                 className="mt-4 w-full max-w-2xl"
                 controls
                 preload="metadata"
-                src={String(block.audioUrl).trim()}
+                src={resolveAdminAssetUrl(String(block.audioUrl).trim())}
               >
                 הדפדפן לא תומך בנגן האודיו.
               </audio>
@@ -87,7 +89,7 @@ export default function ForWhomDetailBlocks({ blocks }) {
                 {items.map((img, j) => (
                   <figure key={`${key}-${j}`} className="overflow-hidden rounded-xl border border-neutral-200/80 bg-neutral-50 shadow-sm">
                     <img
-                      src={String(img.url).trim()}
+                      src={resolveAdminAssetUrl(String(img.url).trim())}
                       alt={img.caption?.trim() || ''}
                       className="h-auto w-full object-cover"
                       loading="lazy"

@@ -1,16 +1,55 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import { useContact } from '../context/ContactContext'
+import { bookingService } from '../services/api'
+
+const FALLBACK_HOURS_LINES = [
+  'ראשון - חמישי: 9:00 - 20:00',
+  'שישי: 9:00 - 14:00',
+  'שבת: סגור',
+]
 
 function ContactPage() {
   const { openContactModal } = useContact()
+  const [hoursLines, setHoursLines] = useState(null)
+  const [hoursLoading, setHoursLoading] = useState(true)
 
   useEffect(() => {
     window.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setHoursLoading(true)
+        const res = await bookingService.getPublicWorkingHours()
+        const days = res?.data?.days
+        if (cancelled || !Array.isArray(days) || days.length === 0) {
+          if (!cancelled) setHoursLines(null)
+          return
+        }
+        const lines = days.map((d) => {
+          if (d.closed) {
+            return `${d.dayLabel}: סגור`
+          }
+          const part = (d.intervals || []).map((i) => i.display || `${i.start} – ${i.end}`).join(' · ')
+          return `${d.dayLabel}: ${part}`
+        })
+        if (!cancelled) setHoursLines(lines)
+      } catch {
+        if (!cancelled) setHoursLines(null)
+      } finally {
+        if (!cancelled) setHoursLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (
@@ -128,11 +167,22 @@ function ContactPage() {
               <h3 className="text-lg font-semibold text-neutral-900 mb-2">
                 שעות פעילות
               </h3>
-              <p className="text-neutral-600">
-                ראשון - חמישי: 9:00 - 20:00<br />
-                שישי: 9:00 - 14:00<br />
-                שבת: סגור
+              <p className="text-neutral-600 text-sm mb-2">
+                לפי הגדרות קביעת הפגישות (שעות כלליות). חריגים לסוג פגישה מסוים אינם מוצגים כאן.
               </p>
+              {hoursLoading ? (
+                <p className="text-neutral-500">טוען שעות…</p>
+              ) : (
+                <div className="text-neutral-600">
+                  {(hoursLines && hoursLines.length > 0 ? hoursLines : FALLBACK_HOURS_LINES).map(
+                    (line, i) => (
+                      <span key={i} className="block">
+                        {line}
+                      </span>
+                    )
+                  )}
+                </div>
+              )}
             </div>
           </AnimatedSection>
         </div>

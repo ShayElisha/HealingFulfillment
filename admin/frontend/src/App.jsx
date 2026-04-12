@@ -18,6 +18,7 @@ const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
 const LeadsPage = lazy(() => import('./pages/LeadsPage'))
 const TransactionsPage = lazy(() => import('./pages/TransactionsPage'))
 const ForWhomAudiencePage = lazy(() => import('./pages/ForWhomAudiencePage'))
+const AvailabilityPage = lazy(() => import('./pages/AvailabilityPage'))
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 
@@ -121,6 +122,7 @@ function App() {
                   <Route path="/customer/:id" element={<CustomerPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/bookings" element={<BookingsPage />} />
+                  <Route path="/availability" element={<AvailabilityPage />} />
                   <Route path="/contacts" element={<ContactsPage />} />
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/reviews" element={<ReviewsPage />} />

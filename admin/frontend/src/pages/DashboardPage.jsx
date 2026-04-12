@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { categoryService, courseService, purchaseService, bookingService, contactService, reviewService, transactionService } from '../services/adminApi'
-import { customerService } from '../services/customerApi'
+import { statsService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
@@ -25,22 +24,48 @@ function DashboardPage() {
     transactions: { totalIncome: 0, totalExpense: 0, balance: 0 }
   })
 
+  const loadDashboardData = useCallback(
+    async ({ silent = false } = {}) => {
+      try {
+        if (!silent) setLoading(true)
+        const params = {}
+        if (dateRange.startDate) params.startDate = dateRange.startDate
+        if (dateRange.endDate) params.endDate = dateRange.endDate
+        const res = await statsService.getDashboard(params)
+        const d = res?.data
+        if (!d) throw new Error('אין נתונים מהשרת')
+        setStats({
+          customers: d.customers,
+          bookings: d.bookings,
+          purchases: d.purchases,
+          reviews: d.reviews,
+          contacts: d.contacts,
+          transactions: d.transactions,
+        })
+        setReviews(Array.isArray(d.pendingReviewsPreview) ? d.pendingReviewsPreview : [])
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+        console.error('Error details:', error.response?.data || error.message)
+        if (!silent) {
+          toast.error(`שגיאה בטעינת נתוני הדאשבורד: ${error.response?.data?.message || error.message}`)
+        }
+      } finally {
+        if (!silent) setLoading(false)
+      }
+    },
+    [dateRange.startDate, dateRange.endDate]
+  )
+
   useEffect(() => {
-    loadDashboardData()
-    // Refresh data every 30 seconds
-    const interval = setInterval(loadDashboardData, 30000)
-    
-    // Refresh data when window gains focus (user returns to tab)
-    const handleFocus = () => {
-      loadDashboardData()
-    }
+    loadDashboardData({ silent: false })
+    const interval = setInterval(() => loadDashboardData({ silent: true }), 30000)
+    const handleFocus = () => loadDashboardData({ silent: true })
     window.addEventListener('focus', handleFocus)
-    
     return () => {
       clearInterval(interval)
       window.removeEventListener('focus', handleFocus)
     }
-  }, [dateRange])
+  }, [loadDashboardData])
 
   // Close date picker when clicking outside
   useEffect(() => {
@@ -52,200 +77,6 @@ function DashboardPage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showDatePicker])
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
-      const [
-        customersRes,
-        bookingsRes,
-        purchasesRes,
-        reviewsRes,
-        contactsRes,
-        transactionsStatsRes
-      ] = await Promise.all([
-        customerService.getAll({
-          page: 1,
-          limit: 1,
-          startDate: dateRange.startDate || undefined,
-          endDate: dateRange.endDate || undefined
-        }),
-        bookingService.getAll(),
-        purchaseService.getAll(),
-        reviewService.getAll(),
-        contactService.getAll(),
-        transactionService.getStats(dateRange.startDate || dateRange.endDate ? {
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate
-        } : {}).catch((err) => {
-          console.error('❌ Error fetching transaction stats:', err)
-          console.error('❌ Error details:', err.response?.data || err.message)
-          return { data: { totalIncome: 0, totalExpense: 0, balance: 0 } }
-        })
-      ])
-
-      let customers = customersRes?.data || []
-      let bookings = bookingsRes?.data || []
-      let purchases = purchasesRes?.data || []
-      let reviewsData = reviewsRes?.data || []
-      let contacts = contactsRes?.data || []
-      const customersMeta = customersRes?.meta || {}
-      
-      // Filter by date range if selected
-      if (dateRange.startDate || dateRange.endDate) {
-        const startDate = dateRange.startDate ? new Date(dateRange.startDate) : null
-        const endDate = dateRange.endDate ? new Date(dateRange.endDate) : null
-        
-        if (startDate) {
-          startDate.setHours(0, 0, 0, 0)
-        }
-        if (endDate) {
-          endDate.setHours(23, 59, 59, 999)
-        }
-
-        // Filter bookings by preferredDate
-        if (startDate || endDate) {
-          bookings = bookings.filter(b => {
-            const bookingDate = new Date(b.preferredDate)
-            if (startDate && bookingDate < startDate) return false
-            if (endDate && bookingDate > endDate) return false
-            return true
-          })
-        }
-
-        // Filter purchases by createdAt
-        if (startDate || endDate) {
-          purchases = purchases.filter(p => {
-            const purchaseDate = new Date(p.createdAt)
-            if (startDate && purchaseDate < startDate) return false
-            if (endDate && purchaseDate > endDate) return false
-            return true
-          })
-        }
-
-        // Filter contacts by createdAt
-        if (startDate || endDate) {
-          contacts = contacts.filter(c => {
-            if (!c.createdAt) return false
-            const contactDate = new Date(c.createdAt)
-            if (startDate && contactDate < startDate) return false
-            if (endDate && contactDate > endDate) return false
-            return true
-          })
-        }
-
-        // Filter reviews by createdAt
-        if (startDate || endDate) {
-          reviewsData = reviewsData.filter(r => {
-            if (!r.createdAt) return false
-            const reviewDate = new Date(r.createdAt)
-            if (startDate && reviewDate < startDate) return false
-            if (endDate && reviewDate > endDate) return false
-            return true
-          })
-        }
-      }
-      
-      setReviews(Array.isArray(reviewsData) ? reviewsData : [])
-
-      // Calculate upcoming bookings (next 7 days)
-      const today = new Date()
-      const nextWeek = new Date(today)
-      nextWeek.setDate(today.getDate() + 7)
-      
-      const upcomingBookings = bookings
-        .filter(b => {
-          const bookingDate = new Date(b.preferredDate)
-          return bookingDate >= today && bookingDate <= nextWeek && 
-                 (b.status === 'pending' || b.status === 'confirmed')
-        })
-        .sort((a, b) => new Date(a.preferredDate) - new Date(b.preferredDate))
-        .slice(0, 5)
-
-      // Calculate stats
-      const completedPurchases = purchases.filter(p => p.status === 'completed')
-      const revenue = completedPurchases.reduce((sum, p) => sum + (p.price || 0), 0)
-
-      const approvedReviews = reviewsData.filter(r => r.status === 'approved')
-      const averageRating = approvedReviews.length > 0
-        ? approvedReviews.reduce((sum, r) => sum + r.rating, 0) / approvedReviews.length
-        : 0
-
-      // Calculate revenue growth (last 30 days vs previous 30 days)
-      // Calculate revenue growth only if no date filter is applied
-      let revenueGrowth = 0
-      if (!dateRange.startDate && !dateRange.endDate) {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        const sixtyDaysAgo = new Date()
-        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
-        
-        const recentRevenue = completedPurchases
-          .filter(p => new Date(p.createdAt) >= thirtyDaysAgo)
-          .reduce((sum, p) => sum + (p.price || 0), 0)
-        
-        const previousRevenue = completedPurchases
-          .filter(p => {
-            const date = new Date(p.createdAt)
-            return date >= sixtyDaysAgo && date < thirtyDaysAgo
-          })
-          .reduce((sum, p) => sum + (p.price || 0), 0)
-        
-        revenueGrowth = previousRevenue > 0 
-          ? ((recentRevenue - previousRevenue) / previousRevenue * 100).toFixed(1)
-          : recentRevenue > 0 ? 100 : 0
-      }
-
-      setStats({
-        customers: {
-          total: customersMeta.total ?? customers.length,
-          active: customersMeta.activeCount ?? customers.filter(c => c.hasAccount === true).length,
-          new: customersMeta.newLast7Days ?? customers.filter(c => {
-            if (!c.createdAt) return false
-            const createdDate = new Date(c.createdAt)
-            const weekAgo = new Date()
-            weekAgo.setDate(weekAgo.getDate() - 7)
-            return createdDate >= weekAgo
-          }).length
-        },
-        bookings: {
-          total: bookings.length,
-          pending: bookings.filter(b => b.status === 'pending').length,
-          confirmed: bookings.filter(b => b.status === 'confirmed').length,
-          completed: bookings.filter(b => b.status === 'completed').length,
-          upcoming: upcomingBookings
-        },
-        purchases: {
-          total: purchases.length,
-          pending: purchases.filter(p => p.status === 'pending').length,
-          completed: completedPurchases.length,
-          revenue: revenue,
-          revenueGrowth: parseFloat(revenueGrowth)
-        },
-        reviews: {
-          total: reviewsData.length,
-          pending: reviewsData.filter(r => r.status === 'pending').length,
-          approved: approvedReviews.length,
-          averageRating: Math.round(averageRating * 10) / 10
-        },
-        contacts: {
-          total: contacts.length,
-          unread: contacts.filter(c => !c.isRead).length
-        },
-        transactions: {
-          totalIncome: transactionsStatsRes?.data?.totalIncome || 0,
-          totalExpense: transactionsStatsRes?.data?.totalExpense || 0,
-          balance: transactionsStatsRes?.data?.balance || 0
-        }
-      })
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-      console.error('Error details:', error.response?.data || error.message)
-      toast.error(`שגיאה בטעינת נתוני הדאשבורד: ${error.response?.data?.message || error.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const StatCard = ({ title, value, subtitle, icon, gradient, trend, trendValue, onClick }) => (
     <div
@@ -743,14 +574,14 @@ function DashboardPage() {
                       צפה בכל →
                     </Button>
                   </div>
-                  {stats.reviews.pending === 0 ? (
+                  {reviews.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="text-5xl mb-4">⭐</div>
                       <p className="text-neutral-500">אין ביקורות ממתינות</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {reviews.filter(r => r.status === 'pending').slice(0, 3).map((review) => (
+                      {reviews.map((review) => (
                         <div
                           key={review._id}
                           className="p-4 bg-gradient-to-r from-neutral-50 to-white rounded-xl hover:from-amber-50/50 hover:to-amber-50/30 cursor-pointer transition-all duration-200 border border-neutral-200 hover:border-amber-200 hover:shadow-soft transform hover:-translate-y-0.5"

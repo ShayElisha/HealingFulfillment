@@ -7,24 +7,41 @@ import PageHeader from '../components/PageHeader'
 import AdminModalLayout from '../components/AdminModalLayout'
 import EmptyState from '../components/EmptyState'
 import Button from '../components/Button'
+import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
+
+const CONTACTS_PAGE_SIZE = 50
 
 function ContactsPage() {
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+  const [listSummary, setListSummary] = useState(null)
   const [selectedContact, setSelectedContact] = useState(null)
   const [readFilter, setReadFilter] = useState('all')
 
   useEffect(() => {
+    setPage(1)
+  }, [readFilter])
+
+  useEffect(() => {
     loadContacts()
-  }, [])
+  }, [page, readFilter])
 
   const loadContacts = async () => {
     try {
       setLoading(true)
-      const response = await contactService.getAll()
-      const contactsData = response?.data || response || []
+      const readParam = readFilter === 'unread' ? 'unread' : readFilter === 'read' ? 'read' : 'all'
+      const response = await contactService.getAll({
+        page,
+        limit: CONTACTS_PAGE_SIZE,
+        read: readParam,
+      })
+      const contactsData = response?.data || []
       setContacts(Array.isArray(contactsData) ? contactsData : [])
+      setPagination(response?.pagination || null)
+      setListSummary(response?.summary || null)
     } catch (error) {
       console.error('Error loading contacts:', error)
       toast.error('שגיאה בטעינת הפניות')
@@ -39,14 +56,13 @@ function ContactsPage() {
     if (!contact.isRead) {
       try {
         await contactService.markAsRead(contact._id)
-        // עדכן את הרשימה המקומית
         setContacts(contacts.map(c => 
           c._id === contact._id 
             ? { ...c, isRead: true, readAt: new Date() }
             : c
         ))
-        // עדכן גם את הפנייה הנבחרת
         setSelectedContact({ ...contact, isRead: true, readAt: new Date() })
+        await loadContacts()
       } catch (error) {
         console.error('Error marking contact as read:', error)
         toast.error('שגיאה בסימון הפנייה כנקראה')
@@ -68,6 +84,7 @@ function ContactsPage() {
         setSelectedContact({ ...selectedContact, isRead: true, readAt: new Date() })
       }
       toast.success('הפנייה סומנה כנקראה')
+      await loadContacts()
     } catch (error) {
       console.error('Error marking contact as read:', error)
       toast.error('שגיאה בסימון הפנייה כנקראה')
@@ -86,26 +103,11 @@ function ContactsPage() {
     })
   }
 
-  const filteredContacts = contacts.filter((c) => {
-    if (readFilter === 'unread') return !c.isRead
-    if (readFilter === 'read') return c.isRead
-    return true
-  })
-
-  const stats = {
-    total: contacts.length,
-    unread: contacts.filter(c => !c.isRead).length,
-    today: contacts.filter(c => {
-      const contactDate = new Date(c.createdAt)
-      const today = new Date()
-      return contactDate.toDateString() === today.toDateString()
-    }).length,
-    thisWeek: contacts.filter(c => {
-      const contactDate = new Date(c.createdAt)
-      const weekAgo = new Date()
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      return contactDate >= weekAgo
-    }).length
+  const stats = listSummary || {
+    total: pagination?.total ?? contacts.length,
+    unread: 0,
+    today: 0,
+    thisWeek: 0,
   }
 
   return (
@@ -159,21 +161,23 @@ function ContactsPage() {
               </div>
             </Card>
           ) : contacts.length === 0 ? (
-            <EmptyState
-              icon="📧"
-              title="אין פניות עדיין"
-              description="כאשר ממלאים טופס יצירת קשר באתר, הפניות יופיעו כאן."
-            />
-          ) : filteredContacts.length === 0 ? (
-            <EmptyState
-              icon="🔎"
-              title="אין תוצאות"
-              description="נסו לשנות את מסנן הסטטוס."
-            >
-              <Button type="button" variant="soft" onClick={() => setReadFilter('all')}>
-                הצג הכל
-              </Button>
-            </EmptyState>
+            readFilter === 'all' && (listSummary?.total ?? pagination?.total ?? 0) === 0 ? (
+              <EmptyState
+                icon="📧"
+                title="אין פניות עדיין"
+                description="כאשר ממלאים טופס יצירת קשר באתר, הפניות יופיעו כאן."
+              />
+            ) : (
+              <EmptyState
+                icon="🔎"
+                title="אין תוצאות"
+                description="נסו לשנות את מסנן הסטטוס."
+              >
+                <Button type="button" variant="soft" onClick={() => setReadFilter('all')}>
+                  הצג הכל
+                </Button>
+              </EmptyState>
+            )
           ) : (
             <div className="admin-table-wrap">
               <table className="admin-table min-w-[720px]">
@@ -189,7 +193,7 @@ function ContactsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredContacts.map((contact) => (
+                    {contacts.map((contact) => (
                       <tr
                         key={contact._id}
                         className={!contact.isRead ? 'bg-red-50/25' : ''}
@@ -268,6 +272,14 @@ function ContactsPage() {
                 </table>
             </div>
           )}
+
+          <AdminPager
+            page={pagination?.page ?? page}
+            pages={pagination?.pages ?? 1}
+            total={pagination?.total}
+            loading={loading}
+            onPageChange={setPage}
+          />
 
           {/* Contact Detail Modal */}
           {selectedContact && (

@@ -7,26 +7,42 @@ import AdminPageShell from '../components/AdminPageShell'
 import PageHeader from '../components/PageHeader'
 import AdminModalLayout from '../components/AdminModalLayout'
 import Button from '../components/Button'
+import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
+
+const LEADS_PAGE_SIZE = 50
 
 function LeadsPage() {
   const navigate = useNavigate()
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+  const [listSummary, setListSummary] = useState(null)
   const [selectedLead, setSelectedLead] = useState(null)
   const [filterStatus, setFilterStatus] = useState('all')
   const [adminNotes, setAdminNotes] = useState('')
 
   useEffect(() => {
+    setPage(1)
+  }, [filterStatus])
+
+  useEffect(() => {
     loadLeads()
-  }, [])
+  }, [page, filterStatus])
 
   const loadLeads = async () => {
     try {
       setLoading(true)
-      const response = await leadService.getAll()
-      const leadsData = response?.data || response || []
+      const response = await leadService.getAll({
+        page,
+        limit: LEADS_PAGE_SIZE,
+        ...(filterStatus !== 'all' ? { status: filterStatus } : {}),
+      })
+      const leadsData = response?.data || []
       setLeads(Array.isArray(leadsData) ? leadsData : [])
+      setPagination(response?.pagination || null)
+      setListSummary(response?.summary || null)
     } catch (error) {
       console.error('Error loading leads:', error)
       toast.error('שגיאה בטעינת הלידים')
@@ -93,16 +109,12 @@ function LeadsPage() {
     }
   }
 
-  const filteredLeads = filterStatus === 'all' 
-    ? leads 
-    : leads.filter(lead => lead.status === filterStatus)
-
-  const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === 'new').length,
-    contacted: leads.filter(l => l.status === 'contacted').length,
-    converted: leads.filter(l => l.status === 'converted').length,
-    notInterested: leads.filter(l => l.status === 'not_interested').length
+  const stats = listSummary || {
+    total: pagination?.total ?? leads.length,
+    new: 0,
+    contacted: 0,
+    converted: 0,
+    not_interested: 0,
   }
 
   return (
@@ -209,7 +221,7 @@ function LeadsPage() {
                     : 'bg-white text-neutral-700 hover:bg-neutral-50 border border-neutral-200'
                 }`}
               >
-                לא מעוניינים ({stats.notInterested})
+                לא מעוניינים ({stats.not_interested})
               </button>
             </div>
           </div>
@@ -221,15 +233,17 @@ function LeadsPage() {
                 <p className="text-neutral-600">טוען לידים...</p>
               </div>
             </Card>
-          ) : filteredLeads.length === 0 ? (
+          ) : leads.length === 0 ? (
             <Card>
               <div className="text-center py-12">
-                <p className="text-neutral-600">אין לידים עדיין</p>
+                <p className="text-neutral-600">
+                  {(listSummary?.total ?? 0) === 0 ? 'אין לידים עדיין' : 'אין לידים במסנן זה'}
+                </p>
               </div>
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredLeads.map((lead) => (
+              {leads.map((lead) => (
                 <Card 
                   key={lead._id}
                   className="hover:shadow-soft-lg transition-all duration-200 cursor-pointer"
@@ -281,6 +295,14 @@ function LeadsPage() {
               ))}
             </div>
           )}
+
+          <AdminPager
+            page={pagination?.page ?? page}
+            pages={pagination?.pages ?? 1}
+            total={pagination?.total}
+            loading={loading}
+            onPageChange={setPage}
+          />
 
           {/* Lead Detail Modal */}
           {selectedLead && (

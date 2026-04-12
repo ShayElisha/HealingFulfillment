@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { usePurchase } from '../context/PurchaseContext'
 import { coursesService } from '../services/coursesApi'
 import { purchaseService } from '../services/purchaseApi'
@@ -15,10 +17,10 @@ function PurchaseModal() {
   const [purchaseForm, setPurchaseForm] = useState({
     customerName: '',
     customerEmail: '',
-    customerPhone: '',
     paymentMethod: 'other',
     notes: ''
   })
+  const [phone, setPhone] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -52,10 +54,10 @@ function PurchaseModal() {
     setPurchaseForm({
       customerName: '',
       customerEmail: '',
-      customerPhone: '',
       paymentMethod: 'other',
       notes: ''
     })
+    setPhone('')
   }
 
   const handleBackToSelect = () => {
@@ -65,12 +67,31 @@ function PurchaseModal() {
 
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault()
+
+    const trimmedEmail = purchaseForm.customerEmail.trim()
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!trimmedEmail) {
+      toast.error('אנא הזן כתובת אימייל.')
+      return
+    }
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error('אנא הזן כתובת אימייל תקינה.')
+      return
+    }
+    if (!phone || !isValidPhoneNumber(phone)) {
+      toast.error('אנא הזן מספר טלפון תקין כולל קידומת מדינה.')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       const response = await purchaseService.createCheckout({
         courseId: selectedCourseForPurchase._id,
-        ...purchaseForm
+        ...purchaseForm,
+        customerEmail: trimmedEmail,
+        customerPhone: phone
       })
 
       const checkoutUrl = response?.data?.checkoutUrl
@@ -322,21 +343,22 @@ function PurchaseModal() {
                       required
                       value={purchaseForm.customerEmail}
                       onChange={(e) => setPurchaseForm({ ...purchaseForm, customerEmail: e.target.value })}
+                      pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                       className="w-full px-4 py-2 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       placeholder="הזן כתובת אימייל"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-neutral-900">
+                    <label className="block text-sm font-medium mb-2 text-neutral-900" htmlFor="purchase-phone">
                       טלפון *
                     </label>
-                    <input
-                      type="tel"
-                      required
-                      value={purchaseForm.customerPhone}
-                      onChange={(e) => setPurchaseForm({ ...purchaseForm, customerPhone: e.target.value })}
-                      className="w-full px-4 py-2 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="הזן מספר טלפון"
+                    <PhoneInput
+                      id="purchase-phone"
+                      international
+                      defaultCountry="IL"
+                      value={phone}
+                      onChange={setPhone}
+                      className="w-full px-4 py-2 rounded-lg border border-neutral-300 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent"
                     />
                   </div>
                   <div>

@@ -65,9 +65,20 @@ export const courseService = {
   },
 }
 
+export const statsService = {
+  getNavCounts: async () => {
+    const response = await api.get('/admin/stats/nav-counts')
+    return response.data
+  },
+  getDashboard: async (params = {}) => {
+    const response = await api.get('/admin/stats/dashboard', { params })
+    return response.data
+  },
+}
+
 export const purchaseService = {
-  getAll: async () => {
-    const response = await api.get('/admin/purchases')
+  getAll: async (params = {}) => {
+    const response = await api.get('/admin/purchases', { params })
     return response.data
   },
   create: async (data) => {
@@ -81,8 +92,8 @@ export const purchaseService = {
 }
 
 export const bookingService = {
-  getAll: async () => {
-    const response = await api.get('/admin/bookings')
+  getAll: async (params = {}) => {
+    const response = await api.get('/admin/bookings', { params })
     return response.data
   },
   create: async (data) => {
@@ -103,9 +114,23 @@ export const bookingService = {
   },
 }
 
+/** תצוגת יום לפי מערכת הזמינות (כמו אצל הלקוח) */
+export const availabilityPreviewService = {
+  getDay: async ({ date, meetingType = 'frontend', isIntroMeeting = false }) => {
+    const response = await api.get('/admin/availability/preview', {
+      params: {
+        date,
+        meetingType,
+        isIntroMeeting: isIntroMeeting ? 'true' : 'false',
+      },
+    })
+    return response.data
+  },
+}
+
 export const contactService = {
-  getAll: async () => {
-    const response = await api.get('/contact')
+  getAll: async (params = {}) => {
+    const response = await api.get('/contact', { params })
     return response.data
   },
   markAsRead: async (id) => {
@@ -115,8 +140,8 @@ export const contactService = {
 }
 
 export const messageService = {
-  getAll: async () => {
-    const response = await api.get('/messages')
+  getAll: async (params = {}) => {
+    const response = await api.get('/messages', { params })
     return response.data
   },
   getById: async (id) => {
@@ -134,8 +159,8 @@ export const messageService = {
 }
 
 export const reviewService = {
-  getAll: async () => {
-    const response = await api.get('/reviews/admin/all')
+  getAll: async (params = {}) => {
+    const response = await api.get('/reviews/admin/all', { params })
     return response.data
   },
   updateStatus: async (id, status) => {
@@ -145,8 +170,8 @@ export const reviewService = {
 }
 
 export const leadService = {
-  getAll: async () => {
-    const response = await api.get('/leads')
+  getAll: async (params = {}) => {
+    const response = await api.get('/leads', { params })
     return response.data
   },
   getById: async (id) => {
@@ -198,6 +223,58 @@ export const forWhomAudienceService = {
   },
   seed: async () => {
     const response = await api.post('/admin/for-whom-audience/seed')
+    return response.data
+  },
+}
+
+export const availabilitySettingsService = {
+  getTreatmentTypes: async () => {
+    const response = await api.get('/admin/availability/treatment-types')
+    return response.data
+  },
+  updateTreatmentType: async (id, data) => {
+    const response = await api.put(`/admin/availability/treatment-types/${id}`, data)
+    return response.data
+  },
+  getWorkingHours: async () => {
+    const response = await api.get('/admin/availability/working-hours')
+    return response.data
+  },
+  addWorkingHours: async (data) => {
+    const response = await api.post('/admin/availability/working-hours', data)
+    return response.data
+  },
+  deleteWorkingHours: async (id) => {
+    const response = await api.delete(`/admin/availability/working-hours/${id}`)
+    return response.data
+  },
+  getBlocks: async () => {
+    const response = await api.get('/admin/availability/blocks')
+    return response.data
+  },
+  addBlock: async (data) => {
+    const response = await api.post('/admin/availability/blocks', data)
+    return response.data
+  },
+  deleteBlock: async (id) => {
+    const response = await api.delete(`/admin/availability/blocks/${id}`)
+    return response.data
+  },
+  getTimeOff: async () => {
+    const response = await api.get('/admin/availability/time-off')
+    return response.data
+  },
+  addTimeOff: async (data) => {
+    const response = await api.post('/admin/availability/time-off', data)
+    return response.data
+  },
+  deleteTimeOff: async (id) => {
+    const response = await api.delete(`/admin/availability/time-off/${id}`)
+    return response.data
+  },
+  preview: async (params) => {
+    const qs = new URLSearchParams(params).toString()
+    const response = await api.get(`/admin/availability/preview?${qs}`)
     return response.data
   },
 }

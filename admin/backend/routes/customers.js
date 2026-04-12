@@ -70,14 +70,19 @@ function handleMulterAudioUpload(req, res, next) {
 // GET /api/admin/customers - Get all customers
 router.get('/admin/customers', async (req, res, next) => {
   try {
+    const forLookup = req.query.forLookup === '1' || req.query.forLookup === 'true'
     const hasPagingParams = req.query.page !== undefined || req.query.limit !== undefined
     const pageRaw = Number.parseInt(req.query.page, 10)
     const limitRaw = Number.parseInt(req.query.limit, 10)
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 25
-    const includeDetails = hasPagingParams
+    const maxLimit = forLookup ? 1000 : 200
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, maxLimit) : 25
+    let includeDetails = hasPagingParams
       ? req.query.includeDetails === '1' || req.query.includeDetails === 'true'
       : true
+    if (forLookup) {
+      includeDetails = false
+    }
     const skip = (page - 1) * limit
 
     const filter = { isAdmin: { $ne: true } }
@@ -98,9 +103,11 @@ router.get('/admin/customers', async (req, res, next) => {
     }
     if (createdAt.$gte || createdAt.$lte) filter.createdAt = createdAt
 
-    let query = Customer.find(filter)
-      .sort({ createdAt: -1 })
-      .select('name email phone status hasAccount files bookings purchases createdAt caseOpenedAt accountCreatedAt lastLoginAt mustChangePassword')
+    const selectFields = forLookup
+      ? 'name email phone'
+      : 'name email phone status hasAccount files bookings purchases createdAt caseOpenedAt accountCreatedAt lastLoginAt mustChangePassword'
+
+    let query = Customer.find(filter).sort({ createdAt: -1 }).select(selectFields)
 
     if (hasPagingParams) {
       query = query.skip(skip).limit(limit)

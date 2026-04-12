@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { authService } from '../services/authApi'
+import { takeAdminLogoutRedirectFlag } from '../utils/adminLogoutSync'
 
 const AuthContext = createContext()
 
@@ -47,6 +48,15 @@ export const AuthProvider = ({ children }) => {
   )
 
   useEffect(() => {
+    if (takeAdminLogoutRedirectFlag()) {
+      localStorage.removeItem('authToken')
+      setToken(null)
+      setUser(null)
+      setIsAuthenticated(false)
+      setLoading(false)
+      return
+    }
+
     const storedToken = localStorage.getItem('authToken')
     if (storedToken) {
       setToken(storedToken)

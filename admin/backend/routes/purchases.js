@@ -154,16 +154,39 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-// GET /api/purchases - Get all purchases (admin)
+// GET /api/purchases - Get all purchases (admin); ?page=&limit= לעימוד
 router.get('/', async (req, res, next) => {
   try {
-    const purchases = await Purchase.find()
-      .populate('course', 'title price')
-      .sort({ createdAt: -1 })
-    
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 80))
+    const skip = (page - 1) * limit
+
+    const base = () =>
+      Purchase.find().populate('course', 'title price').sort({ createdAt: -1 })
+
+    if (!usePaging) {
+      const purchases = await base().lean()
+      return res.json({
+        message: 'Purchases retrieved successfully',
+        data: purchases,
+      })
+    }
+
+    const [purchases, total] = await Promise.all([
+      base().skip(skip).limit(limit).lean(),
+      Purchase.countDocuments({}),
+    ])
+
     res.json({
       message: 'Purchases retrieved successfully',
-      data: purchases
+      data: purchases,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
     })
   } catch (error) {
     next(error)

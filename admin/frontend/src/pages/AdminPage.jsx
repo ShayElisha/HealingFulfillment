@@ -1,6 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { categoryService, courseService, purchaseService, bookingService } from '../services/adminApi'
+import {
+  categoryService,
+  courseService,
+  purchaseService,
+  bookingService,
+  availabilityPreviewService,
+} from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Section from '../components/Section'
 import Card from '../components/Card'
@@ -293,6 +299,54 @@ function AdminPage() {
     status: 'pending',
     isIntroMeeting: false // false = פגישה רגילה, true = פגישת היכרות
   })
+
+  const [adminBookingAvailability, setAdminBookingAvailability] = useState({
+    availableTimes: [],
+    isDateUnavailable: false,
+  })
+  const [loadingAdminBookingAvailability, setLoadingAdminBookingAvailability] = useState(false)
+  const [adminBookingAvailabilityError, setAdminBookingAvailabilityError] = useState(false)
+
+  useEffect(() => {
+    if (!bookingForm.preferredDate) {
+      setAdminBookingAvailabilityError(false)
+      setAdminBookingAvailability({ availableTimes: [], isDateUnavailable: false })
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoadingAdminBookingAvailability(true)
+        setAdminBookingAvailabilityError(false)
+        const res = await availabilityPreviewService.getDay({
+          date: bookingForm.preferredDate,
+          meetingType: bookingForm.meetingType,
+          isIntroMeeting: bookingForm.isIntroMeeting,
+        })
+        if (cancelled) return
+        const d = res?.data || {}
+        if (d.error) {
+          setAdminBookingAvailability({ availableTimes: [], isDateUnavailable: true })
+          return
+        }
+        setAdminBookingAvailability({
+          availableTimes: Array.isArray(d.availableTimes) ? d.availableTimes : [],
+          isDateUnavailable: Boolean(d.isDateUnavailable),
+        })
+      } catch (err) {
+        console.error('Admin availability preview:', err)
+        if (!cancelled) {
+          setAdminBookingAvailabilityError(true)
+          setAdminBookingAvailability({ availableTimes: [], isDateUnavailable: false })
+        }
+      } finally {
+        if (!cancelled) setLoadingAdminBookingAvailability(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingForm.preferredDate, bookingForm.meetingType, bookingForm.isIntroMeeting])
 
   useEffect(() => {
     loadData()
@@ -663,6 +717,24 @@ function AdminPage() {
       if (!bookingForm.preferredDate) {
         toast.error('אנא בחר תאריך מועדף')
         return
+      }
+
+      if (adminBookingAvailabilityError) {
+        toast.error('לא ניתן לטעון זמינות. נסה שוב או בחר תאריך אחר.')
+        return
+      }
+      if (adminBookingAvailability.isDateUnavailable) {
+        toast.error('התאריך שבחרת אינו זמין לפי מערכת הזמינות.')
+        return
+      }
+      if (bookingForm.preferredTime) {
+        if (
+          adminBookingAvailability.availableTimes.length === 0 ||
+          !adminBookingAvailability.availableTimes.includes(bookingForm.preferredTime)
+        ) {
+          toast.error('השעה שבחרת אינה זמינה. בחר שעה מהרשימה.')
+          return
+        }
       }
 
       // אם נבחר לקוח קיים, השתמש בפרטיו
@@ -1675,7 +1747,13 @@ function AdminPage() {
                               name="meetingType"
                               value="frontend"
                               checked={bookingForm.meetingType === 'frontend'}
-                              onChange={(e) => setBookingForm({ ...bookingForm, meetingType: e.target.value })}
+                              onChange={(e) =>
+                                setBookingForm({
+                                  ...bookingForm,
+                                  meetingType: e.target.value,
+                                  preferredTime: '',
+                                })
+                              }
                               className="sr-only"
                             />
                             <div className="flex items-center gap-3 w-full">
@@ -1704,7 +1782,13 @@ function AdminPage() {
                               name="meetingType"
                               value="zoom"
                               checked={bookingForm.meetingType === 'zoom'}
-                              onChange={(e) => setBookingForm({ ...bookingForm, meetingType: e.target.value })}
+                              onChange={(e) =>
+                                setBookingForm({
+                                  ...bookingForm,
+                                  meetingType: e.target.value,
+                                  preferredTime: '',
+                                })
+                              }
                               className="sr-only"
                             />
                             <div className="flex items-center gap-3 w-full">
@@ -1735,10 +1819,31 @@ function AdminPage() {
                             type="date"
                             required
                             value={bookingForm.preferredDate}
-                            onChange={(e) => setBookingForm({ ...bookingForm, preferredDate: e.target.value })}
+                            onChange={(e) =>
+                              setBookingForm({
+                                ...bookingForm,
+                                preferredDate: e.target.value,
+                                preferredTime: '',
+                              })
+                            }
                             min={new Date().toISOString().split('T')[0]}
                             className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           />
+                          {loadingAdminBookingAvailability && (
+                            <p className="text-xs text-neutral-500 mt-2">בודק זמינות...</p>
+                          )}
+                          {!loadingAdminBookingAvailability &&
+                            adminBookingAvailabilityError &&
+                            bookingForm.preferredDate && (
+                              <p className="text-xs text-red-500 mt-2">
+                                שגיאה בטעינת זמינות. נסה לבחור תאריך מחדש.
+                              </p>
+                            )}
+                          {!loadingAdminBookingAvailability &&
+                            adminBookingAvailability.isDateUnavailable &&
+                            bookingForm.preferredDate && (
+                              <p className="text-xs text-red-500 mt-2">התאריך אינו זמין.</p>
+                            )}
                         </div>
 
                         <div>
@@ -1748,19 +1853,35 @@ function AdminPage() {
                           <select
                             value={bookingForm.preferredTime}
                             onChange={(e) => setBookingForm({ ...bookingForm, preferredTime: e.target.value })}
-                            className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            disabled={
+                              loadingAdminBookingAvailability ||
+                              adminBookingAvailabilityError ||
+                              adminBookingAvailability.isDateUnavailable ||
+                              !bookingForm.preferredDate
+                            }
+                            className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60"
                           >
-                            <option value="">בחר שעה</option>
-                            <option value="09:00">09:00</option>
-                            <option value="10:00">10:00</option>
-                            <option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option>
-                            <option value="13:00">13:00</option>
-                            <option value="14:00">14:00</option>
-                            <option value="15:00">15:00</option>
-                            <option value="16:00">16:00</option>
-                            <option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option>
+                            <option value="">
+                              {loadingAdminBookingAvailability && bookingForm.preferredDate
+                                ? 'טוען שעות…'
+                                : adminBookingAvailabilityError
+                                  ? 'לא ניתן לטעון שעות'
+                                  : adminBookingAvailability.isDateUnavailable
+                                    ? 'אין שעות זמינות'
+                                    : !bookingForm.preferredDate
+                                      ? 'בחר תאריך תחילה'
+                                      : adminBookingAvailability.availableTimes.length === 0
+                                        ? 'אין חלונות פנויים'
+                                        : 'בחר שעה'}
+                            </option>
+                            {(adminBookingAvailability.isDateUnavailable || adminBookingAvailabilityError
+                              ? []
+                              : adminBookingAvailability.availableTimes
+                            ).map((time) => (
+                              <option key={time} value={time}>
+                                {time}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -1770,7 +1891,13 @@ function AdminPage() {
                           <input
                             type="checkbox"
                             checked={bookingForm.isIntroMeeting}
-                            onChange={(e) => setBookingForm({ ...bookingForm, isIntroMeeting: e.target.checked })}
+                            onChange={(e) =>
+                              setBookingForm({
+                                ...bookingForm,
+                                isIntroMeeting: e.target.checked,
+                                preferredTime: '',
+                              })
+                            }
                             className="w-4 h-4 text-primary-600 border-neutral-300 rounded focus:ring-primary-500"
                           />
                           <span className="text-sm font-medium text-neutral-900">

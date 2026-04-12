@@ -1,16 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { bookingService, contactService } from '../services/adminApi'
-import { customerService } from '../services/customerApi'
+import { statsService } from '../services/adminApi'
 
 const NavCountsContext = createContext(null)
-
-function extractDataArray(response) {
-  if (!response) return []
-  if (Array.isArray(response)) return response
-  if (response.data && Array.isArray(response.data)) return response.data
-  return []
-}
 
 export function NavCountsProvider({ children }) {
   const location = useLocation()
@@ -20,17 +12,12 @@ export function NavCountsProvider({ children }) {
 
   const refreshNavCounts = useCallback(async () => {
     try {
-      const [customersRes, bookingsRes, contactsRes] = await Promise.all([
-        customerService.getAll({ page: 1, limit: 1 }),
-        bookingService.getAll(),
-        contactService.getAll()
-      ])
-      const customers = extractDataArray(customersRes)
-      const bookings = extractDataArray(bookingsRes)
-      const contacts = extractDataArray(contactsRes)
-      setCustomersCount(customersRes?.meta?.total ?? customers.length)
-      setBookingsCount(bookings.length)
-      setContactsCount(contacts.length)
+      const res = await statsService.getNavCounts()
+      const d = res?.data
+      if (!d) return
+      setCustomersCount(d.customersCount ?? 0)
+      setBookingsCount(d.bookingsCount ?? 0)
+      setContactsCount(d.contactsCount ?? 0)
     } catch (e) {
       console.warn('NavCounts: failed to refresh', e)
     }

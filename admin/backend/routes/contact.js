@@ -4,16 +4,57 @@ import { validateContact } from '../validation/contactValidation.js'
 
 const router = express.Router()
 
-// GET /api/contact - Get all contact submissions (admin)
+// GET /api/contact - Get all contact submissions (admin); ?page=&limit=&read=all|read|unread
 router.get('/', async (req, res, next) => {
   try {
-    const contacts = await Contact.find()
-      .sort({ createdAt: -1 }) // Newest first
-      .lean()
-    
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(150, Math.max(1, parseInt(req.query.limit, 10) || 50))
+    const skip = (page - 1) * limit
+
+    const read = String(req.query.read || 'all').trim()
+    const listFilter = {}
+    if (read === 'unread') listFilter.isRead = false
+    if (read === 'read') listFilter.isRead = true
+
+    if (!usePaging) {
+      const contacts = await Contact.find(listFilter).sort({ createdAt: -1 }).lean()
+      return res.json({
+        message: 'Contact submissions retrieved successfully',
+        data: contacts,
+      })
+    }
+
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+
+    const [contacts, total, unreadTotal, todayCount, weekCount] = await Promise.all([
+      Contact.find(listFilter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Contact.countDocuments(listFilter),
+      Contact.countDocuments({ isRead: false }),
+      Contact.countDocuments({ createdAt: { $gte: todayStart } }),
+      Contact.countDocuments({ createdAt: { $gte: weekAgo } }),
+    ])
+
+    const allTotal = await Contact.countDocuments({})
+
     res.json({
       message: 'Contact submissions retrieved successfully',
-      data: contacts
+      data: contacts,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+      summary: {
+        total: allTotal,
+        unread: unreadTotal,
+        today: todayCount,
+        thisWeek: weekCount,
+      },
     })
   } catch (error) {
     next(error)

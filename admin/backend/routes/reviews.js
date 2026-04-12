@@ -202,17 +202,58 @@ router.get('/my-review', authenticateToken, async (req, res, next) => {
   }
 })
 
-// Admin routes - Get all reviews (including pending)
+// Admin routes - Get all reviews (including pending); ?page=&limit=&reviewStatus=
 router.get('/admin/all', async (req, res, next) => {
   try {
-    const reviews = await Review.find()
-      .populate('customer', 'name email')
-      .sort({ createdAt: -1 })
-      .lean()
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 60))
+    const skip = (page - 1) * limit
+
+    const rs = String(req.query.reviewStatus || 'all').trim()
+    const listFilter = {}
+    if (['pending', 'approved', 'rejected'].includes(rs)) listFilter.status = rs
+
+    if (!usePaging) {
+      const reviews = await Review.find(listFilter)
+        .populate('customer', 'name email')
+        .sort({ createdAt: -1 })
+        .lean()
+      return res.json({
+        message: 'All reviews retrieved successfully',
+        data: reviews,
+      })
+    }
+
+    const [reviews, total, totalAll, pendingC, approvedC, rejectedC] = await Promise.all([
+      Review.find(listFilter)
+        .populate('customer', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Review.countDocuments(listFilter),
+      Review.countDocuments({}),
+      Review.countDocuments({ status: 'pending' }),
+      Review.countDocuments({ status: 'approved' }),
+      Review.countDocuments({ status: 'rejected' }),
+    ])
 
     res.json({
       message: 'All reviews retrieved successfully',
-      data: reviews
+      data: reviews,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+      summary: {
+        total: totalAll,
+        pending: pendingC,
+        approved: approvedC,
+        rejected: rejectedC,
+      },
     })
   } catch (error) {
     next(error)

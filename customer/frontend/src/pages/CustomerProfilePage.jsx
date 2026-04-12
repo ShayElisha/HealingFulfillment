@@ -12,7 +12,9 @@ import RegulationsQuestionnaireTab from '../components/RegulationsQuestionnaireT
 import { triggerConfetti } from '../utils/confetti'
 import toast from 'react-hot-toast'
 import { getAdminPanelBaseUrl } from '../utils/adminPanelUrl'
+import { resolveAdminAssetUrl } from '../utils/resolveAdminAssetUrl'
 import { reviewsService } from '../services/reviewsApi'
+import { bookingService } from '../services/api'
 
 const dateShortHe = { year: 'numeric', month: 'short', day: 'numeric' }
 const dateLongHe = { year: 'numeric', month: 'long', day: 'numeric' }
@@ -67,16 +69,14 @@ function purchaseDisplayDate(purchase) {
   return purchase?.createdAt ? new Date(purchase.createdAt) : null
 }
 
-/** קבצי תיק לקוח מגיעים משרת המנהל; בפיתוח פרוקסי Vite מפנה /uploads ל־5001 */
-function resolveCustomerUploadUrl(urlPath) {
-  if (!urlPath) return ''
-  if (urlPath.startsWith('http://') || urlPath.startsWith('https://')) return urlPath
-  if (import.meta.env.DEV) return urlPath
-  const adminBase = import.meta.env.VITE_ADMIN_ASSET_URL?.replace(/\/$/, '')
-  if (adminBase) return `${adminBase}${urlPath}`
-  const apiBase = import.meta.env.VITE_API_URL
-  if (apiBase) return apiBase.replace(/\/api\/?$/, '') + urlPath
-  return urlPath
+function toDateInputYmd(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function CustomerProfilePage() {
@@ -104,6 +104,13 @@ function CustomerProfilePage() {
   })
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
+  const [bookingAvailability, setBookingAvailability] = useState({
+    unavailableTimes: [],
+    availableTimes: [],
+    isDateUnavailable: false,
+  })
+  const [loadingBookingAvailability, setLoadingBookingAvailability] = useState(false)
+  const [bookingAvailabilityLoadError, setBookingAvailabilityLoadError] = useState(false)
 
   const nonAudioFiles =
     customerData?.files?.filter((f) => f.type !== 'audio') ?? []
@@ -205,10 +212,77 @@ function CustomerProfilePage() {
     }
   }
 
+  useEffect(() => {
+    if (!bookingForm.preferredDate) {
+      setBookingAvailabilityLoadError(false)
+      setBookingAvailability({
+        unavailableTimes: [],
+        availableTimes: [],
+        isDateUnavailable: false,
+      })
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoadingBookingAvailability(true)
+        setBookingAvailabilityLoadError(false)
+        const response = await bookingService.getAvailability({
+          date: bookingForm.preferredDate,
+          meetingType: bookingForm.meetingType,
+          isIntroMeeting: false,
+        })
+        if (cancelled) return
+        const d = response?.data || {}
+        setBookingAvailability({
+          unavailableTimes: d.unavailableTimes || [],
+          availableTimes: Array.isArray(d.availableTimes) ? d.availableTimes : [],
+          isDateUnavailable: Boolean(d.isDateUnavailable),
+        })
+      } catch (err) {
+        console.error('Error loading booking availability:', err)
+        if (!cancelled) {
+          setBookingAvailabilityLoadError(true)
+          setBookingAvailability({
+            unavailableTimes: [],
+            availableTimes: [],
+            isDateUnavailable: false,
+          })
+        }
+      } finally {
+        if (!cancelled) setLoadingBookingAvailability(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [bookingForm.preferredDate, bookingForm.meetingType])
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault()
     setIsSubmittingBooking(true)
     setBookingError('')
+
+    if (bookingAvailabilityLoadError) {
+      setBookingError('לא ניתן לטעון זמינות. נסה שוב או בחר תאריך אחר.')
+      setIsSubmittingBooking(false)
+      return
+    }
+    if (bookingAvailability.isDateUnavailable) {
+      setBookingError('התאריך שבחרת אינו זמין. אנא בחר תאריך אחר.')
+      setIsSubmittingBooking(false)
+      return
+    }
+    if (bookingForm.preferredTime) {
+      if (
+        bookingAvailability.availableTimes.length === 0 ||
+        !bookingAvailability.availableTimes.includes(bookingForm.preferredTime)
+      ) {
+        setBookingError('השעה שבחרת אינה זמינה. אנא בחר שעה אחרת.')
+        setIsSubmittingBooking(false)
+        return
+      }
+    }
 
     try {
       await authService.createBooking(bookingForm)
@@ -275,6 +349,22 @@ function CustomerProfilePage() {
   const activeCoachingPurchases = (customerData.purchases || []).filter((p) =>
     isCoachingCurrentlyActive(p, customerData)
   )
+
+  const todayYmd = toDateInputYmd(new Date())
+  const subForBooking = customerData.activeSubscription
+  const bookingPreferredDateMin = subForBooking
+    ? (() => {
+        const start = toDateInputYmd(subForBooking.startedAt) || todayYmd
+        return start > todayYmd ? start : todayYmd
+      })()
+    : todayYmd
+  const bookingPreferredDateMax = subForBooking?.endsAt
+    ? toDateInputYmd(subForBooking.endsAt)
+    : ''
+
+  const canBookRegular =
+    customerData.bookingUnlimitedBySubscription === true ||
+    customerData.availableSessions > 0
 
   return (
     <>
@@ -587,6 +677,11 @@ function CustomerProfilePage() {
                           {booking.meetingType === 'zoom' ? '💻 זום' : '🏢 פרונטאלי'}
                           {booking.isIntroMeeting && ' | ⭐ פגישת היכרות'}
                         </p>
+                        {booking.preferredTime && (
+                          <p className="text-sm text-neutral-600 mt-1">
+                            🕐 שעה: {booking.preferredTime}
+                          </p>
+                        )}
                         {booking.meetingType === 'zoom' && booking.zoomLink && (
                           <div className="mt-2">
                             <a
@@ -769,11 +864,15 @@ function CustomerProfilePage() {
                       פתיחת תקנון ושאלון
                     </Button>
                   </div>
-                ) : customerData.availableSessions > 0 ? (
+                ) : canBookRegular ? (
                   <>
                     <div className="mb-6 p-4 bg-primary-50 rounded-lg border border-primary-200">
                       <p className="text-primary-800 font-medium">
-                        יש לך {customerData.availableSessions} מפגשים זמינים מתוך {customerData.totalSessionsPurchased || 0} שנרכשו
+                        {customerData.bookingUnlimitedBySubscription &&
+                        customerData.sessionEntitlementSource === 'subscription' &&
+                        customerData.activeSubscription
+                          ? 'מנוי פעיל — ניתן לקבוע פגישות לפי תאריכי המנוי (ללא הגבלת מספר מפגשים).'
+                          : `יש לך ${customerData.availableSessions} מפגשים זמינים מתוך ${customerData.totalSessionsPurchased || 0} שנרכשו`}
                       </p>
                     </div>
 
@@ -793,7 +892,13 @@ function CustomerProfilePage() {
                               name="meetingType"
                               value="frontend"
                               checked={bookingForm.meetingType === 'frontend'}
-                              onChange={(e) => setBookingForm({ ...bookingForm, meetingType: e.target.value })}
+                              onChange={(e) =>
+                                setBookingForm({
+                                  ...bookingForm,
+                                  meetingType: e.target.value,
+                                  preferredTime: '',
+                                })
+                              }
                               className="sr-only"
                             />
                             <div className="flex items-center gap-3 w-full">
@@ -822,7 +927,13 @@ function CustomerProfilePage() {
                               name="meetingType"
                               value="zoom"
                               checked={bookingForm.meetingType === 'zoom'}
-                              onChange={(e) => setBookingForm({ ...bookingForm, meetingType: e.target.value })}
+                              onChange={(e) =>
+                                setBookingForm({
+                                  ...bookingForm,
+                                  meetingType: e.target.value,
+                                  preferredTime: '',
+                                })
+                              }
                               className="sr-only"
                             />
                             <div className="flex items-center gap-3 w-full">
@@ -854,10 +965,30 @@ function CustomerProfilePage() {
                             id="preferredDate"
                             required
                             value={bookingForm.preferredDate}
-                            onChange={(e) => setBookingForm({ ...bookingForm, preferredDate: e.target.value })}
-                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) =>
+                              setBookingForm((prev) => ({
+                                ...prev,
+                                preferredDate: e.target.value,
+                                preferredTime: '',
+                              }))
+                            }
+                            min={bookingPreferredDateMin}
+                            max={bookingPreferredDateMax || undefined}
                             className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                           />
+                          {loadingBookingAvailability && (
+                            <p className="text-xs text-neutral-500 mt-2">בודק זמינות...</p>
+                          )}
+                          {!loadingBookingAvailability &&
+                            bookingAvailabilityLoadError &&
+                            bookingForm.preferredDate && (
+                              <p className="text-xs text-red-500 mt-2">
+                                שגיאה בטעינת זמינות. נסה לבחור תאריך מחדש.
+                              </p>
+                            )}
+                          {!loadingBookingAvailability && bookingAvailability.isDateUnavailable && (
+                            <p className="text-xs text-red-500 mt-2">התאריך אינו זמין. אנא בחר תאריך אחר.</p>
+                          )}
                         </div>
 
                         <div>
@@ -868,20 +999,44 @@ function CustomerProfilePage() {
                             id="preferredTime"
                             value={bookingForm.preferredTime}
                             onChange={(e) => setBookingForm({ ...bookingForm, preferredTime: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                            disabled={
+                              loadingBookingAvailability ||
+                              bookingAvailabilityLoadError ||
+                              bookingAvailability.isDateUnavailable ||
+                              !bookingForm.preferredDate
+                            }
+                            className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all disabled:opacity-60"
                           >
-                            <option value="">בחר שעה</option>
-                            <option value="09:00">09:00</option>
-                            <option value="10:00">10:00</option>
-                            <option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option>
-                            <option value="13:00">13:00</option>
-                            <option value="14:00">14:00</option>
-                            <option value="15:00">15:00</option>
-                            <option value="16:00">16:00</option>
-                            <option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option>
+                            <option value="">
+                              {loadingBookingAvailability && bookingForm.preferredDate
+                                ? 'טוען שעות…'
+                                : bookingAvailabilityLoadError
+                                  ? 'לא ניתן לטעון שעות'
+                                  : bookingAvailability.isDateUnavailable
+                                    ? 'אין שעות זמינות'
+                                    : !bookingForm.preferredDate
+                                      ? 'בחר תאריך תחילה'
+                                      : bookingAvailability.availableTimes.length === 0
+                                        ? 'אין חלונות פנויים'
+                                        : 'בחר שעה'}
+                            </option>
+                            {(bookingAvailability.isDateUnavailable || bookingAvailabilityLoadError
+                              ? []
+                              : bookingAvailability.availableTimes
+                            ).map((time) => (
+                              <option key={time} value={time}>
+                                {time}
+                              </option>
+                            ))}
                           </select>
+                          {!loadingBookingAvailability &&
+                            bookingForm.preferredDate &&
+                            !bookingAvailability.isDateUnavailable &&
+                            bookingAvailability.availableTimes.length === 0 && (
+                              <p className="text-xs text-neutral-500 mt-2">
+                                אין חלונות פנויים לתאריך זה. נסה תאריך אחר.
+                              </p>
+                            )}
                         </div>
                       </div>
 
@@ -917,11 +1072,9 @@ function CustomerProfilePage() {
                   </>
                 ) : (
                   <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
-                    <p className="text-yellow-800 font-medium mb-4">
-                      אין לך מפגשים זמינים
-                    </p>
+                    <p className="text-yellow-800 font-medium mb-4">אין לך מפגשים זמינים</p>
                     <p className="text-yellow-700 mb-4">
-                      על מנת לקבוע פגישה נוספת, נא לרכוש מסלול טיפול.
+                      על מנת לקבוע פגישה, נא לרכוש מסלול טיפול או לפנות למנהל.
                     </p>
                     <Button
                       onClick={() => navigate('/courses')}
@@ -948,7 +1101,7 @@ function CustomerProfilePage() {
                       <p className="text-sm text-neutral-600 mb-2">{file.description}</p>
                     )}
                     <a
-                      href={resolveCustomerUploadUrl(file.url)}
+                      href={resolveAdminAssetUrl(file.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:underline text-sm"
@@ -984,7 +1137,7 @@ function CustomerProfilePage() {
                         className="w-full"
                         controls
                         preload="metadata"
-                        src={resolveCustomerUploadUrl(file.url)}
+                        src={resolveAdminAssetUrl(file.url)}
                       >
                         הדפדפן שלך לא תומך בהשמעת אודיו.
                       </audio>

@@ -20,6 +20,10 @@ const router = express.Router()
 
 const COACHING_DEFAULT_MONTHS = 3
 
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 // GET /api/admin/auth/verify - verify admin access token
 router.get('/auth/verify', (req, res) => {
   res.json({
@@ -477,16 +481,100 @@ router.put('/purchases/:id/status', async (req, res, next) => {
 
 // ========== BOOKINGS ==========
 
-// GET /api/admin/bookings - Get all bookings
+// GET /api/admin/bookings — ללא page/limit: כמו קודם (כל הרשומות). עם עימוד: tab, status, meetingType, search
 router.get('/bookings', async (req, res, next) => {
   try {
-    const bookings = await Booking.find()
-      .sort({ createdAt: -1 })
-      .lean()
-    
+    const usePaging = req.query.page !== undefined || req.query.limit !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50))
+    const skip = (page - 1) * limit
+
+    const tab = String(req.query.tab || '').trim()
+    const statusQ = String(req.query.status || 'all').trim()
+    const meetingTypeQ = String(req.query.meetingType || 'all').trim()
+    const searchRaw = String(req.query.search || '').trim()
+
+    let filter = {}
+
+    if (tab === 'intro') {
+      filter.isIntroMeeting = true
+      if (statusQ !== 'all') filter.status = statusQ
+      else filter.status = { $ne: 'completed' }
+    } else if (tab === 'regular') {
+      filter.isIntroMeeting = false
+      if (statusQ !== 'all') filter.status = statusQ
+      else filter.status = { $ne: 'completed' }
+    } else if (tab === 'history') {
+      filter.status = 'completed'
+    }
+
+    if (meetingTypeQ === 'frontend' || meetingTypeQ === 'zoom') {
+      filter.meetingType = meetingTypeQ
+    }
+
+    if (searchRaw) {
+      const rx = new RegExp(escapeRegex(searchRaw), 'i')
+      const searchPart = { $or: [{ name: rx }, { email: rx }, { phone: rx }] }
+      filter =
+        Object.keys(filter).length === 0
+          ? searchPart
+          : { $and: [filter, searchPart] }
+    }
+
+    if (!usePaging) {
+      const bookings = await Booking.find(filter).sort({ createdAt: -1 }).lean()
+      return res.json({
+        message: 'Bookings retrieved successfully',
+        data: bookings,
+      })
+    }
+
+    const [
+      bookings,
+      listTotal,
+      totalAll,
+      pendingAll,
+      confirmedAll,
+      completedAll,
+      cancelledAll,
+      introOpen,
+      regularOpen,
+      allIntro,
+      allRegular,
+    ] = await Promise.all([
+      Booking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Booking.countDocuments(filter),
+      Booking.countDocuments({}),
+      Booking.countDocuments({ status: 'pending' }),
+      Booking.countDocuments({ status: 'confirmed' }),
+      Booking.countDocuments({ status: 'completed' }),
+      Booking.countDocuments({ status: 'cancelled' }),
+      Booking.countDocuments({ isIntroMeeting: true, status: { $ne: 'completed' } }),
+      Booking.countDocuments({ isIntroMeeting: false, status: { $ne: 'completed' } }),
+      Booking.countDocuments({ isIntroMeeting: true }),
+      Booking.countDocuments({ isIntroMeeting: false }),
+    ])
+
     res.json({
       message: 'Bookings retrieved successfully',
-      data: bookings
+      data: bookings,
+      pagination: {
+        page,
+        limit,
+        total: listTotal,
+        pages: Math.max(1, Math.ceil(listTotal / limit)),
+      },
+      stats: {
+        total: totalAll,
+        pending: pendingAll,
+        confirmed: confirmedAll,
+        completed: completedAll,
+        cancelled: cancelledAll,
+        introOpen,
+        regularOpen,
+        intro: allIntro,
+        regular: allRegular,
+      },
     })
   } catch (error) {
     console.error('Error fetching bookings:', error)

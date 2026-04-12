@@ -6,13 +6,18 @@ import Button from '../components/Button'
 import Navbar from '../components/Navbar'
 import AdminPageShell from '../components/AdminPageShell'
 import PageHeader from '../components/PageHeader'
+import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
+
+const MESSAGES_PAGE_SIZE = 30
 
 function MessagesPage() {
   const [customers, setCustomers] = useState([])
   const [selectedCustomers, setSelectedCustomers] = useState([])
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
+  const [messagesPage, setMessagesPage] = useState(1)
+  const [messagesPagination, setMessagesPagination] = useState(null)
   const [showSendForm, setShowSendForm] = useState(false)
   const [formData, setFormData] = useState({
     subject: '',
@@ -22,27 +27,32 @@ function MessagesPage() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [messagesPage])
 
   const loadData = async () => {
     try {
       setLoading(true)
       const [customersRes, messagesRes] = await Promise.all([
-        customerService.getAll().catch(err => {
-          console.error('Error loading customers:', err)
-          return { data: [] }
-        }),
-        messageService.getAll().catch(err => {
-          console.error('Error loading messages:', err)
-          return { data: [] }
-        })
+        customerService
+          .getAll({ forLookup: 1, page: 1, limit: 1000 })
+          .catch((err) => {
+            console.error('Error loading customers:', err)
+            return { data: [] }
+          }),
+        messageService
+          .getAll({ page: messagesPage, limit: MESSAGES_PAGE_SIZE })
+          .catch((err) => {
+            console.error('Error loading messages:', err)
+            return { data: [], pagination: null }
+          }),
       ])
-      
-      const customersData = customersRes?.data || customersRes || []
-      const messagesData = messagesRes?.data || messagesRes || []
-      
+
+      const customersData = customersRes?.data || []
+      const messagesData = messagesRes?.data || []
+
       setCustomers(Array.isArray(customersData) ? customersData : [])
       setMessages(Array.isArray(messagesData) ? messagesData : [])
+      setMessagesPagination(messagesRes?.pagination || null)
     } catch (error) {
       console.error('Error loading data:', error)
       const errorMessage = error.response?.data?.message || error.message || 'שגיאה לא ידועה'
@@ -50,6 +60,7 @@ function MessagesPage() {
       // Set empty arrays to prevent crashes
       setCustomers([])
       setMessages([])
+      setMessagesPagination(null)
     } finally {
       setLoading(false)
     }
@@ -318,6 +329,13 @@ function MessagesPage() {
                 ))}
               </div>
             )}
+            <AdminPager
+              page={messagesPagination?.page ?? messagesPage}
+              pages={messagesPagination?.pages ?? 1}
+              total={messagesPagination?.total}
+              loading={loading}
+              onPageChange={setMessagesPage}
+            />
           </div>
       </AdminPageShell>
     </>

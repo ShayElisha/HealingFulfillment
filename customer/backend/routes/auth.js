@@ -4,11 +4,14 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import Customer from '../models/Customer.js'
 import Booking from '../models/Booking.js'
-import Purchase from '../models/Purchase.js'
-import Subscription from '../models/Subscription.js'
+import {
+  computeSessionEntitlementForCustomerId,
+  preferredDateWithinSubscription,
+} from '../utils/sessionEntitlement.js'
 import Message from '../models/Message.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { sendPasswordResetEmail, sendRegularMeetingConfirmationEmail } from '../services/emailService.js'
+import { isPreferredTimeAllowed, formatYmd } from '../services/availabilityService.js'
 
 const router = express.Router()
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000
@@ -267,38 +270,21 @@ router.get('/me', authenticateToken, async (req, res, next) => {
       return res.status(404).json({ message: 'לקוח לא נמצא' })
     }
 
-    // חשב מפגשים זמינים
-    const completedPurchases = customer.purchases.filter(p => p.status === 'completed')
-    const totalSessionsPurchased = completedPurchases.reduce((sum, purchase) => {
-      return sum + (purchase.course?.sessionsCount || 0)
-    }, 0)
-    
-    // ספור פגישות פעילות (pending או confirmed) ופגישות שהושלמו (completed)
-    // רק פגישות רגילות (לא פגישות היכרות)
-    const usedBookings = customer.bookings.filter(b => 
-      !b.isIntroMeeting && (b.status === 'pending' || b.status === 'confirmed' || b.status === 'completed')
-    ).length
-    
-    const availableSessions = Math.max(0, totalSessionsPurchased - usedBookings)
+    const entitlement = await computeSessionEntitlementForCustomerId(req.customerId)
 
-    // הוסף את המידע ל-customer object
     const customerData = customer.toObject()
-    customerData.availableSessions = availableSessions
-    customerData.totalSessionsPurchased = totalSessionsPurchased
-    customerData.usedBookings = usedBookings
+    customerData.availableSessions = entitlement.availableSessions
+    customerData.totalSessionsPurchased = entitlement.totalSessionsPurchased
+    customerData.usedBookings = entitlement.usedBookings
+    customerData.bookingUnlimitedBySubscription = Boolean(
+      entitlement.bookingUnlimitedBySubscription
+    )
+    customerData.sessionEntitlementSource = entitlement.entitlementSource
     customerData.activeBookings = customer.bookings.filter(b => 
       b.status === 'pending' || b.status === 'confirmed'
     ).length
 
-    const activeSubscription = await Subscription.findOne({
-      customer: req.customerId,
-      status: 'active',
-      endsAt: { $gt: new Date() }
-    })
-      .select('planSnapshot startedAt endsAt purchase course status')
-      .lean()
-
-    customerData.activeSubscription = activeSubscription || null
+    customerData.activeSubscription = entitlement.activeSubscription || null
 
     res.json({
       message: 'פרטי לקוח נטענו בהצלחה',
@@ -361,39 +347,30 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
       })
     }
 
-    // טען את הלקוח עם רכישות
     const customer = await Customer.findById(req.customerId)
-      .populate({
-        path: 'purchases',
-        populate: {
-          path: 'course',
-          select: 'sessionsCount installmentsCount'
-        }
-      })
 
     if (!customer) {
       return res.status(404).json({ message: 'לקוח לא נמצא' })
     }
 
-    // חשב מפגשים זמינים
-    const completedPurchases = customer.purchases.filter(p => p.status === 'completed')
-    const totalSessionsPurchased = completedPurchases.reduce((sum, purchase) => {
-      return sum + (purchase.course?.sessionsCount || 0)
-    }, 0)
-    
-    // ספור פגישות פעילות (pending או confirmed) ופגישות שהושלמו (completed)
-    // רק פגישות רגילות (לא פגישות היכרות)
-    const usedBookings = await Booking.countDocuments({
-      customer: req.customerId,
-      isIntroMeeting: false, // רק פגישות רגילות
-      status: { $in: ['pending', 'confirmed', 'completed'] } // כולל גם פגישות שהושלמו
-    })
-    
-    const availableSessions = totalSessionsPurchased - usedBookings
+    const entitlement = await computeSessionEntitlementForCustomerId(req.customerId)
 
-    if (availableSessions <= 0) {
+    if (
+      !entitlement.bookingUnlimitedBySubscription &&
+      entitlement.availableSessions <= 0
+    ) {
       return res.status(400).json({ 
-        message: 'אין לך מפגשים זמינים. נא לרכוש מסלול נוסף.' 
+        message: 'אין לך מפגשים זמינים בתקופה הנוכחית. נא לרכוש מסלול נוסף או לפנות לתמיכה.' 
+      })
+    }
+
+    if (
+      entitlement.activeSubscription &&
+      !preferredDateWithinSubscription(preferredDate, entitlement.activeSubscription)
+    ) {
+      return res.status(400).json({
+        message:
+          'תאריך הפגישה מחוץ לתקופת המנוי שלך. בחר תאריך בתוך תקופת הליווי או פנה למנהל.',
       })
     }
 
@@ -440,6 +417,25 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
       }
     }
 
+    const meetingTypeBody = meetingType === 'zoom' ? 'zoom' : 'frontend'
+    if (preferredTime && String(preferredTime).trim() !== '') {
+      const ymd =
+        typeof preferredDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(String(preferredDate).trim())
+          ? String(preferredDate).trim()
+          : formatYmd(new Date(preferredDate))
+      const allowed = await isPreferredTimeAllowed(
+        ymd,
+        String(preferredTime).trim(),
+        meetingTypeBody,
+        false
+      )
+      if (!allowed) {
+        return res.status(400).json({
+          message: 'השעה שבחרת אינה זמינה יותר. אנא בחר תאריך או שעה אחרת.',
+        })
+      }
+    }
+
     // צור את הפגישה
     const booking = new Booking({
       customer: req.customerId,
@@ -448,7 +444,7 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
       email: customer.email,
       preferredDate,
       preferredTime: preferredTime || '',
-      meetingType: meetingType || 'frontend',
+      meetingType: meetingTypeBody,
       notes: notes || '',
       status: 'pending',
       isIntroMeeting: false // פגישה רגילה (לא היכרות)
@@ -483,7 +479,9 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
       data: {
         id: booking._id,
         preferredDate: booking.preferredDate,
-        availableSessions: availableSessions - 1 // מפגשים זמינים אחרי הפגישה החדשה
+        availableSessions: entitlement.bookingUnlimitedBySubscription
+          ? entitlement.availableSessions
+          : entitlement.availableSessions - 1,
       }
     })
   } catch (error) {

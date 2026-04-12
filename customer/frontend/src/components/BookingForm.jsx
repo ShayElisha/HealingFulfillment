@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import { bookingService } from '../services/api'
@@ -19,43 +19,57 @@ function BookingForm() {
   const [phone, setPhone] = useState('')
   const [availability, setAvailability] = useState({
     unavailableTimes: [],
+    availableTimes: [],
     isDateUnavailable: false,
   })
   const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [availabilityLoadError, setAvailabilityLoadError] = useState(false)
 
-  const timeOptions = [
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-    '18:00',
-  ]
-
-  const loadAvailability = async (date) => {
-    if (!date) {
-      setAvailability({ unavailableTimes: [], isDateUnavailable: false })
+  useEffect(() => {
+    if (!formData.preferredDate) {
+      setAvailabilityLoadError(false)
+      setAvailability({
+        unavailableTimes: [],
+        availableTimes: [],
+        isDateUnavailable: false,
+      })
       return
     }
-
-    try {
-      setLoadingAvailability(true)
-      const response = await bookingService.getAvailability(date)
-      setAvailability({
-        unavailableTimes: response?.data?.unavailableTimes || [],
-        isDateUnavailable: Boolean(response?.data?.isDateUnavailable),
-      })
-    } catch (error) {
-      console.error('Error loading availability:', error)
-      setAvailability({ unavailableTimes: [], isDateUnavailable: false })
-    } finally {
-      setLoadingAvailability(false)
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoadingAvailability(true)
+        setAvailabilityLoadError(false)
+        const response = await bookingService.getAvailability({
+          date: formData.preferredDate,
+          meetingType: formData.meetingType,
+          isIntroMeeting: true,
+        })
+        if (cancelled) return
+        const d = response?.data || {}
+        setAvailability({
+          unavailableTimes: d.unavailableTimes || [],
+          availableTimes: Array.isArray(d.availableTimes) ? d.availableTimes : [],
+          isDateUnavailable: Boolean(d.isDateUnavailable),
+        })
+      } catch (error) {
+        console.error('Error loading availability:', error)
+        if (!cancelled) {
+          setAvailabilityLoadError(true)
+          setAvailability({
+            unavailableTimes: [],
+            availableTimes: [],
+            isDateUnavailable: false,
+          })
+        }
+      } finally {
+        if (!cancelled) setLoadingAvailability(false)
+      }
+    })()
+    return () => {
+      cancelled = true
     }
-  }
+  }, [formData.preferredDate, formData.meetingType])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -66,7 +80,15 @@ function BookingForm() {
         preferredDate: value,
         preferredTime: '',
       }))
-      loadAvailability(value)
+      return
+    }
+
+    if (name === 'meetingType') {
+      setFormData((prev) => ({
+        ...prev,
+        meetingType: value,
+        preferredTime: '',
+      }))
       return
     }
 
@@ -94,14 +116,21 @@ function BookingForm() {
       }
     }
 
+    if (availabilityLoadError) {
+      toast.error('לא ניתן לטעון זמינות. נסה שוב או בחר תאריך אחר.')
+      return
+    }
+
     if (availability.isDateUnavailable) {
       toast.error('התאריך שבחרת כבר תפוס. אנא בחר תאריך אחר.')
       return
     }
 
-    if (formData.preferredTime && availability.unavailableTimes.includes(formData.preferredTime)) {
-      toast.error('השעה שבחרת כבר תפוסה. אנא בחר שעה אחרת.')
-      return
+    if (formData.preferredTime) {
+      if (!availability.availableTimes.includes(formData.preferredTime)) {
+        toast.error('השעה שבחרת אינה זמינה. אנא בחר שעה אחרת.')
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -124,6 +153,12 @@ function BookingForm() {
         notes: '',
       })
       setPhone('')
+      setAvailability({
+        unavailableTimes: [],
+        availableTimes: [],
+        isDateUnavailable: false,
+      })
+      setAvailabilityLoadError(false)
     } catch (error) {
       const errorMessage = error.response?.data?.message || 
                           (error.response?.data?.errors && Array.isArray(error.response.data.errors) 
@@ -269,6 +304,9 @@ function BookingForm() {
           {loadingAvailability && (
             <p className="text-xs text-neutral-500 mt-2">בודק זמינות...</p>
           )}
+          {!loadingAvailability && availabilityLoadError && formData.preferredDate && (
+            <p className="text-xs text-red-500 mt-2">שגיאה בטעינת זמינות. נסה לבחור תאריך מחדש.</p>
+          )}
           {!loadingAvailability && availability.isDateUnavailable && (
             <p className="text-xs text-red-500 mt-2">התאריך תפוס. אנא בחר תאריך אחר.</p>
           )}
@@ -283,22 +321,36 @@ function BookingForm() {
             name="preferredTime"
             value={formData.preferredTime}
             onChange={handleChange}
-            disabled={availability.isDateUnavailable}
+            disabled={
+              loadingAvailability ||
+              availabilityLoadError ||
+              availability.isDateUnavailable ||
+              !formData.preferredDate
+            }
             className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           >
-            <option value="">בחר שעה</option>
-            {timeOptions.map((time) => {
-              const isUnavailable = availability.unavailableTimes.includes(time)
-              return (
-                <option key={time} value={time} disabled={isUnavailable}>
-                  {time}{isUnavailable ? ' (תפוס)' : ''}
-                </option>
-              )
-            })}
+            <option value="">
+              {loadingAvailability && formData.preferredDate
+                ? 'טוען שעות…'
+                : availabilityLoadError
+                  ? 'לא ניתן לטעון שעות'
+                  : availability.isDateUnavailable
+                    ? 'אין שעות זמינות'
+                    : !formData.preferredDate
+                      ? 'בחר תאריך תחילה'
+                      : availability.availableTimes.length === 0
+                        ? 'אין חלונות פנויים'
+                        : 'בחר שעה'}
+            </option>
+            {(availability.isDateUnavailable || availabilityLoadError
+              ? []
+              : availability.availableTimes
+            ).map((time) => (
+              <option key={time} value={time}>
+                {time}
+              </option>
+            ))}
           </select>
-          {!loadingAvailability && !availability.isDateUnavailable && availability.unavailableTimes.length > 0 && (
-            <p className="text-xs text-neutral-500 mt-2">שעות מסומנות כ"תפוס" אינן זמינות לקביעה.</p>
-          )}
         </div>
       </div>
 

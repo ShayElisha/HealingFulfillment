@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { bookingService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
@@ -8,13 +8,20 @@ import Navbar from '../components/Navbar'
 import AdminPageShell from '../components/AdminPageShell'
 import PageHeader from '../components/PageHeader'
 import AdminModalLayout from '../components/AdminModalLayout'
+import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
+
+const BOOKINGS_PAGE_SIZE = 25
 
 function BookingsPage() {
   const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+  const [bookingStats, setBookingStats] = useState(null)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
   const [activeTab, setActiveTab] = useState('intro') // 'intro', 'regular', או 'history'
@@ -26,39 +33,62 @@ function BookingsPage() {
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    loadData()
-  }, [])
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchTerm])
 
-  const loadData = async () => {
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch])
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const [bookingsRes, customersRes] = await Promise.all([
-        bookingService.getAll().catch(err => {
-          console.error('Error loading bookings:', err)
-          return { data: [] }
-        }),
-        customerService.getAll().catch(err => {
-          console.error('Error loading customers:', err)
-          return { data: [] }
-        })
+        bookingService
+          .getAll({
+            page,
+            limit: BOOKINGS_PAGE_SIZE,
+            tab: activeTab,
+            status: filterStatus,
+            meetingType: filterType,
+            ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          })
+          .catch((err) => {
+            console.error('Error loading bookings:', err)
+            return { data: [], pagination: null, stats: null }
+          }),
+        customerService
+          .getAll({ forLookup: 1, page: 1, limit: 1000 })
+          .catch((err) => {
+            console.error('Error loading customers:', err)
+            return { data: [] }
+          }),
       ])
-      
-      const bookingsData = bookingsRes?.data || bookingsRes || []
-      const customersData = customersRes?.data || customersRes || []
-      
+
+      const bookingsData = bookingsRes?.data || []
+      const customersData = customersRes?.data || []
+
       setBookings(Array.isArray(bookingsData) ? bookingsData : [])
+      setPagination(bookingsRes?.pagination || null)
+      setBookingStats(bookingsRes?.stats || null)
       setCustomers(Array.isArray(customersData) ? customersData : [])
     } catch (error) {
       console.error('Error loading data:', error)
       console.error('Error details:', error.response?.data || error.message)
       toast.error(`שגיאה בטעינת הנתונים: ${error.response?.data?.message || error.message}`)
-      // Set empty arrays on error to prevent crashes
       setBookings([])
       setCustomers([])
+      setPagination(null)
+      setBookingStats(null)
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, activeTab, filterStatus, filterType, debouncedSearch])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const normalize = (value) => String(value || '').trim().toLowerCase()
 
@@ -81,42 +111,6 @@ function BookingsPage() {
     }
     return null
   }
-
-  const filteredBookings = bookings.filter(booking => {
-    // סינון לפי טאב (פגישת היכרות, רגילה, או היסטוריה)
-    if (activeTab === 'intro') {
-      if (!booking.isIntroMeeting || booking.status === 'completed') return false
-      if (filterStatus !== 'all' && booking.status !== filterStatus) return false
-      if (filterType !== 'all' && booking.meetingType !== filterType) return false
-    }
-    if (activeTab === 'regular') {
-      if (booking.isIntroMeeting || booking.status === 'completed') return false
-      if (filterStatus !== 'all' && booking.status !== filterStatus) return false
-      if (filterType !== 'all' && booking.meetingType !== filterType) return false
-    }
-    if (activeTab === 'history') {
-      // רק פגישות שהושלמו
-      if (booking.status !== 'completed') return false
-      if (filterType !== 'all' && booking.meetingType !== filterType) return false
-    }
-
-    const q = normalize(searchTerm)
-    if (!q) return true
-    const customer = getCustomerForBooking(booking)
-    const haystack = [
-      booking?.name,
-      booking?.email,
-      booking?.phone,
-      customer?.name,
-      customer?.email,
-      customer?.phone
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-
-    return haystack.includes(q)
-  })
 
   const handleEditZoomLink = (booking) => {
     setEditingZoomLink(booking._id)
@@ -196,16 +190,18 @@ function BookingsPage() {
     setSessionSummary('')
   }
 
-  const stats = {
-    total: bookings.length,
-    intro: bookings.filter(b => b.isIntroMeeting).length,
-    regular: bookings.filter(b => !b.isIntroMeeting).length,
-    pending: bookings.filter(b => b.status === 'pending').length,
-    confirmed: bookings.filter(b => b.status === 'confirmed').length,
-    completed: bookings.filter(b => b.status === 'completed').length,
-    cancelled: bookings.filter(b => b.status === 'cancelled').length,
-    frontend: bookings.filter(b => b.meetingType === 'frontend').length,
-    zoom: bookings.filter(b => b.meetingType === 'zoom').length
+  const stats = bookingStats || {
+    total: 0,
+    intro: 0,
+    regular: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0,
+    cancelled: 0,
+    frontend: 0,
+    zoom: 0,
+    introOpen: 0,
+    regularOpen: 0,
   }
 
   return (
@@ -218,6 +214,7 @@ function BookingsPage() {
             <button
               type="button"
               onClick={() => {
+                setPage(1)
                 setActiveTab('intro')
                 setFilterStatus('all')
               }}
@@ -225,11 +222,12 @@ function BookingsPage() {
                 activeTab === 'intro' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
-              פגישות היכרות ({bookings.filter(b => b.isIntroMeeting && b.status !== 'completed').length})
+              פגישות היכרות ({stats.introOpen ?? 0})
             </button>
             <button
               type="button"
               onClick={() => {
+                setPage(1)
                 setActiveTab('regular')
                 setFilterStatus('all')
               }}
@@ -237,11 +235,12 @@ function BookingsPage() {
                 activeTab === 'regular' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
-              פגישות רגילות ({bookings.filter(b => !b.isIntroMeeting && b.status !== 'completed').length})
+              פגישות רגילות ({stats.regularOpen ?? 0})
             </button>
             <button
               type="button"
               onClick={() => {
+                setPage(1)
                 setActiveTab('history')
                 setFilterStatus('all')
               }}
@@ -284,7 +283,10 @@ function BookingsPage() {
                 <label className="block text-sm font-medium mb-2 text-neutral-700">סטטוס</label>
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
+                  onChange={(e) => {
+                    setPage(1)
+                    setFilterStatus(e.target.value)
+                  }}
                   className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
                 >
                   <option value="all">הכל</option>
@@ -297,7 +299,10 @@ function BookingsPage() {
                 <label className="block text-sm font-medium mb-2 text-neutral-700">סוג פגישה</label>
                 <select
                   value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
+                  onChange={(e) => {
+                    setPage(1)
+                    setFilterType(e.target.value)
+                  }}
                   className="px-4 py-2.5 border border-neutral-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 shadow-soft"
                 >
                   <option value="all">הכל</option>
@@ -313,7 +318,10 @@ function BookingsPage() {
                 <label className="block text-sm font-medium mb-2 text-neutral-700">סוג פגישה</label>
                 <select
                   value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
+                  onChange={(e) => {
+                    setPage(1)
+                    setFilterType(e.target.value)
+                  }}
                   className="px-4 py-2 border border-neutral-300 rounded-lg"
                 >
                   <option value="all">הכל</option>
@@ -340,15 +348,15 @@ function BookingsPage() {
             <div className="text-center py-12">
               <p className="text-xl text-neutral-600">טוען...</p>
             </div>
-          ) : filteredBookings.length === 0 ? (
+          ) : bookings.length === 0 ? (
             <Card>
               <p className="text-center text-neutral-500 py-8">
-                {bookings.length === 0 ? 'אין פגישות עדיין' : 'אין פגישות התואמות לסינון'}
+                {pagination?.total === 0 ? 'אין פגישות עדיין' : 'אין פגישות התואמות לסינון'}
               </p>
             </Card>
           ) : (
             <div className="space-y-4">
-              {filteredBookings.map((booking) => {
+              {bookings.map((booking) => {
                 const customer = getCustomerForBooking(booking)
                 return (
                   <Card key={booking._id} className="hover:shadow-soft-lg transition-all duration-200">
@@ -372,11 +380,15 @@ function BookingsPage() {
                           {booking.email && <p>📧 {booking.email}</p>}
                           <p>📞 {booking.phone}</p>
                           <p>
-                            📅 תאריך: {new Date(booking.preferredDate).toLocaleDateString('he-IL', {
+                            📅 תאריך:{' '}
+                            {new Date(booking.preferredDate).toLocaleDateString('he-IL', {
                               year: 'numeric',
                               month: 'long',
-                              day: 'numeric'
+                              day: 'numeric',
                             })}
+                            {booking.preferredTime
+                              ? ` · 🕐 ${booking.preferredTime}`
+                              : ''}
                           </p>
                           <p>
                             💻 סוג פגישה: {booking.meetingType === 'zoom' ? 'זום' : 'פרונטאלי'}
@@ -526,6 +538,13 @@ function BookingsPage() {
               })}
             </div>
           )}
+          <AdminPager
+            page={pagination?.page ?? page}
+            pages={pagination?.pages ?? 1}
+            total={pagination?.total}
+            loading={loading}
+            onPageChange={setPage}
+          />
       </AdminPageShell>
 
       {/* Session Summary Modal */}

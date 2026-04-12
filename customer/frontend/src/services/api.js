@@ -107,10 +107,19 @@ export const bookingService = {
     const response = await api.post('/booking', data)
     return response.data
   },
-  getAvailability: async (date) => {
-    const response = await api.get('/booking/availability', {
-      params: { date },
-    })
+  getAvailability: async (arg) => {
+    const opts = typeof arg === 'string' ? { date: arg } : arg || {}
+    const { date, meetingType = 'frontend', isIntroMeeting = true } = opts
+    const params = {
+      date,
+      meetingType,
+      isIntroMeeting: isIntroMeeting ? 'true' : 'false',
+    }
+    const response = await api.get('/booking/availability', { params })
+    return response.data
+  },
+  getPublicWorkingHours: async () => {
+    const response = await api.get('/booking/public-working-hours')
     return response.data
   },
 }
