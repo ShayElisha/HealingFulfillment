@@ -62,6 +62,27 @@ function isCoachingCurrentlyActive(purchase, customer) {
   return now >= w.start.getTime() && now <= w.end.getTime()
 }
 
+/** תקופת ליווי לתצוגה: אם יש מנוי שנוצר מאותה רכישה — משתמשים בתאריכי המנוי */
+function getCoachingPeriodForPurchaseDisplay(purchase, customerData) {
+  const sub = customerData?.activeSubscription
+  if (
+    sub &&
+    purchase?._id &&
+    sub.purchase &&
+    String(sub.purchase) === String(purchase._id)
+  ) {
+    return {
+      source: 'subscription',
+      start: new Date(sub.startedAt),
+      end: new Date(sub.endsAt),
+      derived: false,
+    }
+  }
+  const w = getCoachingWindow(purchase, customerData)
+  if (!w) return null
+  return { source: 'derived', start: w.start, end: w.end, derived: w.derived }
+}
+
 function purchaseDisplayDate(purchase) {
   if (purchase?.paidAt && purchase?.status === 'completed') {
     return new Date(purchase.paidAt)
@@ -472,13 +493,13 @@ function CustomerProfilePage() {
               </Card>
 
               {customerData.activeSubscription && (
-                <Card className="border border-green-200 bg-green-50/40">
-                  <h3 className="text-xl font-semibold mb-2 text-neutral-900">מנוי פעיל</h3>
+                <Card className="border-2 border-primary-200 bg-primary-50/50">
+                  <h3 className="text-xl font-semibold mb-3 text-primary-900">תהליך ליווי בתוקף</h3>
                   <p className="font-medium text-neutral-800">
                     {customerData.activeSubscription.planSnapshot?.title || 'מסלול'}
                   </p>
                   <p className="text-sm text-neutral-600 mt-2">
-                    תקופה:{' '}
+                    תקופת המנוי (ליווי וקביעת פגישות):{' '}
                     {new Date(customerData.activeSubscription.startedAt).toLocaleDateString(
                       'he-IL',
                       dateLongHe
@@ -495,9 +516,12 @@ function CustomerProfilePage() {
                 </Card>
               )}
 
-              {activeCoachingPurchases.length > 0 && (
+              {!customerData.activeSubscription && activeCoachingPurchases.length > 0 && (
                 <Card className="border-2 border-primary-200 bg-primary-50/50">
                   <h3 className="text-xl font-semibold mb-3 text-primary-900">תהליך ליווי בתוקף</h3>
+                  <p className="text-sm text-neutral-600 mb-3">
+                    ללא רשומת מנוי במערכת — מוצג חלון ליווי לפי הגדרות המסלול והרכישה.
+                  </p>
                   <ul className="space-y-3">
                     {activeCoachingPurchases.map((p) => {
                       const w = getCoachingWindow(p, customerData)
@@ -611,15 +635,20 @@ function CustomerProfilePage() {
                           {purchaseDisplayDate(purchase)?.toLocaleDateString('he-IL', dateLongHe) ?? '—'}
                         </p>
                         {(() => {
-                          const w = getCoachingWindow(purchase, customerData)
-                          if (w) {
+                          const period = getCoachingPeriodForPurchaseDisplay(purchase, customerData)
+                          if (period) {
                             return (
                               <div className="mt-2">
                                 <p className="text-sm text-neutral-700 font-medium">
-                                  תקופת ליווי: {w.start.toLocaleDateString('he-IL', dateShortHe)} –{' '}
-                                  {w.end.toLocaleDateString('he-IL', dateShortHe)}
+                                  תקופת ליווי: {period.start.toLocaleDateString('he-IL', dateShortHe)} –{' '}
+                                  {period.end.toLocaleDateString('he-IL', dateShortHe)}
                                 </p>
-                                {w.derived && (
+                                {period.source === 'subscription' && (
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    לפי מנוי פעיל (תואם לזכאות לקביעת פגישות)
+                                  </p>
+                                )}
+                                {period.source === 'derived' && period.derived && (
                                   <p className="text-xs text-neutral-500 mt-1">
                                     מחושב לפי תאריך פתיחת התיק או תאריך החיוב ומשך המסלול במערכת
                                   </p>
