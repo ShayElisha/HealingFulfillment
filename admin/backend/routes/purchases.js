@@ -178,7 +178,7 @@ router.post('/create-checkout', async (req, res, next) => {
       paymentStatus: 'pending',
     }).save()
 
-    const returnBase = `${frontendUrl}/purchase?orderId=${encodeURIComponent(orderId)}`
+    const returnBase = `${frontendUrl}/dashboard?orderId=${encodeURIComponent(orderId)}`
     const checkout = await createCardcomCheckout({
       orderId,
       amount: chargeAmount,

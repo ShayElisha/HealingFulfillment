@@ -730,7 +730,8 @@ function AdminPage() {
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault()
     try {
-      if (purchaseForm.paymentProvider === 'cardcom') {
+      const isCardcomPurchase = purchaseForm.paymentProvider === 'cardcom'
+      if (isCardcomPurchase) {
         const res = await purchaseService.createCheckout({
           courseId: purchaseForm.courseId,
           customerName: purchaseForm.customerName,
@@ -759,6 +760,8 @@ function AdminPage() {
         status: 'pending'
       })
       toast.success('רכישה נוצרה בהצלחה!' + (purchaseForm.status === 'completed' ? ' הכנסה נוצרה אוטומטית.' : ''))
+      // ברכישה ידנית נשארים מחוברים ומתקדמים אוטומטית לרשימת לקוחות
+      navigate('/customers')
     } catch (error) {
       console.error('Error creating purchase:', error)
       const errorMessage = error.response?.data?.message || 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { statsService } from '../services/adminApi'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { purchaseService, statsService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [reviews, setReviews] = useState([])
   const [dateRange, setDateRange] = useState({
@@ -66,6 +67,51 @@ function DashboardPage() {
       window.removeEventListener('focus', handleFocus)
     }
   }, [loadDashboardData])
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const lowProfileCode = searchParams.get('lowprofilecode') || searchParams.get('LowProfileCode')
+    const orderId = searchParams.get('orderId')
+    const cardcomFlag = searchParams.get('cardcom')
+    if (!orderId || !cardcomFlag) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (cardcomFlag === 'success') {
+          if (!lowProfileCode) {
+            toast.error('הרכישה לא אושרה: חסר קוד אימות מהסולק')
+          } else {
+            await purchaseService.confirmFromRedirect({ orderId, lowProfileCode })
+            if (!cancelled) {
+              toast.success('הרכישה הושלמה בהצלחה! לקוח נוצר ונקלט במערכת')
+              await loadDashboardData({ silent: true })
+            }
+          }
+        } else {
+          toast.error('הרכישה לא הושלמה')
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const msg = error?.response?.data?.message || 'לא ניתן לאמת את העסקה מול Cardcom'
+          toast.error(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          const sp = new URLSearchParams(location.search)
+          sp.delete('orderId')
+          sp.delete('cardcom')
+          sp.delete('lowprofilecode')
+          sp.delete('LowProfileCode')
+          navigate({ pathname: location.pathname, search: sp.toString() ? `?${sp}` : '' }, { replace: true })
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [location.pathname, location.search, navigate, loadDashboardData])
 
   // Close date picker when clicking outside
   useEffect(() => {
