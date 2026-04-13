@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../context/AuthContext'
@@ -26,6 +26,17 @@ function EyeIcon({ closed = false }) {
   )
 }
 
+function getPasswordChecks(password) {
+  const value = String(password || '')
+  return {
+    length: value.length >= 8 && value.length <= 12,
+    upper: /[A-Z]/.test(value),
+    lower: /[a-z]/.test(value),
+    digit: /\d/.test(value),
+    symbol: /[^A-Za-z0-9]/.test(value),
+  }
+}
+
 function ChangePasswordPage() {
   const navigate = useNavigate()
   const { changePassword, isAuthenticated, user } = useAuth()
@@ -37,6 +48,11 @@ function ChangePasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const passwordChecks = useMemo(() => getPasswordChecks(newPassword), [newPassword])
+  const isStrongPassword = useMemo(
+    () => Object.values(passwordChecks).every(Boolean),
+    [passwordChecks]
+  )
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -51,8 +67,8 @@ function ChangePasswordPage() {
     setError('')
 
     // בדיקות תקינות
-    if (newPassword.length < 6) {
-      setError('סיסמה חדשה חייבת להכיל לפחות 6 תווים')
+    if (!isStrongPassword) {
+      setError('הסיסמה חייבת להכיל 8-12 תווים, אות גדולה, אות קטנה, מספר וסימן מיוחד')
       return
     }
 
@@ -153,9 +169,10 @@ function ChangePasswordPage() {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
+                      maxLength={12}
                       className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-20"
-                      placeholder="הכנס סיסמה חדשה (מינימום 6 תווים)"
+                      placeholder="8-12 תווים, כולל אותיות/מספרים/סימנים"
                     />
                     <button
                       type="button"
@@ -166,9 +183,26 @@ function ChangePasswordPage() {
                       <EyeIcon closed={showNewPassword} />
                     </button>
                   </div>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    סיסמה חייבת להכיל לפחות 6 תווים
-                  </p>
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {[
+                      { ok: passwordChecks.length, label: 'באורך 8-12 תווים' },
+                      { ok: passwordChecks.upper, label: 'לפחות אות גדולה באנגלית (A-Z)' },
+                      { ok: passwordChecks.lower, label: 'לפחות אות קטנה באנגלית (a-z)' },
+                      { ok: passwordChecks.digit, label: 'לפחות מספר אחד (0-9)' },
+                      { ok: passwordChecks.symbol, label: 'לפחות סימן מיוחד אחד (כמו !@#$)' },
+                    ].map((rule) => (
+                      <li
+                        key={rule.label}
+                        className={`${
+                          rule.ok
+                            ? 'text-neutral-400 line-through decoration-1'
+                            : 'text-neutral-600'
+                        }`}
+                      >
+                        • {rule.label}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <div>
@@ -182,7 +216,8 @@ function ChangePasswordPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
+                      maxLength={12}
                       className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-20"
                       placeholder="הכנס שוב את הסיסמה החדשה"
                     />

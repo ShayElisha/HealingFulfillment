@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { purchaseService } from '../services/adminApi'
 import { customerService } from '../services/customerApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast'
 
 function CustomersPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -17,6 +19,51 @@ function CustomersPage() {
   useEffect(() => {
     loadCustomers()
   }, [])
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const orderId = searchParams.get('orderId')
+    const cardcomFlag = searchParams.get('cardcom')
+    const lowProfileCode = searchParams.get('lowprofilecode') || searchParams.get('LowProfileCode')
+    if (!orderId || !cardcomFlag) return
+
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (cardcomFlag === 'success') {
+          if (!lowProfileCode) {
+            toast.error('הרכישה לא אושרה: חסר קוד אימות מהסולק')
+          } else {
+            await purchaseService.confirmFromRedirect({ orderId, lowProfileCode })
+            if (!cancelled) {
+              toast.success('הרכישה הושלמה בהצלחה! הלקוח עודכן במערכת')
+              await loadCustomers()
+            }
+          }
+        } else {
+          toast.error('הרכישה לא הושלמה')
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const msg = error?.response?.data?.message || 'לא ניתן לאמת את העסקה מול Cardcom'
+          toast.error(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          const sp = new URLSearchParams(location.search)
+          sp.delete('orderId')
+          sp.delete('cardcom')
+          sp.delete('lowprofilecode')
+          sp.delete('LowProfileCode')
+          navigate({ pathname: location.pathname, search: sp.toString() ? `?${sp}` : '' }, { replace: true })
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [location.pathname, location.search, navigate])
 
   const loadCustomers = async () => {
     try {

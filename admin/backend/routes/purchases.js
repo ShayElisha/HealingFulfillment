@@ -141,7 +141,11 @@ router.post('/create-checkout', async (req, res, next) => {
   try {
     assertCardcomEnvConfigured()
     const { courseId, customerName, customerEmail, customerPhone, paymentMethod, notes } = req.body
-    const frontendUrl = process.env.ADMIN_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:3001'
+    const isProd = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production'
+    // תמיד מחזירים לפלטפורמת המנהל בלבד (לא ללקוח/public)
+    const frontendUrl =
+      process.env.ADMIN_FRONTEND_URL ||
+      (isProd && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3001')
     const backendUrl = process.env.ADMIN_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:5001'
 
     const course = await Course.findById(courseId)
@@ -178,7 +182,7 @@ router.post('/create-checkout', async (req, res, next) => {
       paymentStatus: 'pending',
     }).save()
 
-    const returnBase = `${frontendUrl}/dashboard?orderId=${encodeURIComponent(orderId)}`
+    const returnBase = `${frontendUrl}/customers?orderId=${encodeURIComponent(orderId)}`
     const checkout = await createCardcomCheckout({
       orderId,
       amount: chargeAmount,

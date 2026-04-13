@@ -20,6 +20,24 @@ function hashResetToken(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex')
 }
 
+function validateStrongPassword(password) {
+  const value = String(password || '')
+  const checks = {
+    length: value.length >= 8 && value.length <= 12,
+    upper: /[A-Z]/.test(value),
+    lower: /[a-z]/.test(value),
+    digit: /\d/.test(value),
+    symbol: /[^A-Za-z0-9]/.test(value),
+  }
+  const valid = Object.values(checks).every(Boolean)
+  return {
+    valid,
+    checks,
+    message:
+      'הסיסמה חייבת להכיל 8-12 תווים, אות גדולה, אות קטנה, מספר וסימן מיוחד.',
+  }
+}
+
 // GET /api/auth/login - Return info about login endpoint
 router.get('/login', (req, res) => {
   res.status(405).json({
@@ -174,8 +192,9 @@ router.post('/reset-password', async (req, res, next) => {
     if (!token || !newPassword) {
       return res.status(400).json({ message: 'חסרים נתונים לאיפוס סיסמה' })
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'סיסמה חדשה חייבת להכיל לפחות 6 תווים' })
+    const strong = validateStrongPassword(newPassword)
+    if (!strong.valid) {
+      return res.status(400).json({ message: strong.message, passwordChecks: strong.checks })
     }
 
     const tokenHash = hashResetToken(token)
@@ -211,9 +230,11 @@ router.post('/change-password', authenticateToken, async (req, res, next) => {
       })
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ 
-        message: 'סיסמה חדשה חייבת להכיל לפחות 6 תווים' 
+    const strong = validateStrongPassword(newPassword)
+    if (!strong.valid) {
+      return res.status(400).json({
+        message: strong.message,
+        passwordChecks: strong.checks,
       })
     }
 

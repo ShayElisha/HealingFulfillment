@@ -26,6 +26,17 @@ function EyeIcon({ closed = false }) {
   )
 }
 
+function getPasswordChecks(password) {
+  const value = String(password || '')
+  return {
+    length: value.length >= 8 && value.length <= 12,
+    upper: /[A-Z]/.test(value),
+    lower: /[a-z]/.test(value),
+    digit: /\d/.test(value),
+    symbol: /[^A-Za-z0-9]/.test(value),
+  }
+}
+
 function ResetPasswordPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -38,6 +49,11 @@ function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const passwordChecks = useMemo(() => getPasswordChecks(newPassword), [newPassword])
+  const isStrongPassword = useMemo(
+    () => Object.values(passwordChecks).every(Boolean),
+    [passwordChecks]
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,8 +62,8 @@ function ResetPasswordPage() {
       setError('קישור איפוס לא תקין')
       return
     }
-    if (newPassword.length < 6) {
-      setError('סיסמה חדשה חייבת להכיל לפחות 6 תווים')
+    if (!isStrongPassword) {
+      setError('הסיסמה חייבת להכיל 8-12 תווים, אות גדולה, אות קטנה, מספר וסימן מיוחד')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -114,9 +130,10 @@ function ResetPasswordPage() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={8}
+                        maxLength={12}
                         className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-20"
-                        placeholder="לפחות 6 תווים"
+                        placeholder="8-12 תווים, כולל אותיות/מספרים/סימנים"
                       />
                       <button
                         type="button"
@@ -127,6 +144,26 @@ function ResetPasswordPage() {
                         <EyeIcon closed={showNew} />
                       </button>
                     </div>
+                    <ul className="mt-2 space-y-1 text-xs">
+                      {[
+                        { ok: passwordChecks.length, label: 'באורך 8-12 תווים' },
+                        { ok: passwordChecks.upper, label: 'לפחות אות גדולה באנגלית (A-Z)' },
+                        { ok: passwordChecks.lower, label: 'לפחות אות קטנה באנגלית (a-z)' },
+                        { ok: passwordChecks.digit, label: 'לפחות מספר אחד (0-9)' },
+                        { ok: passwordChecks.symbol, label: 'לפחות סימן מיוחד אחד (כמו !@#$)' },
+                      ].map((rule) => (
+                        <li
+                          key={rule.label}
+                          className={`${
+                            rule.ok
+                              ? 'text-neutral-400 line-through decoration-1'
+                              : 'text-neutral-600'
+                          }`}
+                        >
+                          • {rule.label}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                   <div>
@@ -140,7 +177,8 @@ function ResetPasswordPage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
-                        minLength={6}
+                        minLength={8}
+                        maxLength={12}
                         className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent pr-20"
                         placeholder="הכנס שוב את הסיסמה"
                       />
