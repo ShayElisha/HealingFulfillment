@@ -28,7 +28,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: import.meta.env.PROD ? 25000 : 10000, // Vercel cold starts may exceed 10s
 })
 
 // Add request interceptor for debugging and auth token

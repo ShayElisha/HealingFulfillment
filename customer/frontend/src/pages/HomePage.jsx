@@ -17,6 +17,7 @@ function HomePage() {
   const { openPurchaseModal } = usePurchase()
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(true)
+  const [reviewsError, setReviewsError] = useState('')
   const [treatments, setTreatments] = useState([])
   const [loadingTreatments, setLoadingTreatments] = useState(true)
   const [forWhomProfiles, setForWhomProfiles] = useState([])
@@ -32,12 +33,18 @@ function HomePage() {
   const loadReviews = async () => {
     try {
       setLoadingReviews(true)
+      setReviewsError('')
       const reviewsRes = await reviewsService.getAll()
-      setReviews(reviewsRes?.data || [])
+      const normalized = Array.isArray(reviewsRes?.data)
+        ? reviewsRes.data
+        : Array.isArray(reviewsRes)
+          ? reviewsRes
+          : []
+      setReviews(normalized)
     } catch (error) {
       console.error('Error loading reviews:', error)
       console.error('Error details:', error.response?.data || error.message)
-      // Set empty arrays on error
+      setReviewsError('טעינת הביקורות נכשלה כרגע. נסה לרענן בעוד רגע.')
       setReviews([])
     } finally {
       setLoadingReviews(false)
@@ -355,6 +362,17 @@ function HomePage() {
         {loadingReviews ? (
           <div className="text-center py-12">
             <p className="text-neutral-600">טוען ביקורות...</p>
+          </div>
+        ) : reviewsError ? (
+          <div className="text-center py-12">
+            <p className="text-neutral-700">{reviewsError}</p>
+            <Button
+              onClick={loadReviews}
+              variant="secondary"
+              className="mt-4"
+            >
+              נסה שוב
+            </Button>
           </div>
         ) : !reviews || reviews.length === 0 ? (
           <div className="text-center py-12">
