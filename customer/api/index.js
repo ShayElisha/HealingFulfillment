@@ -375,7 +375,8 @@ async function loadRoutes() {
         purchases: purchasesModule.default,
         messages: messagesModule.default,
         leads: leadsModule.default,
-        forWhomAudience: forWhomAudienceModule.default
+        forWhomAudience: forWhomAudienceModule.default,
+        triggerJournal: triggerJournalModule.default
       }
       
       for (const [name, route] of Object.entries(routes)) {
