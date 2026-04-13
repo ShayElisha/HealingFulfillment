@@ -97,6 +97,17 @@ export const purchaseService = {
     const response = await api.post('/purchases', data)
     return response.data
   },
+  createCheckout: async (data) => {
+    const response = await api.post('/purchases/create-checkout', data)
+    return response.data
+  },
+  confirmFromRedirect: async ({ orderId, lowProfileCode }) => {
+    const response = await api.post('/purchases/cardcom/confirm-from-redirect', {
+      orderId,
+      lowProfileCode,
+    })
+    return response.data
+  },
   updateStatus: async (id, status) => {
     const response = await api.put(`/admin/purchases/${id}/status`, { status })
     return response.data
@@ -122,6 +133,10 @@ export const bookingService = {
   },
   updateSessionSummary: async (id, sessionSummary) => {
     const response = await api.put(`/admin/bookings/${id}/session-summary`, { sessionSummary })
+    return response.data
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/admin/bookings/${id}`)
     return response.data
   },
 }

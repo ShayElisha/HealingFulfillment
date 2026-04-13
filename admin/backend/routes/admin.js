@@ -499,13 +499,13 @@ router.get('/bookings', async (req, res, next) => {
     if (tab === 'intro') {
       filter.isIntroMeeting = true
       if (statusQ !== 'all') filter.status = statusQ
-      else filter.status = { $ne: 'completed' }
+      else filter.status = { $nin: ['completed', 'cancelled'] }
     } else if (tab === 'regular') {
       filter.isIntroMeeting = false
       if (statusQ !== 'all') filter.status = statusQ
-      else filter.status = { $ne: 'completed' }
+      else filter.status = { $nin: ['completed', 'cancelled'] }
     } else if (tab === 'history') {
-      filter.status = 'completed'
+      filter.status = { $in: ['completed', 'cancelled'] }
     }
 
     if (meetingTypeQ === 'frontend' || meetingTypeQ === 'zoom') {
@@ -555,8 +555,8 @@ router.get('/bookings', async (req, res, next) => {
       Booking.countDocuments({ status: 'confirmed' }),
       Booking.countDocuments({ status: 'completed' }),
       Booking.countDocuments({ status: 'cancelled' }),
-      Booking.countDocuments({ isIntroMeeting: true, status: { $ne: 'completed' } }),
-      Booking.countDocuments({ isIntroMeeting: false, status: { $ne: 'completed' } }),
+      Booking.countDocuments({ isIntroMeeting: true, status: { $nin: ['completed', 'cancelled'] } }),
+      Booking.countDocuments({ isIntroMeeting: false, status: { $nin: ['completed', 'cancelled'] } }),
       Booking.countDocuments({ isIntroMeeting: true }),
       Booking.countDocuments({ isIntroMeeting: false }),
     ])
@@ -722,6 +722,29 @@ router.put('/bookings/:id/zoom-link', async (req, res, next) => {
     })
   } catch (error) {
     console.error('Error updating zoom link:', error)
+    next(error)
+  }
+})
+
+// DELETE /api/admin/bookings/:id - Delete booking
+router.delete('/bookings/:id', async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id).lean()
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    await Booking.findByIdAndDelete(req.params.id)
+
+    // ניקוי שיוך היסטורי אצל לקוח (אם קיים)
+    await Customer.updateMany(
+      { bookings: booking._id },
+      { $pull: { bookings: booking._id } }
+    )
+
+    res.json({ message: 'Booking deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting booking:', error)
     next(error)
   }
 })

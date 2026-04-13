@@ -282,6 +282,7 @@ function AdminPage() {
     customerName: '',
     customerEmail: '',
     customerPhone: '',
+    paymentProvider: 'manual',
     paymentMethod: 'other',
     notes: '',
     status: 'pending'
@@ -351,6 +352,46 @@ function AdminPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    const lowProfileCode = searchParams.get('lowprofilecode') || searchParams.get('LowProfileCode')
+    const orderId = searchParams.get('orderId')
+    const cardcomFlag = searchParams.get('cardcom')
+    if (!orderId || !lowProfileCode) {
+      if (cardcomFlag === 'failed') {
+        toast.error('התשלום ב-Cardcom לא הושלם')
+      }
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        await purchaseService.confirmFromRedirect({ orderId, lowProfileCode })
+        if (!cancelled) {
+          toast.success('התשלום אושר בהצלחה')
+          await loadData()
+        }
+      } catch (error) {
+        if (!cancelled) {
+          const msg = error?.response?.data?.message || 'לא ניתן לאמת את העסקה מול Cardcom'
+          toast.error(msg)
+        }
+      } finally {
+        if (!cancelled) {
+          const sp = new URLSearchParams(location.search)
+          sp.delete('orderId')
+          sp.delete('cardcom')
+          sp.delete('lowprofilecode')
+          sp.delete('LowProfileCode')
+          navigate({ pathname: location.pathname, search: sp.toString() ? `?${sp}` : '' }, { replace: true })
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [location.pathname, location.search, navigate])
 
   useEffect(() => {
     const tab = new URLSearchParams(location.search).get('tab')
@@ -689,6 +730,21 @@ function AdminPage() {
   const handlePurchaseSubmit = async (e) => {
     e.preventDefault()
     try {
+      if (purchaseForm.paymentProvider === 'cardcom') {
+        const res = await purchaseService.createCheckout({
+          courseId: purchaseForm.courseId,
+          customerName: purchaseForm.customerName,
+          customerEmail: purchaseForm.customerEmail,
+          customerPhone: purchaseForm.customerPhone,
+          paymentMethod: 'credit_card',
+          notes: purchaseForm.notes,
+        })
+        const checkoutUrl = res?.data?.checkoutUrl
+        if (!checkoutUrl) throw new Error('לא התקבל קישור לתשלום')
+        window.location.href = checkoutUrl
+        return
+      }
+
       await purchaseService.create(purchaseForm)
       triggerConfetti()
       await loadData()
@@ -697,6 +753,7 @@ function AdminPage() {
         customerName: '',
         customerEmail: '',
         customerPhone: '',
+        paymentProvider: 'manual',
         paymentMethod: 'other',
         notes: '',
         status: 'pending'
@@ -1576,11 +1633,32 @@ function AdminPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium mb-2 text-neutral-900">
+                          סוג רכישה
+                        </label>
+                        <select
+                          value={purchaseForm.paymentProvider}
+                          onChange={(e) =>
+                            setPurchaseForm({
+                              ...purchaseForm,
+                              paymentProvider: e.target.value,
+                              paymentMethod: e.target.value === 'cardcom' ? 'credit_card' : purchaseForm.paymentMethod,
+                              status: e.target.value === 'cardcom' ? 'pending' : purchaseForm.status,
+                            })
+                          }
+                          className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="manual">רכישה ידנית</option>
+                          <option value="cardcom">תשלום דרך Cardcom</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-neutral-900">
                           שיטת תשלום
                         </label>
                         <select
                           value={purchaseForm.paymentMethod}
                           onChange={(e) => setPurchaseForm({ ...purchaseForm, paymentMethod: e.target.value })}
+                          disabled={purchaseForm.paymentProvider === 'cardcom'}
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         >
                           <option value="other">אחר</option>
@@ -1597,6 +1675,7 @@ function AdminPage() {
                           required
                           value={purchaseForm.status}
                           onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}
+                          disabled={purchaseForm.paymentProvider === 'cardcom'}
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         >
                           <option value="pending">ממתין</option>
@@ -1626,7 +1705,7 @@ function AdminPage() {
 
                     <div className="flex gap-4 pt-4">
                       <Button type="submit" variant="primary" className="flex-1 text-lg py-3">
-                        שמור רכישה
+                        {purchaseForm.paymentProvider === 'cardcom' ? 'המשך לתשלום ב-Cardcom' : 'שמור רכישה'}
                       </Button>
                       <Button
                         type="button"
@@ -1637,6 +1716,7 @@ function AdminPage() {
                             customerName: '',
                             customerEmail: '',
                             customerPhone: '',
+                            paymentProvider: 'manual',
                             paymentMethod: 'other',
                             notes: '',
                             status: 'pending'

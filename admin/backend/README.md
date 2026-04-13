@@ -37,6 +37,16 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-password
 FRONTEND_URL=http://localhost:3001
+ADMIN_BACKEND_URL=http://localhost:5001
+CARDCOM_TERMINAL_NUMBER=
+CARDCOM_API_NAME=
+CARDCOM_API_PASSWORD=
+CARDCOM_USERNAME=
+CARDCOM_WEBHOOK_SECRET=
+# אופציונלי:
+# CARDCOM_API_URL=https://secure.cardcom.solutions/Interface/LowProfile.aspx
+# CARDCOM_USER_PASSWORD=
+# CARDCOM_API_LEVEL=
 ```
 
 ## Routes

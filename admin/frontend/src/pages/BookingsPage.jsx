@@ -168,6 +168,24 @@ function BookingsPage() {
     handleStatusChange(booking, 'cancelled')
   }
 
+  const handleDeleteBooking = async (booking) => {
+    const whenText = booking?.preferredDate
+      ? new Date(booking.preferredDate).toLocaleDateString('he-IL')
+      : ''
+    const ok = window.confirm(
+      `למחוק את הפגישה של ${booking?.name || 'ללא שם'}${whenText ? ` בתאריך ${whenText}` : ''}? פעולה זו לא ניתנת לביטול.`
+    )
+    if (!ok) return
+    try {
+      await bookingService.delete(booking._id)
+      await loadData()
+      toast.success('הפגישה נמחקה')
+    } catch (error) {
+      console.error('Error deleting booking:', error)
+      toast.error(error?.response?.data?.message || 'שגיאה במחיקת הפגישה')
+    }
+  }
+
   const handleOpenSummaryModal = (booking) => {
     setSummaryBooking(booking)
     setSessionSummary(booking.sessionSummary || '')
@@ -255,7 +273,7 @@ function BookingsPage() {
                 activeTab === 'history' ? 'admin-tab-btn-active' : 'admin-tab-btn-idle'
               }`}
             >
-              היסטוריית פגישות ({stats.completed})
+              היסטוריית פגישות ({(stats.completed ?? 0) + (stats.cancelled ?? 0)})
             </button>
           </div>
 
@@ -539,17 +557,43 @@ function BookingsPage() {
                             >
                               דחה
                             </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleDeleteBooking(booking)}
+                            >
+                              מחק
+                            </Button>
                           </div>
                         )}
                         {activeTab !== 'history' && booking.status === 'confirmed' && (
-                          <Button
-                            type="button"
-                            variant="primary"
-                            className="!px-3 !py-1.5 text-xs w-full"
-                            onClick={() => handleStatusChange(booking, 'completed')}
-                          >
-                            בוצע
-                          </Button>
+                          <div className="flex flex-row-reverse flex-wrap gap-2 justify-end">
+                            <Button
+                              type="button"
+                              variant="primary"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleStatusChange(booking, 'completed')}
+                            >
+                              בוצע
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleStatusChange(booking, 'cancelled')}
+                            >
+                              ביטול
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleDeleteBooking(booking)}
+                            >
+                              מחק
+                            </Button>
+                          </div>
                         )}
                         {activeTab !== 'history' && booking.status === 'completed' && (
                           <Button
@@ -564,7 +608,7 @@ function BookingsPage() {
                         {activeTab !== 'history' && booking.status === 'cancelled' && (
                           <p className="text-xs text-neutral-500 text-right leading-snug">הפגישה בוטלה</p>
                         )}
-                        {activeTab === 'history' && (
+                        {activeTab === 'history' && booking.status === 'completed' && (
                           <Button
                             type="button"
                             variant="soft"

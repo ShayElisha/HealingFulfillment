@@ -31,15 +31,66 @@ const purchaseSchema = new mongoose.Schema({
     required: [true, 'Price is required'],
     min: [0, 'Price cannot be negative']
   },
+  /** סכום לתשלום (מסונכרן עם price בעת יצירת הזמנה) — לצורך ביקורת מול Cardcom */
+  amount: {
+    type: Number,
+    min: [0, 'Amount cannot be negative'],
+    default: null
+  },
   status: {
     type: String,
     enum: ['pending', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'succeeded', 'failed', 'cancelled'],
     default: 'pending'
   },
   paymentMethod: {
     type: String,
     enum: ['credit_card', 'bank_transfer', 'paypal', 'other'],
     default: 'other'
+  },
+  orderId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true
+  },
+  provider: {
+    type: String,
+    enum: ['cardcom', 'manual'],
+    default: 'manual'
+  },
+  /** מזהה עסקה ב-Cardcom (InternalDealNumber / TransactionId) */
+  transactionId: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  providerTransactionId: {
+    type: String,
+    trim: true
+  },
+  cardcomResponseCode: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  cardcomDescription: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  /** תגובה גולמית מספק התשלומים (webhook / low-profile) */
+  providerResponse: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null
+  },
+  paidAt: {
+    type: Date,
+    default: null
   },
   notes: {
     type: String,
