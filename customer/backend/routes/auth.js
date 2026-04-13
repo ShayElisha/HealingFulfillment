@@ -6,6 +6,7 @@ import Customer from '../models/Customer.js'
 import Booking from '../models/Booking.js'
 import {
   computeSessionEntitlementForCustomerId,
+  getSubscriptionDisplayForCustomer,
   preferredDateWithinSubscription,
 } from '../utils/sessionEntitlement.js'
 import Message from '../models/Message.js'
@@ -292,6 +293,7 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     }
 
     const entitlement = await computeSessionEntitlementForCustomerId(req.customerId)
+    const subscriptionDisplay = await getSubscriptionDisplayForCustomer(req.customerId)
 
     const customerData = customer.toObject()
     customerData.availableSessions = entitlement.availableSessions
@@ -306,6 +308,7 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     ).length
 
     customerData.activeSubscription = entitlement.activeSubscription || null
+    customerData.subscriptionDisplay = subscriptionDisplay
 
     res.json({
       message: 'פרטי לקוח נטענו בהצלחה',

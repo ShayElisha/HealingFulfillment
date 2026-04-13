@@ -58,6 +58,38 @@ async function computePurchasesOnlyEntitlement(customerId) {
  * זכאות למפגשים: אם יש מנוי בתוקף — קביעה לפי תוקף המנוי בלבד (ללא מכסת מספר פגישות).
  * אחרת — סכימת רכישות שהושלמו מול פגישות שנקבעו.
  */
+/**
+ * תצוגת מנוי ללקוח: פעיל / פג תוקף (האחרון לפי endsAt) / אין רשומה
+ */
+export async function getSubscriptionDisplayForCustomer(customerId) {
+  if (!customerId) return { state: 'none', subscription: null }
+  const now = new Date()
+
+  const active = await Subscription.findOne({
+    customer: customerId,
+    status: 'active',
+    endsAt: { $gt: now },
+  })
+    .sort({ endsAt: -1 })
+    .select('planSnapshot startedAt endsAt purchase course status')
+    .lean()
+
+  if (active) {
+    return { state: 'active', subscription: active }
+  }
+
+  const latest = await Subscription.findOne({ customer: customerId })
+    .sort({ endsAt: -1 })
+    .select('planSnapshot startedAt endsAt purchase course status')
+    .lean()
+
+  if (!latest) {
+    return { state: 'none', subscription: null }
+  }
+
+  return { state: 'expired', subscription: latest }
+}
+
 export async function computeSessionEntitlementForCustomerId(customerId) {
   const sub = await getActiveSubscriptionForCustomer(customerId)
   if (sub) {

@@ -62,7 +62,7 @@ function isCoachingCurrentlyActive(purchase, customer) {
   return now >= w.start.getTime() && now <= w.end.getTime()
 }
 
-/** תקופת ליווי לתצוגה: אם יש מנוי שנוצר מאותה רכישה — משתמשים בתאריכי המנוי */
+/** תקופת ליווי לתצוגה: אם יש מנוי שנוצר מאותה רכישה — משתמשים בתאריכי המנוי (גם כשהמנוי פג) */
 function getCoachingPeriodForPurchaseDisplay(purchase, customerData) {
   const sub = customerData?.activeSubscription
   if (
@@ -76,11 +76,30 @@ function getCoachingPeriodForPurchaseDisplay(purchase, customerData) {
       start: new Date(sub.startedAt),
       end: new Date(sub.endsAt),
       derived: false,
+      expired: false,
     }
   }
+
+  const disp = customerData?.subscriptionDisplay
+  const expiredSub = disp?.state === 'expired' ? disp?.subscription : null
+  if (
+    expiredSub &&
+    purchase?._id &&
+    expiredSub.purchase &&
+    String(expiredSub.purchase) === String(purchase._id)
+  ) {
+    return {
+      source: 'subscription',
+      start: new Date(expiredSub.startedAt),
+      end: new Date(expiredSub.endsAt),
+      derived: false,
+      expired: true,
+    }
+  }
+
   const w = getCoachingWindow(purchase, customerData)
   if (!w) return null
-  return { source: 'derived', start: w.start, end: w.end, derived: w.derived }
+  return { source: 'derived', start: w.start, end: w.end, derived: w.derived, expired: false }
 }
 
 function purchaseDisplayDate(purchase) {
@@ -516,7 +535,42 @@ function CustomerProfilePage() {
                 </Card>
               )}
 
-              {!customerData.activeSubscription && activeCoachingPurchases.length > 0 && (
+              {customerData.subscriptionDisplay?.state === 'expired' &&
+                customerData.subscriptionDisplay?.subscription && (
+                <Card className="border-2 border-amber-200 bg-amber-50/60">
+                  <h3 className="text-xl font-semibold mb-3 text-amber-900">תהליך ליווי — פג תוקף</h3>
+                  <p className="font-medium text-neutral-800">
+                    {customerData.subscriptionDisplay.subscription.planSnapshot?.title || 'מסלול'}
+                  </p>
+                  <p className="text-sm text-neutral-700 mt-2">
+                    תקופת המנוי לפי המערכת (נשמר בבסיס הנתונים):{' '}
+                    {new Date(
+                      customerData.subscriptionDisplay.subscription.startedAt
+                    ).toLocaleDateString('he-IL', dateLongHe)}
+                    {' – '}
+                    {new Date(
+                      customerData.subscriptionDisplay.subscription.endsAt
+                    ).toLocaleDateString('he-IL', dateLongHe)}
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-2">
+                    סטטוס במערכת:{' '}
+                    <span className="font-medium">
+                      {customerData.subscriptionDisplay.subscription.status === 'expired'
+                        ? 'פג תוקף'
+                        : customerData.subscriptionDisplay.subscription.status === 'cancelled'
+                          ? 'בוטל'
+                          : 'לא בתוקף'}
+                    </span>
+                    {customerData.subscriptionDisplay.subscription.status === 'active' && (
+                      <> (תאריך הסיום עבר)</>
+                    )}
+                  </p>
+                </Card>
+              )}
+
+              {customerData.subscriptionDisplay?.state !== 'active' &&
+                customerData.subscriptionDisplay?.state !== 'expired' &&
+                activeCoachingPurchases.length > 0 && (
                 <Card className="border-2 border-primary-200 bg-primary-50/50">
                   <h3 className="text-xl font-semibold mb-3 text-primary-900">תהליך ליווי בתוקף</h3>
                   <p className="text-sm text-neutral-600 mb-3">
@@ -643,9 +697,14 @@ function CustomerProfilePage() {
                                   תקופת ליווי: {period.start.toLocaleDateString('he-IL', dateShortHe)} –{' '}
                                   {period.end.toLocaleDateString('he-IL', dateShortHe)}
                                 </p>
-                                {period.source === 'subscription' && (
+                                {period.source === 'subscription' && !period.expired && (
                                   <p className="text-xs text-neutral-500 mt-1">
                                     לפי מנוי פעיל (תואם לזכאות לקביעת פגישות)
+                                  </p>
+                                )}
+                                {period.source === 'subscription' && period.expired && (
+                                  <p className="text-xs text-amber-700 mt-1">
+                                    לפי רשומת המנוי בבסיס הנתונים — פג תוקף (ללא זכאות לפגישות לפי מנוי)
                                   </p>
                                 )}
                                 {period.source === 'derived' && period.derived && (
