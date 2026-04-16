@@ -96,6 +96,32 @@ function formatTriggerEntryDate(iso) {
   return d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+/** חלק מהפס (0–1) שמוקדש לטעינת הקובץ מהדיסק לפני שליחה לשרת */
+const UPLOAD_READ_SHARE = 0.45
+
+/**
+ * קורא את הקובץ לזיכרון עם התקדמות (לפני העלאת HTTP).
+ * @param {(percent0to100: number) => void} onProgress
+ */
+function readFileIntoMemoryWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    let gotProgress = false
+    reader.onprogress = (ev) => {
+      if (ev.lengthComputable && ev.total > 0) {
+        gotProgress = true
+        onProgress(Math.min(100, Math.round((ev.loaded / ev.total) * 100)))
+      }
+    }
+    reader.onload = () => {
+      if (!gotProgress) onProgress(100)
+      resolve(reader.result)
+    }
+    reader.onerror = () => reject(reader.error || new Error('שגיאה בקריאת הקובץ'))
+    reader.readAsArrayBuffer(file)
+  })
+}
+
 function CustomerPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -111,8 +137,10 @@ function CustomerPage() {
   const [uploading, setUploading] = useState(false)
   /** 'file' | 'audio' — איזה טופס מעלה כרגע (לפרוגרס) */
   const [uploadKind, setUploadKind] = useState(null)
-  /** 0–100 או null אם אין אחוז (למשל לפני ידיעת גודל) */
+  /** 0–100 משולב: טעינה מקומית (0–45) ואז שליחה לשרת (45–100) */
   const [uploadProgress, setUploadProgress] = useState(0)
+  /** reading = טעינת קובץ מהמחשב | uploading = שליחה לרשת | processing = אחרי תגובה, לפני רענון נתונים */
+  const [uploadStage, setUploadStage] = useState(null)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [initialPassword, setInitialPassword] = useState('')
   const [creatingAccount, setCreatingAccount] = useState(false)
@@ -194,17 +222,37 @@ function CustomerPage() {
 
     setUploadKind('file')
     setUploadProgress(0)
+    setUploadStage('reading')
     setUploading(true)
-    const formData = new FormData()
-    formData.append('file', fileUpload)
-    formData.append('description', fileDescription)
 
     try {
+      const buf = await readFileIntoMemoryWithProgress(fileUpload, (readPct) => {
+        setUploadProgress(Math.round((readPct / 100) * UPLOAD_READ_SHARE * 100))
+      })
+
+      const formData = new FormData()
+      formData.append(
+        'file',
+        new File([buf], fileUpload.name, {
+          type: fileUpload.type || 'application/octet-stream',
+        })
+      )
+      formData.append('description', fileDescription)
+
+      setUploadStage('uploading')
       await customerService.uploadFile(id, formData, {
         onUploadProgress: (pct) => {
-          if (pct != null) setUploadProgress(pct)
+          if (pct != null) {
+            setUploadProgress(
+              Math.round(
+                UPLOAD_READ_SHARE * 100 + (pct / 100) * (1 - UPLOAD_READ_SHARE) * 100
+              )
+            )
+          }
         },
       })
+      setUploadStage('processing')
+      setUploadProgress(100)
       await loadCustomer()
       setFileUpload(null)
       setFileDescription('')
@@ -220,6 +268,7 @@ function CustomerPage() {
     } finally {
       setUploading(false)
       setUploadKind(null)
+      setUploadStage(null)
       setUploadProgress(0)
     }
   }
@@ -232,16 +281,37 @@ function CustomerPage() {
     }
     setUploadKind('audio')
     setUploadProgress(0)
+    setUploadStage('reading')
     setUploading(true)
-    const formData = new FormData()
-    formData.append('file', audioFileUpload)
-    formData.append('description', audioFileDescription)
+
     try {
+      const buf = await readFileIntoMemoryWithProgress(audioFileUpload, (readPct) => {
+        setUploadProgress(Math.round((readPct / 100) * UPLOAD_READ_SHARE * 100))
+      })
+
+      const formData = new FormData()
+      formData.append(
+        'file',
+        new File([buf], audioFileUpload.name, {
+          type: audioFileUpload.type || 'application/octet-stream',
+        })
+      )
+      formData.append('description', audioFileDescription)
+
+      setUploadStage('uploading')
       await customerService.uploadAudio(id, formData, {
         onUploadProgress: (pct) => {
-          if (pct != null) setUploadProgress(pct)
+          if (pct != null) {
+            setUploadProgress(
+              Math.round(
+                UPLOAD_READ_SHARE * 100 + (pct / 100) * (1 - UPLOAD_READ_SHARE) * 100
+              )
+            )
+          }
         },
       })
+      setUploadStage('processing')
+      setUploadProgress(100)
       await loadCustomer()
       setAudioFileUpload(null)
       setAudioFileDescription('')
@@ -253,6 +323,7 @@ function CustomerPage() {
     } finally {
       setUploading(false)
       setUploadKind(null)
+      setUploadStage(null)
       setUploadProgress(0)
     }
   }
@@ -835,14 +906,44 @@ function CustomerPage() {
                         />
                       </div>
                       <p className="text-xs text-neutral-600">
-                        {uploadProgress < 100
-                          ? `מעלה את הקובץ… ${uploadProgress}%`
-                          : 'מסיים בעיבוד בשרת…'}
+                        {uploadStage === 'reading' && (
+                          <>
+                            טוען קובץ מהמחשב…{' '}
+                            {Math.min(
+                              100,
+                              Math.round(
+                                (uploadProgress / (UPLOAD_READ_SHARE * 100)) * 100
+                              )
+                            )}
+                            %
+                          </>
+                        )}
+                        {uploadStage === 'uploading' && (
+                          <>
+                            מעלה לשרת…{' '}
+                            {Math.min(
+                              100,
+                              Math.round(
+                                ((uploadProgress - UPLOAD_READ_SHARE * 100) /
+                                  ((1 - UPLOAD_READ_SHARE) * 100)) *
+                                  100
+                              )
+                            )}
+                            %
+                          </>
+                        )}
+                        {uploadStage === 'processing' && 'מסיים בעיבוד בשרת…'}
                       </p>
                     </div>
                   )}
                   <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading && uploadKind === 'file' ? 'מעלה…' : 'העלה קובץ'}
+                    {uploading && uploadKind === 'file'
+                      ? uploadStage === 'reading'
+                        ? 'טוען קובץ…'
+                        : uploadStage === 'processing'
+                          ? 'מעבד…'
+                          : 'מעלה…'
+                      : 'העלה קובץ'}
                   </Button>
                 </form>
               </Card>
@@ -927,14 +1028,44 @@ function CustomerPage() {
                         />
                       </div>
                       <p className="text-xs text-neutral-600">
-                        {uploadProgress < 100
-                          ? `מעלה את האודיו… ${uploadProgress}%`
-                          : 'מסיים בעיבוד בשרת…'}
+                        {uploadStage === 'reading' && (
+                          <>
+                            טוען אודיו מהמחשב…{' '}
+                            {Math.min(
+                              100,
+                              Math.round(
+                                (uploadProgress / (UPLOAD_READ_SHARE * 100)) * 100
+                              )
+                            )}
+                            %
+                          </>
+                        )}
+                        {uploadStage === 'uploading' && (
+                          <>
+                            מעלה אודיו לשרת…{' '}
+                            {Math.min(
+                              100,
+                              Math.round(
+                                ((uploadProgress - UPLOAD_READ_SHARE * 100) /
+                                  ((1 - UPLOAD_READ_SHARE) * 100)) *
+                                  100
+                              )
+                            )}
+                            %
+                          </>
+                        )}
+                        {uploadStage === 'processing' && 'מסיים בעיבוד בשרת…'}
                       </p>
                     </div>
                   )}
                   <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading && uploadKind === 'audio' ? 'מעלה…' : 'העלה אודיו'}
+                    {uploading && uploadKind === 'audio'
+                      ? uploadStage === 'reading'
+                        ? 'טוען אודיו…'
+                        : uploadStage === 'processing'
+                          ? 'מעבד…'
+                          : 'מעלה…'
+                      : 'העלה אודיו'}
                   </Button>
                 </form>
               </Card>
