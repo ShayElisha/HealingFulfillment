@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { customerService } from '../services/customerApi'
-import { purchaseService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
@@ -269,23 +268,6 @@ function CustomerPage() {
     } catch (error) {
       console.error('Error adding note:', error)
       toast.error('שגיאה בהוספת הערה')
-    }
-  }
-
-  const handleUpdatePurchaseStatus = async (purchaseId, newStatus) => {
-    const statusText = newStatus === 'completed' ? 'הושלם' : newStatus === 'cancelled' ? 'בוטל' : 'ממתין'
-    const confirmed = window.confirm(`האם אתה בטוח שברצונך לשנות את סטטוס הרכישה ל-${statusText}?`)
-    if (!confirmed) {
-      return
-    }
-
-    try {
-      await purchaseService.updateStatus(purchaseId, newStatus)
-      await loadCustomer()
-      toast.success('סטטוס הרכישה עודכן בהצלחה!')
-    } catch (error) {
-      console.error('Error updating purchase status:', error)
-      toast.error('שגיאה בעדכון סטטוס הרכישה')
     }
   }
 
@@ -716,48 +698,6 @@ function CustomerPage() {
                                purchase.status === 'cancelled' ? 'בוטל' :
                                'ממתין'}
                             </span>
-                          </div>
-                        </div>
-                        
-                        {/* Status Change Dropdown */}
-                        <div className="mt-3 pt-3 border-t border-neutral-200">
-                          <label className="admin-label">
-                            שנה סטטוס:
-                          </label>
-                          <div className="flex gap-2 flex-wrap">
-                            <button
-                              onClick={() => handleUpdatePurchaseStatus(purchase._id, 'pending')}
-                              disabled={purchase.status === 'pending'}
-                              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                purchase.status === 'pending'
-                                  ? 'bg-yellow-200 text-yellow-800 cursor-not-allowed'
-                                  : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                              }`}
-                            >
-                              ממתין
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePurchaseStatus(purchase._id, 'completed')}
-                              disabled={purchase.status === 'completed'}
-                              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                purchase.status === 'completed'
-                                  ? 'bg-green-200 text-green-800 cursor-not-allowed'
-                                  : 'bg-green-50 text-green-700 hover:bg-green-100'
-                              }`}
-                            >
-                              הושלם
-                            </button>
-                            <button
-                              onClick={() => handleUpdatePurchaseStatus(purchase._id, 'cancelled')}
-                              disabled={purchase.status === 'cancelled'}
-                              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                purchase.status === 'cancelled'
-                                  ? 'bg-red-200 text-red-800 cursor-not-allowed'
-                                  : 'bg-red-50 text-red-700 hover:bg-red-100'
-                              }`}
-                            >
-                              בוטל
-                            </button>
                           </div>
                         </div>
                       </div>
