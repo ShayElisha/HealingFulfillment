@@ -7,18 +7,51 @@ import api from './services/api'
 import { getCustomerLoginUrl } from './utils/customerPortalUrl'
 import { getSafeAdminReturnToUrl } from './utils/safeAdminReturnTo'
 
-const AdminPage = lazy(() => import('./pages/AdminPage'))
-const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-const CustomerPage = lazy(() => import('./pages/CustomerPage'))
-const CustomersPage = lazy(() => import('./pages/CustomersPage'))
-const BookingsPage = lazy(() => import('./pages/BookingsPage'))
-const ContactsPage = lazy(() => import('./pages/ContactsPage'))
-const MessagesPage = lazy(() => import('./pages/MessagesPage'))
-const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
-const LeadsPage = lazy(() => import('./pages/LeadsPage'))
-const TransactionsPage = lazy(() => import('./pages/TransactionsPage'))
-const ForWhomAudiencePage = lazy(() => import('./pages/ForWhomAudiencePage'))
-const AvailabilityPage = lazy(() => import('./pages/AvailabilityPage'))
+const LAZY_RETRY_KEY = 'admin_lazy_chunk_retry_done'
+
+function lazyWithRetry(importer) {
+  return lazy(async () => {
+    try {
+      const mod = await importer()
+      try {
+        window.sessionStorage.removeItem(LAZY_RETRY_KEY)
+      } catch {}
+      return mod
+    } catch (err) {
+      const msg = String(err?.message || '')
+      const isChunkError =
+        msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('Importing a module script failed')
+      if (isChunkError) {
+        let alreadyRetried = false
+        try {
+          alreadyRetried = window.sessionStorage.getItem(LAZY_RETRY_KEY) === '1'
+        } catch {}
+        if (!alreadyRetried) {
+          try {
+            window.sessionStorage.setItem(LAZY_RETRY_KEY, '1')
+          } catch {}
+          window.location.reload()
+          return new Promise(() => {})
+        }
+      }
+      throw err
+    }
+  })
+}
+
+const AdminPage = lazyWithRetry(() => import('./pages/AdminPage'))
+const DashboardPage = lazyWithRetry(() => import('./pages/DashboardPage'))
+const CustomerPage = lazyWithRetry(() => import('./pages/CustomerPage'))
+const CustomersPage = lazyWithRetry(() => import('./pages/CustomersPage'))
+const BookingsPage = lazyWithRetry(() => import('./pages/BookingsPage'))
+const ContactsPage = lazyWithRetry(() => import('./pages/ContactsPage'))
+const MessagesPage = lazyWithRetry(() => import('./pages/MessagesPage'))
+const ReviewsPage = lazyWithRetry(() => import('./pages/ReviewsPage'))
+const LeadsPage = lazyWithRetry(() => import('./pages/LeadsPage'))
+const TransactionsPage = lazyWithRetry(() => import('./pages/TransactionsPage'))
+const ForWhomAudiencePage = lazyWithRetry(() => import('./pages/ForWhomAudiencePage'))
+const AvailabilityPage = lazyWithRetry(() => import('./pages/AvailabilityPage'))
 
 const ADMIN_TOKEN_STORAGE_KEY = 'adminAuthToken'
 
