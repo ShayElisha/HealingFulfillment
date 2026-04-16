@@ -205,10 +205,6 @@ function CustomerProfilePage() {
     try {
       const response = await reviewsService.getMyReview()
       setReviewEligibility(response?.meta?.eligibility || null)
-      if (response?.meta?.rewardApplied) {
-        toast.success('הסרטון זיכה אותך בשבוע נוסף למנוי')
-        await loadCustomerData()
-      }
       if (response.data) {
         setMyReview(response.data)
         setReviewForm({
@@ -679,12 +675,17 @@ function CustomerProfilePage() {
                   שנה סיסמה
                 </Button>
                 {canManageReview && (
-                  <Button
-                    onClick={() => setShowReviewModal(true)}
-                    variant="primary"
-                  >
-                    {myReview ? 'ערוך ביקורת' : 'הוסף ביקורת'}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-neutral-600">
+                      יש ברשותך אפשרות להוסיף ביקורת. תדע/י שהוספת סרטון ביקורת נותן לך שבוע נוסף לאחר אישור המנהל.
+                    </p>
+                    <Button
+                      onClick={() => setShowReviewModal(true)}
+                      variant="primary"
+                    >
+                      {myReview ? 'ערוך ביקורת' : 'הוסף ביקורת'}
+                    </Button>
+                  </div>
                 )}
                 {!canManageReview && reviewEligibility?.message && (
                   <p className="text-sm text-neutral-500 self-center">{reviewEligibility.message}</p>
@@ -1340,6 +1341,10 @@ function CustomerProfilePage() {
             
             <form onSubmit={async (e) => {
               e.preventDefault()
+              if (isUploadingReviewVideo) {
+                toast.error('אנא המתן לסיום העלאת הסרטון לפני שליחת חוות הדעת')
+                return
+              }
               if (reviewForm.rating === 0) {
                 toast.error('אנא בחר דירוג')
                 return
@@ -1352,17 +1357,11 @@ function CustomerProfilePage() {
               setIsSubmittingReview(true)
               try {
                 if (myReview) {
-                  const result = await reviewsService.update(myReview._id, reviewForm)
+                  await reviewsService.update(myReview._id, reviewForm)
                   toast.success('ביקורת עודכנה בהצלחה')
-                  if (result?.meta?.rewardApplied) {
-                    toast.success('כל הכבוד! קיבלת שבוע נוסף למנוי על העלאת סרטון.')
-                  }
                 } else {
-                  const result = await reviewsService.create(reviewForm)
+                  await reviewsService.create(reviewForm)
                   toast.success('ביקורת נשלחה בהצלחה וממתינה לאישור')
-                  if (result?.meta?.rewardApplied) {
-                    toast.success('כל הכבוד! קיבלת שבוע נוסף למנוי על העלאת סרטון.')
-                  }
                 }
                 setShowReviewModal(false)
                 await loadMyReview()
@@ -1469,7 +1468,7 @@ function CustomerProfilePage() {
                       </Button>
                     </div>
                     <p className="text-xs text-primary-700">
-                      העלאת סרטון מזכה בשבוע נוסף למנוי.
+                      העלאת סרטון מזכה בשבוע נוסף למנוי לאחר אישור הביקורת על ידי המנהל.
                     </p>
                   </div>
                 )}
@@ -1477,8 +1476,8 @@ function CustomerProfilePage() {
 
               {/* Submit Buttons */}
               <div className="flex gap-4">
-                <Button type="submit" variant="primary" disabled={isSubmittingReview}>
-                  {isSubmittingReview ? 'שולח...' : (myReview ? 'עדכן ביקורת' : 'שלח ביקורת')}
+                <Button type="submit" variant="primary" disabled={isSubmittingReview || isUploadingReviewVideo}>
+                  {isUploadingReviewVideo ? 'מעלה סרטון...' : isSubmittingReview ? 'שולח...' : (myReview ? 'עדכן ביקורת' : 'שלח ביקורת')}
                 </Button>
                 <Button
                   type="button"

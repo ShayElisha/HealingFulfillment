@@ -1,9 +1,34 @@
 import express from 'express'
 import Review from '../models/Review.js'
 import Customer from '../models/Customer.js'
+import Subscription from '../models/Subscription.js'
 import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
+const VIDEO_REWARD_DAYS = 7
+
+async function grantVideoRewardOnApprovalIfNeeded(review) {
+  if (!review?.video?.url || review.videoRewardGrantedAt || !review.customer) {
+    return { rewardApplied: false }
+  }
+
+  const subscription = await Subscription.findOne({ customer: review.customer }).sort({ endsAt: -1 })
+  if (!subscription?.endsAt || subscription.status === 'cancelled') {
+    return { rewardApplied: false, reason: 'no_active_subscription' }
+  }
+
+  const extendedEndsAt = new Date(subscription.endsAt)
+  extendedEndsAt.setDate(extendedEndsAt.getDate() + VIDEO_REWARD_DAYS)
+  subscription.endsAt = extendedEndsAt
+  if (extendedEndsAt > new Date()) {
+    subscription.status = 'active'
+  }
+  await subscription.save()
+
+  review.videoRewardGrantedAt = new Date()
+  await review.save()
+  return { rewardApplied: true, newSubscriptionEndAt: extendedEndsAt }
+}
 
 // GET /api/reviews - Get all approved reviews (public)
 router.get('/', async (req, res, next) => {
@@ -275,22 +300,29 @@ router.put('/admin/:id/status', async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid status' })
     }
 
-    const review = await Review.findByIdAndUpdate(
-      req.params.id,
-      { 
-        status,
-        approvedAt: status === 'approved' ? new Date() : undefined
-      },
-      { new: true, runValidators: true }
-    )
-
+    const review = await Review.findById(req.params.id)
     if (!review) {
       return res.status(404).json({ message: 'Review not found' })
     }
 
+    const wasApproved = review.status === 'approved'
+    review.status = status
+    review.approvedAt = status === 'approved' ? new Date() : undefined
+    await review.save()
+
+    let rewardMeta = { rewardApplied: false, newSubscriptionEndAt: null }
+    if (status === 'approved' && !wasApproved) {
+      const rewardResult = await grantVideoRewardOnApprovalIfNeeded(review)
+      rewardMeta = {
+        rewardApplied: rewardResult.rewardApplied,
+        newSubscriptionEndAt: rewardResult.newSubscriptionEndAt || null,
+      }
+    }
+
     res.json({
       message: 'Review status updated successfully',
-      data: review
+      data: review,
+      meta: rewardMeta,
     })
   } catch (error) {
     next(error)

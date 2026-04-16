@@ -16,7 +16,6 @@ import { catchMulterUpload } from '../middleware/multerCatch.js'
 
 const router = express.Router()
 const REVIEW_WINDOW_DAYS = 14
-const VIDEO_REWARD_DAYS = 7
 
 function buildReviewEligibility(subscription) {
   if (!subscription?.endsAt) {
@@ -84,28 +83,6 @@ function maybeVideoPayload(videoData) {
     size: Number(videoData.size) || undefined,
     uploadedAt: videoData.uploadedAt ? new Date(videoData.uploadedAt) : new Date(),
   }
-}
-
-async function grantVideoRewardIfNeeded({ review, customerId }) {
-  if (!review?.video?.url || review.videoRewardGrantedAt) {
-    return { rewardApplied: false }
-  }
-  const subscription = await getLatestCustomerSubscription(customerId)
-  if (!subscription?.endsAt) {
-    return { rewardApplied: false, reason: 'no_subscription' }
-  }
-
-  const extendedEndsAt = new Date(subscription.endsAt)
-  extendedEndsAt.setDate(extendedEndsAt.getDate() + VIDEO_REWARD_DAYS)
-  subscription.endsAt = extendedEndsAt
-  if (extendedEndsAt > new Date() && subscription.status !== 'cancelled') {
-    subscription.status = 'active'
-  }
-  await subscription.save()
-
-  review.videoRewardGrantedAt = new Date()
-  await review.save()
-  return { rewardApplied: true, newSubscriptionEndAt: extendedEndsAt }
 }
 
 function tmpFilename(_req, file, cb) {
@@ -277,15 +254,9 @@ router.post('/', authenticateToken, async (req, res, next) => {
     })
 
     await review.save()
-    const rewardResult = await grantVideoRewardIfNeeded({ review, customerId: req.customerId })
-
     res.status(201).json({
       message: 'ביקורת נשלחה בהצלחה וממתינה לאישור',
       data: review,
-      meta: {
-        rewardApplied: rewardResult.rewardApplied,
-        newSubscriptionEndAt: rewardResult.newSubscriptionEndAt || null,
-      },
     })
   } catch (error) {
     next(error)
@@ -344,15 +315,9 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
     }
 
     await review.save()
-    const rewardResult = await grantVideoRewardIfNeeded({ review, customerId: req.customerId })
-
     res.json({
       message: 'ביקורת עודכנה בהצלחה',
       data: review,
-      meta: {
-        rewardApplied: rewardResult.rewardApplied,
-        newSubscriptionEndAt: rewardResult.newSubscriptionEndAt || null,
-      },
     })
   } catch (error) {
     next(error)
@@ -363,7 +328,7 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
 router.get('/my-review', authenticateToken, async (req, res, next) => {
   try {
     const { eligibility } = await ensureReviewWindow(req.customerId)
-    let review = await Review.findOne({ customer: req.customerId })
+    const review = await Review.findOne({ customer: req.customerId })
     
     if (!review) {
       return res.json({
@@ -373,20 +338,10 @@ router.get('/my-review', authenticateToken, async (req, res, next) => {
       })
     }
 
-    // Backfill: if a video already exists but reward was not granted, grant it now.
-    const rewardResult = await grantVideoRewardIfNeeded({ review, customerId: req.customerId })
-    if (rewardResult.rewardApplied) {
-      review = await Review.findById(review._id)
-    }
-
     res.json({
       message: 'Review retrieved successfully',
       data: review,
-      meta: {
-        eligibility,
-        rewardApplied: rewardResult.rewardApplied,
-        newSubscriptionEndAt: rewardResult.newSubscriptionEndAt || null,
-      },
+      meta: { eligibility },
     })
   } catch (error) {
     next(error)
