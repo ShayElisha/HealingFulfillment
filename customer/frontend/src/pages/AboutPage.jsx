@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Button from '../components/Button'
+import yanivImage from '../assets/yaniv.png'
 
 function AboutPage() {
   useEffect(() => {
@@ -24,6 +25,22 @@ function AboutPage() {
         <div className="container-custom">
           <AnimatedSection>
             <div className="max-w-4xl mx-auto text-center">
+              <div className="mb-8 flex w-full justify-center">
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-0 -inset-3 motion-reduce:will-change-auto motion-reduce:animate-none will-change-transform animate-spin-slow rounded-full sm:-inset-5 md:-inset-8">
+                    <div className="absolute inset-0 rounded-full border-[4px] border-primary-700/80 bg-primary-900/10 sm:border-[6px] md:border-[10px]" />
+                    <div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                    <div className="absolute bottom-0 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                    <div className="absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                    <div className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
+                  </div>
+                  <img
+                    src={yanivImage}
+                    alt="יניב תנעמי"
+                    className="relative z-[1] h-40 w-40 rounded-full border-2 border-white object-cover shadow-2xl sm:h-56 sm:w-56 sm:border-4 md:h-72 md:w-72"
+                  />
+                </div>
+              </div>
               <h1 className="text-5xl md:text-7xl font-serif font-bold text-neutral-900 mb-8 leading-tight tracking-tight">
                 על המסע המשותף שלנו
               </h1>
