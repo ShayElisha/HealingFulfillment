@@ -648,6 +648,33 @@ router.put('/admin/customers/:id/sessions', async (req, res, next) => {
   }
 })
 
+// PUT /api/admin/customers/:id/status - Activate / deactivate customer
+router.put('/admin/customers/:id/status', async (req, res, next) => {
+  try {
+    const status = String(req.body?.status || '').trim()
+    if (!['active', 'inactive', 'completed'].includes(status)) {
+      return res.status(400).json({ message: 'סטטוס לא תקין. הערכים המותרים: active, inactive, completed' })
+    }
+
+    const customer = await Customer.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    )
+
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+
+    return res.json({
+      message: 'סטטוס הלקוח עודכן בהצלחה',
+      data: customer,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // Helper function to generate random password
 const generateRandomPassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'

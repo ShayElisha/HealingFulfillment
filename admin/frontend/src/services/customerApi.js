@@ -52,6 +52,10 @@ export const customerService = {
     const response = await api.put(`/admin/customers/${id}/sessions`, { completedSessions })
     return response.data
   },
+  updateStatus: async (id, status) => {
+    const response = await api.put(`/admin/customers/${id}/status`, { status })
+    return response.data
+  },
   createAccount: async (id) => {
     const response = await api.post(`/admin/customers/${id}/create-account`)
     return response.data

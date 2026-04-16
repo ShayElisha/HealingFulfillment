@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import Customer from '../models/Customer.js'
 import Booking from '../models/Booking.js'
+import Purchase from '../models/Purchase.js'
 import {
   computeSessionEntitlementForCustomerId,
   getSubscriptionDisplayForCustomer,
@@ -50,6 +51,16 @@ function getBookingDateTime(booking) {
     base.setHours(23, 59, 59, 999)
   }
   return base
+}
+
+function ensureCustomerIsActive(customer, res) {
+  if (customer?.status === 'inactive') {
+    res.status(403).json({
+      message: 'המשתמש אינו פעיל. לא ניתן לבצע פעולה זו כרגע, יש לפנות למנהל.',
+    })
+    return false
+  }
+  return true
 }
 
 // GET /api/auth/login - Return info about login endpoint
@@ -340,6 +351,7 @@ router.get('/me', authenticateToken, async (req, res, next) => {
 // POST /api/auth/purchases/:id/refund-request - customer submits refund request
 router.post('/purchases/:id/refund-request', authenticateToken, async (req, res, next) => {
   try {
+    if (!ensureCustomerIsActive(req.customer, res)) return
     const purchase = await Purchase.findOne({
       _id: req.params.id,
       customer: req.customerId,
@@ -435,6 +447,7 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
     if (!customer) {
       return res.status(404).json({ message: 'לקוח לא נמצא' })
     }
+    if (!ensureCustomerIsActive(customer, res)) return
 
     const entitlement = await computeSessionEntitlementForCustomerId(req.customerId)
 
@@ -576,6 +589,7 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
 // POST /api/auth/booking/:id/cancel - Customer cancel flow with 24h policy
 router.post('/booking/:id/cancel', authenticateToken, async (req, res, next) => {
   try {
+    if (!ensureCustomerIsActive(req.customer, res)) return
     const booking = await Booking.findOne({
       _id: req.params.id,
       customer: req.customerId,

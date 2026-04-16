@@ -410,6 +410,23 @@ function CustomerPage() {
     }
   }
 
+  const handleToggleCustomerActive = async () => {
+    const nextStatus = customer.status === 'inactive' ? 'active' : 'inactive'
+    const confirmed = window.confirm(
+      nextStatus === 'inactive'
+        ? 'האם להפוך את הלקוח ללא פעיל? משתמש לא פעיל לא יוכל לבצע פעולות בתיק הלקוח.'
+        : 'האם להחזיר את הלקוח לפעיל?'
+    )
+    if (!confirmed) return
+    try {
+      await customerService.updateStatus(id, nextStatus)
+      await loadCustomer()
+      toast.success(nextStatus === 'inactive' ? 'הלקוח הוגדר כלא פעיל' : 'הלקוח חזר להיות פעיל')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'שגיאה בעדכון סטטוס הלקוח')
+    }
+  }
+
   if (loading) {
     return (
       <>
@@ -531,6 +548,19 @@ function CustomerPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-xl font-semibold mb-2">חשבון משתמש</h3>
+                    <div className="mb-3">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          customer.status === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : customer.status === 'completed'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        סטטוס משתמש: {customer.status === 'active' ? 'פעיל' : customer.status === 'completed' ? 'הושלם' : 'לא פעיל'}
+                      </span>
+                    </div>
                     {customer.hasAccount ? (
                       <div className="space-y-3">
                         <div className="space-y-2">
@@ -569,6 +599,13 @@ function CustomerPage() {
                         >
                           {creatingAccount ? 'יוצר...' : 'צור סיסמה ראשונית חדשה'}
                         </Button>
+                        <Button
+                          onClick={handleToggleCustomerActive}
+                          variant={customer.status === 'inactive' ? 'primary' : 'soft'}
+                          className="mt-2"
+                        >
+                          {customer.status === 'inactive' ? 'הפוך לפעיל' : 'הפוך ללא פעיל'}
+                        </Button>
                       </div>
                     ) : (
                       <div>
@@ -590,6 +627,14 @@ function CustomerPage() {
                             {creatingAccount ? 'יוצר...' : 'צור משתמש ללקוח'}
                           </Button>
                         )}
+                        <div className="mt-2">
+                          <Button
+                            onClick={handleToggleCustomerActive}
+                            variant={customer.status === 'inactive' ? 'primary' : 'soft'}
+                          >
+                            {customer.status === 'inactive' ? 'הפוך לפעיל' : 'הפוך ללא פעיל'}
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
