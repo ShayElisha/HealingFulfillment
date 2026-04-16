@@ -365,7 +365,7 @@ function BookingForm() {
           value={formData.notes}
           onChange={handleChange}
           className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
-          placeholder="יש משהו נוסף שתרצה שנדע לפני הפגישה?"
+          placeholder="האם יש מידע נוסף שתרצו לשתף כהכנה למפגש ?"
         />
       </div>
 

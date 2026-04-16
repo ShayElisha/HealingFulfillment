@@ -2008,7 +2008,7 @@ function AdminPage() {
                           onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
                           rows="4"
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                          placeholder="הערות נוספות על הפגישה..."
+                          placeholder="האם יש מידע נוסף שתרצו לשתף כהכנה למפגש ?"
                         />
                       </div>
                     </div>
