@@ -43,7 +43,7 @@ export const bookingSchema = Joi.object({
   }),
   preferredTime: Joi.string().trim().allow('', null).optional(),
   meetingType: Joi.string().valid('frontend', 'zoom').default('frontend').required().messages({
-    'any.only': 'סוג פגישה חייב להיות פרונטאלי או זום',
+    'any.only': 'סוג פגישה חייב להיות פרונטאלי או אונליין',
     'any.required': 'סוג פגישה הוא שדה חובה'
   }),
   notes: Joi.string().max(1000).allow('', null).optional().messages({

@@ -128,25 +128,25 @@ function BookingsPage() {
       await loadData()
       setEditingZoomLink(null)
       setZoomLinkValue('')
-      toast.success(zoomLinkValue ? 'קישור זום עודכן בהצלחה!' : 'קישור זום נמחק בהצלחה!')
+      toast.success(zoomLinkValue ? 'קישור אונליין עודכן בהצלחה!' : 'קישור אונליין נמחק בהצלחה!')
     } catch (error) {
       console.error('Error updating zoom link:', error)
-      toast.error('שגיאה בעדכון קישור זום')
+      toast.error('שגיאה בעדכון קישור אונליין')
     }
   }
 
   const handleDeleteZoomLink = async (bookingId) => {
-    const confirmed = window.confirm('האם אתה בטוח שברצונך למחוק את קישור הזום?')
+    const confirmed = window.confirm('האם אתה בטוח שברצונך למחוק את קישור האונליין?')
     if (!confirmed) {
       return
     }
     try {
       await bookingService.updateZoomLink(bookingId, '')
       await loadData()
-      toast.success('קישור זום נמחק בהצלחה!')
+      toast.success('קישור אונליין נמחק בהצלחה!')
     } catch (error) {
       console.error('Error deleting zoom link:', error)
-      toast.error('שגיאה במחיקת קישור זום')
+      toast.error('שגיאה במחיקת קישור אונליין')
     }
   }
 
@@ -332,7 +332,7 @@ function BookingsPage() {
                 >
                   <option value="all">הכל</option>
                   <option value="frontend">פרונטאלי</option>
-                  <option value="zoom">זום</option>
+                  <option value="zoom">אונליין</option>
                 </select>
               </div>
             </div>
@@ -351,7 +351,7 @@ function BookingsPage() {
                 >
                   <option value="all">הכל</option>
                   <option value="frontend">פרונטאלי</option>
-                  <option value="zoom">זום</option>
+                  <option value="zoom">אונליין</option>
                 </select>
               </div>
             </div>
@@ -416,7 +416,7 @@ function BookingsPage() {
                               : ''}
                           </p>
                           <p>
-                            💻 סוג פגישה: {booking.meetingType === 'zoom' ? 'זום' : 'פרונטאלי'}
+                            💻 סוג פגישה: {booking.meetingType === 'zoom' ? 'אונליין' : 'פרונטאלי'}
                           </p>
                           {booking.isIntroMeeting && (
                             <p className="text-primary-600 font-medium">⭐ פגישת היכרות</p>
@@ -426,7 +426,7 @@ function BookingsPage() {
                               {editingZoomLink === booking._id ? (
                                 <div className="space-y-2">
                                   <label className="text-xs text-blue-700 font-medium block">
-                                    🔗 קישור זום:
+                                    🔗 קישור אונליין:
                                   </label>
                                   <input
                                     type="url"
@@ -453,7 +453,7 @@ function BookingsPage() {
                               ) : (
                                 <div>
                                   <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs text-blue-700 font-medium">🔗 קישור זום:</p>
+                                    <p className="text-xs text-blue-700 font-medium">🔗 קישור אונליין:</p>
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => handleEditZoomLink(booking)}
@@ -674,7 +674,7 @@ function BookingsPage() {
               })}
             </p>
             <p className="text-sm text-neutral-600">
-              <strong>סוג פגישה:</strong> {summaryBooking.meetingType === 'zoom' ? 'זום' : 'פרונטאלי'}
+              <strong>סוג פגישה:</strong> {summaryBooking.meetingType === 'zoom' ? 'אונליין' : 'פרונטאלי'}
             </p>
           </div>
 

@@ -100,7 +100,7 @@ async function ensureDefaults() {
     await BookingTreatmentType.insertMany([
       { key: 'intro', label: 'פגישת היכרות', durationMinutes: 60, slotStepMinutes: 30, order: 0 },
       { key: 'frontend', label: 'פגישה פרונטלית', durationMinutes: 60, slotStepMinutes: 30, order: 1 },
-      { key: 'zoom', label: 'פגישת זום', durationMinutes: 60, slotStepMinutes: 30, order: 2 },
+      { key: 'zoom', label: 'פגישת אונליין', durationMinutes: 60, slotStepMinutes: 30, order: 2 },
     ])
   }
   const wh = await AvailabilityWorkingHours.countDocuments()

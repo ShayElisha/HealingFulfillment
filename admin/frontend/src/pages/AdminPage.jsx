@@ -93,7 +93,7 @@ function BookingCard({ booking, onUpdate }) {
             {booking.preferredTime && (
               <p>🕐 שעה מועדפת: {booking.preferredTime}</p>
             )}
-            <p>💻 סוג פגישה: {booking.meetingType === 'zoom' ? 'זום' : 'פרונטאלית'}</p>
+            <p>💻 סוג פגישה: {booking.meetingType === 'zoom' ? 'אונליין' : 'פרונטאלית'}</p>
             
             {/* Zoom Link Section */}
             {booking.status === 'confirmed' && booking.meetingType === 'zoom' && (
@@ -104,7 +104,7 @@ function BookingCard({ booking, onUpdate }) {
                       type="url"
                       value={zoomLinkInput}
                       onChange={(e) => setZoomLinkInput(e.target.value)}
-                      placeholder="הכנס לינק זום (https://zoom.us/j/...)"
+                      placeholder="הכנס לינק אונליין (https://zoom.us/j/...)"
                       className="w-full px-3 py-2 text-sm rounded border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <div className="flex gap-2">
@@ -114,9 +114,9 @@ function BookingCard({ booking, onUpdate }) {
                             await bookingService.updateZoomLink(booking._id, zoomLinkInput)
                             await onUpdate()
                             setIsEditingZoomLink(false)
-                            toast.success('לינק זום עודכן בהצלחה!')
+                            toast.success('לינק אונליין עודכן בהצלחה!')
                           } catch (error) {
-                            toast.error('שגיאה בעדכון לינק זום')
+                            toast.error('שגיאה בעדכון לינק אונליין')
                           }
                         }}
                         className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -138,7 +138,7 @@ function BookingCard({ booking, onUpdate }) {
                   <div>
                     {booking.zoomLink ? (
                       <div>
-                        <p className="text-xs text-blue-700 mb-1 font-medium">🔗 לינק זום:</p>
+                        <p className="text-xs text-blue-700 mb-1 font-medium">🔗 לינק אונליין:</p>
                         <a
                           href={booking.zoomLink}
                           target="_blank"
@@ -159,12 +159,12 @@ function BookingCard({ booking, onUpdate }) {
                       </div>
                     ) : (
                       <div>
-                        <p className="text-xs text-blue-700 mb-2">אין לינק זום. הוסף לינק:</p>
+                        <p className="text-xs text-blue-700 mb-2">אין לינק אונליין. הוסף לינק:</p>
                         <button
                           onClick={() => setIsEditingZoomLink(true)}
                           className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
-                          הוסף לינק זום
+                          הוסף לינק אונליין
                         </button>
                       </div>
                     )}
@@ -1895,7 +1895,7 @@ function AdminPage() {
                                 )}
                               </div>
                               <div>
-                                <div className="font-medium text-neutral-900">פגישה בזום</div>
+                                <div className="font-medium text-neutral-900">פגישה באונליין</div>
                                 <div className="text-sm text-neutral-600">פגישה מקוונת</div>
                               </div>
                             </div>

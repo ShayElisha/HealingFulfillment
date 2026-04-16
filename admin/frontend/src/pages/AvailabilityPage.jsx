@@ -506,7 +506,7 @@ function AvailabilityPage() {
                       className="rounded-lg border border-neutral-300 px-3 py-2"
                     >
                       <option value="frontend">פרונטלי</option>
-                      <option value="zoom">זום</option>
+                      <option value="zoom">אונליין</option>
                     </select>
                   </div>
                   <div>

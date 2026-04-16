@@ -209,8 +209,8 @@ export const sendIntroMeetingConfirmationEmail = async (booking) => {
     <div class="info-box">
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
     </div>
     <p>פגישת ההיכרות היא הזדמנות להכיר, להבין מה אתה מחפש, ולראות אם אנחנו מתאימים לעבוד יחד.</p>
     <p>ללא התחייבות, רק שיחה פתוחה וכנה.</p>
@@ -241,8 +241,8 @@ export const sendRegularMeetingConfirmationEmail = async (booking) => {
     <div class="info-box">
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
     </div>
     <p>ניצור איתך קשר בקרוב לאישור סופי של הפגישה.</p>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו.</p>

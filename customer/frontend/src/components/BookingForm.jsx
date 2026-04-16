@@ -279,7 +279,7 @@ function BookingForm() {
                 )}
               </div>
               <div>
-                <div className="font-medium text-neutral-900">פגישה בזום</div>
+                <div className="font-medium text-neutral-900">פגישה באונליין</div>
                 <div className="text-sm text-neutral-600">פגישה מקוונת</div>
               </div>
             </div>

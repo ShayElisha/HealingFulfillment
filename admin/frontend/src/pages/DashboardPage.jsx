@@ -589,7 +589,7 @@ function DashboardPage() {
                                 {booking.preferredTime && ` • 🕐 ${booking.preferredTime}`}
                               </p>
                               {booking.meetingType === 'zoom' && booking.zoomLink && (
-                                <p className="text-xs text-blue-600 mt-1">🔗 זום</p>
+                                <p className="text-xs text-blue-600 mt-1">🔗 אונליין</p>
                               )}
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${

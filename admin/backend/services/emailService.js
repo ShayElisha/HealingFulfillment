@@ -302,8 +302,8 @@ export const sendIntroMeetingConfirmationEmail = async (booking) => {
     <div class="info-box">
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
     </div>
     <p>פגישת ההיכרות היא הזדמנות להכיר, להבין מה אתה מחפש, ולראות אם אנחנו מתאימים לעבוד יחד.</p>
     <p>ללא התחייבות, רק שיחה פתוחה וכנה.</p>
@@ -334,8 +334,8 @@ export const sendRegularMeetingConfirmationEmail = async (booking) => {
     <div class="info-box">
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
     </div>
     <p>ניצור איתך קשר בקרוב לאישור סופי של הפגישה.</p>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו.</p>
@@ -399,8 +399,8 @@ export const sendBookingConfirmedEmail = async (booking) => {
     <div class="info-box">
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור זום:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
     </div>
     <p>אנא ודא שאתה זמין בתאריך ובשעה שנקבעו.</p>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו בהקדם.</p>
@@ -586,13 +586,13 @@ export const sendBookingReminderEmail = async (booking) => {
     <div class="info-box" style="background-color: #fff3cd; border-right-color: #ffc107;">
       <p><strong>📅 תאריך:</strong> ${dateStr}</p>
       ${timeStr ? `<p><strong>🕐 שעה:</strong> ${timeStr}</p>` : ''}
-      <p><strong>📍 סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה בזום' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>🔗 קישור זום:</strong> <a href="${booking.zoomLink}" style="color: #8B5CF6; font-weight: bold;">${booking.zoomLink}</a></p>` : ''}
+      <p><strong>📍 סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
+      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>🔗 קישור אונליין:</strong> <a href="${booking.zoomLink}" style="color: #8B5CF6; font-weight: bold;">${booking.zoomLink}</a></p>` : ''}
     </div>
     <h3>הכנות מומלצות:</h3>
     <ul>
       <li>ודא שאתה זמין בתאריך ובשעה שנקבעו</li>
-      ${booking.meetingType === 'zoom' ? '<li>בדוק את החיבור לאינטרנט והמיקרופון</li><li>הכן את קישור הזום מראש</li>' : '<li>הכן את הכתובת והגע בזמן</li>'}
+      ${booking.meetingType === 'zoom' ? '<li>בדוק את החיבור לאינטרנט והמיקרופון</li><li>הכן את קישור האונליין מראש</li>' : '<li>הכן את הכתובת והגע בזמן</li>'}
       <li>הכן שאלות או נושאים שתרצה לדון בהם</li>
     </ul>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו בהקדם.</p>

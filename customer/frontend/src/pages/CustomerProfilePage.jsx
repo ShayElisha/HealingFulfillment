@@ -777,7 +777,7 @@ function CustomerProfilePage() {
                           })}
                         </h3>
                         <p className="text-sm text-neutral-600">
-                          {booking.meetingType === 'zoom' ? '💻 זום' : '🏢 פרונטאלי'}
+                          {booking.meetingType === 'zoom' ? '💻 אונליין' : '🏢 פרונטאלי'}
                           {booking.isIntroMeeting && ' | ⭐ פגישת היכרות'}
                         </p>
                         {booking.preferredTime && (
@@ -793,14 +793,14 @@ function CustomerProfilePage() {
                               rel="noopener noreferrer"
                               className="text-primary-600 hover:text-primary-700 font-medium text-sm inline-flex items-center gap-1"
                             >
-                              🔗 לינק זום
+                              🔗 לינק אונליין
                               <span className="text-xs">(פתח בחדש)</span>
                             </a>
                           </div>
                         )}
                         {booking.meetingType === 'zoom' && !booking.zoomLink && (
                           <p className="text-xs text-neutral-500 mt-2 italic">
-                            קישור זום יישלח בהמשך
+                            קישור אונליין יישלח בהמשך
                           </p>
                         )}
                         {booking.sessionSummary && (
@@ -848,7 +848,7 @@ function CustomerProfilePage() {
                           })}
                         </h3>
                         <p className="text-sm text-neutral-600">
-                          {booking.meetingType === 'zoom' ? '💻 זום' : '🏢 פרונטאלי'}
+                          {booking.meetingType === 'zoom' ? '💻 אונליין' : '🏢 פרונטאלי'}
                           {booking.isIntroMeeting && ' | ⭐ פגישת היכרות'}
                         </p>
                         {booking.preferredTime && (
@@ -864,7 +864,7 @@ function CustomerProfilePage() {
                               rel="noopener noreferrer"
                               className="text-primary-600 hover:text-primary-700 font-medium text-sm inline-flex items-center gap-1"
                             >
-                              🔗 לינק זום
+                              🔗 לינק אונליין
                               <span className="text-xs">(פתח בחדש)</span>
                             </a>
                           </div>
@@ -1050,7 +1050,7 @@ function CustomerProfilePage() {
                                 )}
                               </div>
                               <div>
-                                <div className="font-medium text-neutral-900">פגישה בזום</div>
+                                <div className="font-medium text-neutral-900">פגישה באונליין</div>
                                 <div className="text-sm text-neutral-600">פגישה מקוונת</div>
                               </div>
                             </div>

@@ -933,7 +933,7 @@ function CustomerPage() {
                           })}
                         </p>
                         <p className="text-sm text-neutral-600 mt-1">
-                          {booking.meetingType === 'zoom' ? '💻 זום' : '🏢 פרונטאלי'}
+                          {booking.meetingType === 'zoom' ? '💻 אונליין' : '🏢 פרונטאלי'}
                           {booking.isIntroMeeting && ' | ⭐ פגישת היכרות'}
                         </p>
                         {booking.meetingType === 'zoom' && booking.zoomLink && (
@@ -944,14 +944,14 @@ function CustomerPage() {
                               rel="noopener noreferrer"
                               className="text-primary-600 hover:text-primary-700 font-medium text-sm inline-flex items-center gap-1"
                             >
-                              🔗 לינק זום
+                              🔗 לינק אונליין
                               <span className="text-xs">(פתח בחדש)</span>
                             </a>
                           </div>
                         )}
                         {booking.meetingType === 'zoom' && !booking.zoomLink && (
                           <p className="text-xs text-neutral-500 mt-2 italic">
-                            קישור זום עדיין לא נוסף
+                            קישור אונליין עדיין לא נוסף
                           </p>
                         )}
                         {booking.sessionSummary && (
