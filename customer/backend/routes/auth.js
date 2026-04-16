@@ -16,6 +16,7 @@ import { isPreferredTimeAllowed, formatYmd } from '../services/availabilityServi
 
 const router = express.Router()
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000
+const CANCELLATION_FREE_WINDOW_HOURS = 24
 
 function hashResetToken(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex')
@@ -37,6 +38,18 @@ function validateStrongPassword(password) {
     message:
       'הסיסמה חייבת להכיל 8-12 תווים, אות גדולה, אות קטנה, מספר וסימן מיוחד.',
   }
+}
+
+function getBookingDateTime(booking) {
+  const base = new Date(booking.preferredDate)
+  if (booking.preferredTime && /^\d{1,2}:\d{2}$/.test(String(booking.preferredTime).trim())) {
+    const [h, m] = String(booking.preferredTime).trim().split(':').map(Number)
+    base.setHours(Number.isFinite(h) ? h : 0, Number.isFinite(m) ? m : 0, 0, 0)
+  } else {
+    // בלי שעה נחשב סוף יום כדי לא לחסום ביטול מוקדם מדי
+    base.setHours(23, 59, 59, 999)
+  }
+  return base
 }
 
 // GET /api/auth/login - Return info about login endpoint
@@ -286,7 +299,10 @@ router.get('/me', authenticateToken, async (req, res, next) => {
         },
         select: 'course price status createdAt paidAt coachingStartedAt coachingEndsAt'
       })
-      .populate('bookings', 'preferredDate preferredTime status meetingType zoomLink isIntroMeeting sessionSummary')
+      .populate(
+        'bookings',
+        'preferredDate preferredTime status meetingType zoomLink isIntroMeeting sessionSummary cancellationRequestedAt cancellationRequestedByCustomer statusBeforeCancellationRequest'
+      )
 
     if (!customer) {
       return res.status(404).json({ message: 'לקוח לא נמצא' })
@@ -304,7 +320,7 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     )
     customerData.sessionEntitlementSource = entitlement.entitlementSource
     customerData.activeBookings = customer.bookings.filter(b => 
-      b.status === 'pending' || b.status === 'confirmed'
+      b.status === 'pending' || b.status === 'confirmed' || b.status === 'cancellation_requested'
     ).length
 
     customerData.activeSubscription = entitlement.activeSubscription || null
@@ -510,6 +526,59 @@ router.post('/booking', authenticateToken, async (req, res, next) => {
     })
   } catch (error) {
     console.error('Booking error:', error)
+    next(error)
+  }
+})
+
+// POST /api/auth/booking/:id/cancel - Customer cancel flow with 24h policy
+router.post('/booking/:id/cancel', authenticateToken, async (req, res, next) => {
+  try {
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      customer: req.customerId,
+    })
+    if (!booking) {
+      return res.status(404).json({ message: 'פגישה לא נמצאה' })
+    }
+    if (!['pending', 'confirmed', 'cancellation_requested'].includes(booking.status)) {
+      return res.status(400).json({ message: 'לא ניתן לבטל פגישה בסטטוס זה' })
+    }
+
+    const now = new Date()
+    const appointmentAt = getBookingDateTime(booking)
+    const diffHours = (appointmentAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+    // אחרי מועד הפגישה או פחות מ-24 שעות: בקשת ביטול בלבד
+    if (diffHours < CANCELLATION_FREE_WINDOW_HOURS) {
+      if (booking.status === 'cancellation_requested') {
+        return res.json({
+          message: 'בקשת הביטול כבר נשלחה וממתינה לאישור מנהל',
+          data: booking,
+        })
+      }
+      booking.statusBeforeCancellationRequest =
+        booking.status === 'pending' || booking.status === 'confirmed' ? booking.status : 'confirmed'
+      booking.status = 'cancellation_requested'
+      booking.cancellationRequestedAt = now
+      booking.cancellationRequestedByCustomer = true
+      await booking.save()
+      return res.json({
+        message: 'בקשת הביטול נשלחה למנהל לאישור',
+        data: booking,
+      })
+    }
+
+    booking.status = 'cancelled'
+    booking.cancellationRequestedAt = null
+    booking.cancellationRequestedByCustomer = false
+    booking.statusBeforeCancellationRequest = null
+    await booking.save()
+
+    return res.json({
+      message: 'הפגישה בוטלה בהצלחה',
+      data: booking,
+    })
+  } catch (error) {
     next(error)
   }
 })

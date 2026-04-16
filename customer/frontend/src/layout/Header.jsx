@@ -39,7 +39,7 @@ function Header({ isScrolled }) {
             <img
               src={logoImage}
               alt="יניב תנעמי"
-              className="h-10 w-auto shrink-0 object-contain sm:h-12 md:h-14"
+              className="h-12 w-auto shrink-0 object-contain sm:h-14 md:h-16"
             />
             <div className="min-w-0 text-right">
               <div
@@ -52,7 +52,7 @@ function Header({ isScrolled }) {
                 להתעורר אל עצמי
               </div>
               <div className="mt-0.5 text-[11px] font-medium leading-snug text-neutral-600 sm:text-xs md:text-sm">
-                בהירות לחיים טובים
+                בחירות טובות לחיים טובים
               </div>
             </div>
           </Link>

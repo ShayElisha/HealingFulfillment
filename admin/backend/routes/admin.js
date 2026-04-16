@@ -540,6 +540,7 @@ router.get('/bookings', async (req, res, next) => {
       listTotal,
       totalAll,
       pendingAll,
+      cancellationRequestedAll,
       confirmedAll,
       completedAll,
       cancelledAll,
@@ -552,6 +553,7 @@ router.get('/bookings', async (req, res, next) => {
       Booking.countDocuments(filter),
       Booking.countDocuments({}),
       Booking.countDocuments({ status: 'pending' }),
+      Booking.countDocuments({ status: 'cancellation_requested' }),
       Booking.countDocuments({ status: 'confirmed' }),
       Booking.countDocuments({ status: 'completed' }),
       Booking.countDocuments({ status: 'cancelled' }),
@@ -573,6 +575,7 @@ router.get('/bookings', async (req, res, next) => {
       stats: {
         total: totalAll,
         pending: pendingAll,
+        cancellationRequested: cancellationRequestedAll,
         confirmed: confirmedAll,
         completed: completedAll,
         cancelled: cancelledAll,
@@ -601,11 +604,16 @@ router.put('/bookings/:id/status', async (req, res, next) => {
       return res.status(404).json({ message: 'Booking not found' })
     }
     
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    )
+    const update = { status }
+    if (status === 'cancelled') {
+      update.cancellationRequestedAt = null
+      update.cancellationRequestedByCustomer = false
+      update.statusBeforeCancellationRequest = null
+    }
+    const booking = await Booking.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+      runValidators: true,
+    })
     
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
@@ -651,6 +659,55 @@ router.put('/bookings/:id/status', async (req, res, next) => {
     res.json({
       message: 'Booking status updated successfully',
       data: booking
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// PUT /api/admin/bookings/:id/cancellation-request - approve/reject customer cancel request
+router.put('/bookings/:id/cancellation-request', async (req, res, next) => {
+  try {
+    const { action } = req.body || {}
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'action חייב להיות approve או reject' })
+    }
+
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+    if (booking.status !== 'cancellation_requested') {
+      return res.status(400).json({ message: 'אין בקשת ביטול פתוחה לפגישה זו' })
+    }
+
+    const oldBooking = booking.toObject()
+
+    if (action === 'approve') {
+      booking.status = 'cancelled'
+      booking.cancellationRequestedAt = null
+      booking.cancellationRequestedByCustomer = false
+      booking.statusBeforeCancellationRequest = null
+    } else {
+      booking.status = booking.statusBeforeCancellationRequest || 'confirmed'
+      booking.cancellationRequestedAt = null
+      booking.cancellationRequestedByCustomer = false
+      booking.statusBeforeCancellationRequest = null
+    }
+    await booking.save()
+
+    if (booking.email && action === 'approve' && oldBooking.status !== 'cancelled') {
+      try {
+        const cancellationReason = req.body?.cancellationReason || 'בקשת הביטול אושרה על ידי המנהל'
+        await sendBookingCancelledEmail(booking, cancellationReason)
+      } catch (emailError) {
+        console.error('❌ Error sending booking cancelled email:', emailError)
+      }
+    }
+
+    res.json({
+      message: action === 'approve' ? 'בקשת הביטול אושרה' : 'בקשת הביטול נדחתה',
+      data: booking,
     })
   } catch (error) {
     next(error)

@@ -43,8 +43,21 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'completed', 'cancelled', 'cancellation_requested'],
     default: 'pending'
+  },
+  cancellationRequestedAt: {
+    type: Date,
+    default: null
+  },
+  cancellationRequestedByCustomer: {
+    type: Boolean,
+    default: false
+  },
+  statusBeforeCancellationRequest: {
+    type: String,
+    enum: ['pending', 'confirmed', null],
+    default: null
   },
   sessionSummary: {
     type: String,

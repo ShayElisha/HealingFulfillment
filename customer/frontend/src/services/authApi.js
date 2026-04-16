@@ -41,6 +41,10 @@ export const authService = {
     const response = await api.post('/auth/booking', bookingData)
     return response.data
   },
+  cancelBooking: async (bookingId) => {
+    const response = await api.post(`/auth/booking/${bookingId}/cancel`)
+    return response.data
+  },
   
   getMessages: async () => {
     const response = await api.get('/auth/messages')

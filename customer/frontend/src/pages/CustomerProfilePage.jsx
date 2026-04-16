@@ -131,6 +131,17 @@ function toDateInputYmd(value) {
   return `${y}-${m}-${day}`
 }
 
+function getBookingDateTime(booking) {
+  const dt = new Date(booking.preferredDate)
+  if (booking.preferredTime && /^\d{1,2}:\d{2}$/.test(String(booking.preferredTime).trim())) {
+    const [h, m] = String(booking.preferredTime).trim().split(':').map(Number)
+    dt.setHours(Number.isFinite(h) ? h : 0, Number.isFinite(m) ? m : 0, 0, 0)
+  } else {
+    dt.setHours(23, 59, 59, 999)
+  }
+  return dt
+}
+
 function CustomerProfilePage() {
   const navigate = useNavigate()
   const { user, logout, isAuthenticated } = useAuth()
@@ -354,6 +365,18 @@ function CustomerProfilePage() {
       setBookingError(error.response?.data?.message || 'שגיאה בקביעת הפגישה. אנא נסה שוב.')
     } finally {
       setIsSubmittingBooking(false)
+    }
+  }
+
+  const handleCancelBooking = async (booking) => {
+    const ok = window.confirm('האם לשלוח ביטול לפגישה זו?')
+    if (!ok) return
+    try {
+      const res = await authService.cancelBooking(booking._id)
+      toast.success(res?.message || 'הבקשה בוצעה בהצלחה')
+      await loadCustomerData()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'שגיאה בביטול הפגישה')
     }
   }
 
@@ -785,6 +808,9 @@ function CustomerProfilePage() {
                             🕐 שעה: {booking.preferredTime}
                           </p>
                         )}
+                        <p className="text-xs text-amber-700 mt-2">
+                          נא להודיע על ביטול עד 24 שעות לפני מועד הפגישה
+                        </p>
                         {booking.meetingType === 'zoom' && booking.zoomLink && (
                           <div className="mt-2">
                             <a
@@ -812,16 +838,44 @@ function CustomerProfilePage() {
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
                         booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                        booking.status === 'cancellation_requested' ? 'bg-orange-100 text-orange-700' :
                         booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
                         booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                         'bg-yellow-100 text-yellow-700'
                       }`}>
                         {booking.status === 'confirmed' ? 'אושר' :
+                         booking.status === 'cancellation_requested' ? 'בקשת ביטול' :
                          booking.status === 'completed' ? 'בוצע' :
                          booking.status === 'cancelled' ? 'בוטל' :
                          'ממתין'}
                       </span>
                     </div>
+                    {['pending', 'confirmed'].includes(booking.status) && (() => {
+                      const hoursUntil = (getBookingDateTime(booking).getTime() - Date.now()) / (1000 * 60 * 60)
+                      const isLate = hoursUntil < 24
+                      return (
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant={isLate ? 'soft' : 'danger'}
+                            className="text-sm"
+                            onClick={() => handleCancelBooking(booking)}
+                          >
+                            {isLate ? 'בקשת ביטול' : 'ביטול פגישה'}
+                          </Button>
+                          {isLate && (
+                            <p className="text-xs text-neutral-500 mt-2">
+                              פחות מ-24 שעות לפגישה — נשלחת בקשת ביטול לאישור מנהל.
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
+                    {booking.status === 'cancellation_requested' && (
+                      <p className="text-xs text-neutral-500 mt-3">
+                        בקשת הביטול נשלחה וממתינה לאישור מנהל.
+                      </p>
+                    )}
                   </Card>
                 ))
               ) : (
@@ -856,6 +910,9 @@ function CustomerProfilePage() {
                             🕐 שעה: {booking.preferredTime}
                           </p>
                         )}
+                        <p className="text-xs text-amber-700 mt-2">
+                          נא להודיע על ביטול עד 24 שעות לפני מועד הפגישה
+                        </p>
                         {booking.meetingType === 'zoom' && booking.zoomLink && (
                           <div className="mt-2">
                             <a

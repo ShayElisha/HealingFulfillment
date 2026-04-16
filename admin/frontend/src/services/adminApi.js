@@ -127,6 +127,10 @@ export const bookingService = {
     const response = await api.put(`/admin/bookings/${id}/status`, { status })
     return response.data
   },
+  resolveCancellationRequest: async (id, action) => {
+    const response = await api.put(`/admin/bookings/${id}/cancellation-request`, { action })
+    return response.data
+  },
   updateZoomLink: async (id, zoomLink) => {
     const response = await api.put(`/admin/bookings/${id}/zoom-link`, { zoomLink })
     return response.data

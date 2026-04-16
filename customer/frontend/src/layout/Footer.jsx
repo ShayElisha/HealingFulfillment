@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useContact } from '../context/ContactContext'
+import logoImage from '../assets/IMG_1562-Photoroom.png'
 
 function Footer() {
   const currentYear = new Date().getFullYear()
@@ -11,6 +12,13 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           {/* About Section */}
           <div>
+            <div className="mb-4">
+              <img
+                src={logoImage}
+                alt="יניב תנעמי"
+                className="h-16 w-auto object-contain"
+              />
+            </div>
             <h3 className="text-white text-xl font-serif font-semibold mb-4">
               ריפוי והגשמה
             </h3>

@@ -168,6 +168,17 @@ function BookingsPage() {
     handleStatusChange(booking, 'cancelled')
   }
 
+  const handleResolveCancellationRequest = async (booking, action) => {
+    try {
+      await bookingService.resolveCancellationRequest(booking._id, action)
+      await loadData()
+      toast.success(action === 'approve' ? 'בקשת הביטול אושרה' : 'בקשת הביטול נדחתה')
+    } catch (error) {
+      console.error('Error resolving cancellation request:', error)
+      toast.error(error?.response?.data?.message || 'שגיאה בטיפול בבקשת הביטול')
+    }
+  }
+
   const handleDeleteBooking = async (booking) => {
     const whenText = booking?.preferredDate
       ? new Date(booking.preferredDate).toLocaleDateString('he-IL')
@@ -287,6 +298,10 @@ function BookingsPage() {
               <h3 className="text-sm font-medium text-neutral-600 mb-1">ממתינות</h3>
               <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
             </Card>
+            <Card className="bg-gradient-to-br from-orange-50 to-white">
+              <h3 className="text-sm font-medium text-neutral-600 mb-1">בקשות ביטול</h3>
+              <p className="text-2xl font-bold text-orange-600">{stats.cancellationRequested || 0}</p>
+            </Card>
             <Card className="bg-gradient-to-br from-green-50 to-white">
               <h3 className="text-sm font-medium text-neutral-600 mb-1">מאושרות</h3>
               <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
@@ -316,6 +331,7 @@ function BookingsPage() {
                 >
                   <option value="all">הכל</option>
                   <option value="pending">ממתין</option>
+                  <option value="cancellation_requested">בקשת ביטול</option>
                   <option value="confirmed">אושר</option>
                   <option value="cancelled">בוטל</option>
                 </select>
@@ -524,6 +540,8 @@ function BookingsPage() {
                           className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium border ${
                             booking.status === 'confirmed'
                               ? 'bg-green-50 text-green-700 border-green-200'
+                              : booking.status === 'cancellation_requested'
+                                ? 'bg-orange-50 text-orange-700 border-orange-200'
                               : booking.status === 'completed'
                                 ? 'bg-blue-50 text-blue-700 border-blue-200'
                                 : booking.status === 'cancelled'
@@ -533,6 +551,8 @@ function BookingsPage() {
                         >
                           {booking.status === 'confirmed'
                             ? 'אושר'
+                            : booking.status === 'cancellation_requested'
+                              ? 'בקשת ביטול'
                             : booking.status === 'completed'
                               ? 'בוצע'
                               : booking.status === 'cancelled'
@@ -592,6 +612,26 @@ function BookingsPage() {
                               onClick={() => handleDeleteBooking(booking)}
                             >
                               מחק
+                            </Button>
+                          </div>
+                        )}
+                        {activeTab !== 'history' && booking.status === 'cancellation_requested' && (
+                          <div className="flex flex-row-reverse flex-wrap gap-2 justify-end">
+                            <Button
+                              type="button"
+                              variant="danger"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleResolveCancellationRequest(booking, 'approve')}
+                            >
+                              אשר ביטול
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="!px-3 !py-1.5 text-xs"
+                              onClick={() => handleResolveCancellationRequest(booking, 'reject')}
+                            >
+                              דחה בקשה
                             </Button>
                           </div>
                         )}
