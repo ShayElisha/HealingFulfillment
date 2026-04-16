@@ -10,7 +10,6 @@ import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
 import { categoryService, forWhomAudienceService } from '../services/api'
 import ForWhomAudienceDoorCard from '../components/ForWhomAudienceDoorCard'
-import yanivImage from '../assets/yaniv.png'
 import heroVideo from '../assets/PixVerse_V5.5_Extend_720P_Seamless_looping_cin.mp4'
 
 function HomePage() {
@@ -107,29 +106,12 @@ function HomePage() {
           {/* מתיחה לרוחב ה־container (ביטול ה-padding הפנימי) + רווח אופקי גדול — תמונה צמודה יותר לשמאל, טקסט לימין */}
           <div className="-mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8">
             <div
-              className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-y-10 gap-x-10 px-3 sm:px-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-x-28 md:gap-y-12 md:px-6 lg:gap-x-36 lg:px-8 xl:gap-x-44 2xl:gap-x-52"
+              className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-y-10 gap-x-10 px-3 sm:px-4 md:gap-y-12 md:px-6 lg:px-8"
               dir="ltr"
             >
-            <div className="order-2 flex w-full justify-center md:order-1 md:justify-start">
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-0 -inset-3 motion-reduce:will-change-auto motion-reduce:animate-none will-change-transform animate-spin-slow rounded-full sm:-inset-5 md:-inset-8">
-                  <div className="absolute inset-0 rounded-full border-[4px] border-primary-700/80 bg-primary-900/10 sm:border-[6px] md:border-[10px]" />
-                  <div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
-                  <div className="absolute bottom-0 left-1/2 h-3 w-3 -translate-x-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
-                  <div className="absolute left-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
-                  <div className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-primary-800 shadow-md sm:h-4 sm:w-4 md:h-6 md:w-6" />
-                </div>
-                <img
-                  src={yanivImage}
-                  alt="יניב תנעמי"
-                  className="relative z-[1] h-40 w-40 rounded-full border-2 border-white object-cover shadow-2xl sm:h-56 sm:w-56 sm:border-4 md:h-80 md:w-80"
-                />
-              </div>
-            </div>
-
             <div className="order-2 min-w-0 max-w-4xl w-full md:order-2">
               <div
-                className="mx-auto min-w-0 w-full max-w-4xl rounded-2xl border border-white/50 bg-white/90 p-5 shadow-xl sm:bg-white/88 sm:p-7 md:ml-auto md:mr-0 lg:max-w-3xl lg:p-10"
+                className="mx-auto min-w-0 w-full max-w-4xl rounded-2xl border border-white/50 bg-white/90 p-5 shadow-xl sm:bg-white/88 sm:p-7 lg:max-w-3xl lg:p-10"
                 dir="rtl"
               >
                 <h1 className="mb-4 font-serif text-3xl font-bold leading-tight text-neutral-900 sm:mb-5 sm:text-4xl md:text-5xl lg:text-6xl">
