@@ -662,6 +662,13 @@ function CustomerProfilePage() {
               </div>
 
               {/* Actions */}
+              {canManageReview && (
+                <div className="p-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-900">
+                  <p className="text-sm">
+                    יש ברשותך אפשרות להוסיף ביקורת. תדע/י שהוספת סרטון ביקורת נותן לך שבוע נוסף לאחר אישור המנהל.
+                  </p>
+                </div>
+              )}
               <div className="flex gap-4 flex-wrap">
                 {customerData.isAdmin ? (
                   <Button onClick={handleGoToAdmin} variant="primary">
@@ -675,17 +682,12 @@ function CustomerProfilePage() {
                   שנה סיסמה
                 </Button>
                 {canManageReview && (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-sm text-neutral-600">
-                      יש ברשותך אפשרות להוסיף ביקורת. תדע/י שהוספת סרטון ביקורת נותן לך שבוע נוסף לאחר אישור המנהל.
-                    </p>
-                    <Button
-                      onClick={() => setShowReviewModal(true)}
-                      variant="primary"
-                    >
-                      {myReview ? 'ערוך ביקורת' : 'הוסף ביקורת'}
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => setShowReviewModal(true)}
+                    variant="primary"
+                  >
+                    {myReview ? 'ערוך ביקורת' : 'הוסף ביקורת'}
+                  </Button>
                 )}
                 {!canManageReview && reviewEligibility?.message && (
                   <p className="text-sm text-neutral-500 self-center">{reviewEligibility.message}</p>
