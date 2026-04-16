@@ -1,48 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useContact } from '../context/ContactContext'
 import logoImage from '../assets/IMG_1562-Photoroom.png'
+import { FaInstagram, FaYoutube, FaFacebook } from 'react-icons/fa'
+import { SiTiktok } from 'react-icons/si'
 
 const SOCIAL_LINKS = [
-  { label: 'Instagram', href: 'https://www.instagram.com/yanivtan/' },
-  { label: 'YouTube', href: 'https://www.youtube.com/@intelligent-space-between-us/videos?app=desktop&view=0&sort=dd&shelf_id=4' },
-  { label: 'Facebook', href: 'https://www.facebook.com/groups/1265110442334306/' },
-  { label: 'TikTok', href: 'https://www.tiktok.com/@yaniv.tanami1' },
+  { label: 'Instagram', href: 'https://www.instagram.com/yanivtan/', Icon: FaInstagram },
+  { label: 'YouTube', href: 'https://www.youtube.com/@intelligent-space-between-us/videos?app=desktop&view=0&sort=dd&shelf_id=4', Icon: FaYoutube },
+  { label: 'Facebook', href: 'https://www.facebook.com/groups/1265110442334306/', Icon: FaFacebook },
+  { label: 'TikTok', href: 'https://www.tiktok.com/@yaniv.tanami1', Icon: SiTiktok },
 ]
-
-function SocialIcon({ label, className = 'w-5 h-5' }) {
-  if (label === 'Instagram') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-        <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
-        <circle cx="12" cy="12" r="4.2" />
-        <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none" />
-      </svg>
-    )
-  }
-  if (label === 'YouTube') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-        <rect x="2.8" y="6.2" width="18.4" height="11.6" rx="3.2" />
-        <path d="M10 9.4l5.2 2.6L10 14.6V9.4z" fill="currentColor" stroke="none" />
-      </svg>
-    )
-  }
-  if (label === 'Facebook') {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-        <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
-        <path d="M13.4 20v-6.6h2.2l.5-2.6h-2.7V9.4c0-.8.3-1.3 1.4-1.3h1.4V5.8c-.2 0-1-.1-2-.1-2 0-3.3 1.2-3.3 3.5v1.6H9v2.6h1.8V20h2.6z" fill="currentColor" stroke="none" />
-      </svg>
-    )
-  }
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
-      <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
-      <path d="M9.8 9.2v5.7c0 1 .8 1.8 1.8 1.8h2.1c1 0 1.8-.8 1.8-1.8V9.2" />
-      <path d="M11 7.8h2M12 7.8v8.8" />
-    </svg>
-  )
-}
 
 function Footer() {
   const currentYear = new Date().getFullYear()
@@ -79,7 +46,7 @@ function Footer() {
                   title={item.label}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-neutral-700 text-neutral-300 transition-colors hover:border-primary-400 hover:text-primary-400"
                 >
-                  <SocialIcon label={item.label} />
+                  <item.Icon className="h-5 w-5" aria-hidden="true" />
                 </a>
               ))}
             </div>
