@@ -302,7 +302,11 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
     }
 
 
-    const review = await Review.findById(req.params.id)
+    let review = await Review.findById(req.params.id)
+    // Fallback for stale ID in client state: use the customer's existing review.
+    if (!review) {
+      review = await Review.findOne({ customer: req.customerId })
+    }
     if (!review) {
       return res.status(404).json({ message: 'Review not found' })
     }
