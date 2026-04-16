@@ -359,7 +359,7 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
 router.get('/my-review', authenticateToken, async (req, res, next) => {
   try {
     const { eligibility } = await ensureReviewWindow(req.customerId)
-    const review = await Review.findOne({ customer: req.customerId })
+    let review = await Review.findOne({ customer: req.customerId })
     
     if (!review) {
       return res.json({
@@ -369,10 +369,20 @@ router.get('/my-review', authenticateToken, async (req, res, next) => {
       })
     }
 
+    // Backfill: if a video already exists but reward was not granted, grant it now.
+    const rewardResult = await grantVideoRewardIfNeeded({ review, customerId: req.customerId })
+    if (rewardResult.rewardApplied) {
+      review = await Review.findById(review._id)
+    }
+
     res.json({
       message: 'Review retrieved successfully',
       data: review,
-      meta: { eligibility },
+      meta: {
+        eligibility,
+        rewardApplied: rewardResult.rewardApplied,
+        newSubscriptionEndAt: rewardResult.newSubscriptionEndAt || null,
+      },
     })
   } catch (error) {
     next(error)

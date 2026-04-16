@@ -13,6 +13,15 @@ function ReviewCard({ review }) {
         <p className="mb-2 line-clamp-5 min-h-0 flex-1 text-sm leading-relaxed text-neutral-700 sm:text-base italic">
           &quot;{review.content}&quot;
         </p>
+        {review.video?.url && (
+          <div className="mb-2">
+            <video
+              src={review.video.url}
+              controls
+              className="w-full rounded-lg border border-neutral-200"
+            />
+          </div>
+        )}
         <div className="mt-auto shrink-0">
           <p className="text-sm font-semibold text-neutral-900 sm:text-base">
             — {review.customerName || review.customer?.name || 'לקוח'}

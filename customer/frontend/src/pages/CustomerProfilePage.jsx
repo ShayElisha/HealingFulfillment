@@ -205,6 +205,10 @@ function CustomerProfilePage() {
     try {
       const response = await reviewsService.getMyReview()
       setReviewEligibility(response?.meta?.eligibility || null)
+      if (response?.meta?.rewardApplied) {
+        toast.success('הסרטון זיכה אותך בשבוע נוסף למנוי')
+        await loadCustomerData()
+      }
       if (response.data) {
         setMyReview(response.data)
         setReviewForm({
@@ -1362,6 +1366,7 @@ function CustomerProfilePage() {
                 }
                 setShowReviewModal(false)
                 await loadMyReview()
+                await loadCustomerData()
               } catch (error) {
                 console.error('Error submitting review:', error)
                 toast.error(error.response?.data?.message || 'שגיאה בשליחת הביקורת')
