@@ -170,7 +170,6 @@ function CustomerProfilePage() {
   })
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
-  const [refundSubmittingByPurchase, setRefundSubmittingByPurchase] = useState({})
   const [bookingAvailability, setBookingAvailability] = useState({
     unavailableTimes: [],
     availableTimes: [],
@@ -386,21 +385,6 @@ function CustomerProfilePage() {
       await loadCustomerData()
     } catch (error) {
       toast.error(error.response?.data?.message || 'שגיאה בביטול הפגישה')
-    }
-  }
-
-  const handleRequestRefund = async (purchase) => {
-    const ok = window.confirm('האם לשלוח בקשת החזר עבור רכישה זו?')
-    if (!ok) return
-    setRefundSubmittingByPurchase((prev) => ({ ...prev, [purchase._id]: true }))
-    try {
-      await authService.requestPurchaseRefund(purchase._id)
-      toast.success('בקשת החזר נשלחה בהצלחה')
-      await loadCustomerData()
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'שגיאה בשליחת בקשת ההחזר')
-    } finally {
-      setRefundSubmittingByPurchase((prev) => ({ ...prev, [purchase._id]: false }))
     }
   }
 
@@ -807,29 +791,8 @@ function CustomerProfilePage() {
                            purchase.status === 'cancelled' ? 'בוטל' :
                            'ממתין'}
                         </span>
-                        {purchase.refundStatus && purchase.refundStatus !== 'none' && (
-                          <p className="text-xs text-neutral-600 mt-2 text-left">
-                            החזר: {purchase.refundStatus}
-                          </p>
-                        )}
                       </div>
                     </div>
-                    {purchase.provider === 'cardcom' && purchase.status === 'completed' && (
-                      <div className="mt-4 pt-3 border-t border-neutral-200">
-                        <Button
-                          type="button"
-                          variant="soft"
-                          className="text-sm"
-                          disabled={
-                            Boolean(refundSubmittingByPurchase[purchase._id]) ||
-                            ['requested', 'approved', 'refunded'].includes(purchase.refundStatus)
-                          }
-                          onClick={() => handleRequestRefund(purchase)}
-                        >
-                          {refundSubmittingByPurchase[purchase._id] ? 'שולח בקשה...' : 'בקשה להחזר'}
-                        </Button>
-                      </div>
-                    )}
                   </Card>
                 ))
               ) : (

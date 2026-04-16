@@ -115,7 +115,6 @@ function CustomerPage() {
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
   const [coachingUiLoading, setCoachingUiLoading] = useState(null)
-  const [refundLoadingByPurchase, setRefundLoadingByPurchase] = useState({})
   const [triggerJournalEntries, setTriggerJournalEntries] = useState([])
   const [triggerJournalLoading, setTriggerJournalLoading] = useState(false)
 
@@ -288,56 +287,6 @@ function CustomerPage() {
       console.error('Error updating purchase status:', error)
       toast.error('שגיאה בעדכון סטטוס הרכישה')
     }
-  }
-
-  const withRefundLoading = async (purchaseId, fn) => {
-    setRefundLoadingByPurchase((prev) => ({ ...prev, [purchaseId]: true }))
-    try {
-      await fn()
-    } finally {
-      setRefundLoadingByPurchase((prev) => ({ ...prev, [purchaseId]: false }))
-    }
-  }
-
-  const handleCheckRefundEligibility = async (purchaseId) => {
-    await withRefundLoading(purchaseId, async () => {
-      const res = await purchaseService.getRefundEligibility(purchaseId)
-      const eligibility = res?.data?.eligibility
-      if (!eligibility) {
-        toast.error('לא התקבלה תשובת זכאות')
-        return
-      }
-      if (eligibility.eligible) {
-        toast.success('הרכישה זכאית לתהליך החזר')
-      } else {
-        toast.error('הרכישה אינה זכאית לתהליך החזר')
-      }
-    })
-  }
-
-  const handleRequestRefund = async (purchaseId) => {
-    await withRefundLoading(purchaseId, async () => {
-      await purchaseService.requestRefund(purchaseId)
-      await loadCustomer()
-      toast.success('בקשת החזר נפתחה בהצלחה')
-    })
-  }
-
-  const handleRefundAction = async (purchaseId, action) => {
-    const labels = {
-      approve: 'לאשר ולהחזיר בפועל ב-Cardcom',
-      reject: 'לדחות את בקשת ההחזר',
-      mark_refunded: 'לסמן כהוחזר ידנית',
-      mark_failed: 'לסמן שההחזר נכשל',
-    }
-    const confirmed = window.confirm(`האם לבצע פעולה: ${labels[action] || action}?`)
-    if (!confirmed) return
-    await withRefundLoading(purchaseId, async () => {
-      await purchaseService.updateRefundRequest(purchaseId, action)
-      await loadCustomer()
-      if (action === 'approve') toast.success('הבקשה אושרה. בוצע ניסיון זיכוי אוטומטי ב-Cardcom.')
-      else toast.success('סטטוס תהליך ההחזר עודכן')
-    })
   }
 
   const handleCreateAccount = async () => {
@@ -684,8 +633,6 @@ function CustomerPage() {
                       const windowLine = resolved?.line
                       const windowDerived = resolved?.derived
                       const plannedCourseLine = courseCoachingSecondaryLine(purchase.course)
-                      const refundStatus = purchase.refundStatus || 'none'
-                      const refundBusy = Boolean(refundLoadingByPurchase[purchase._id])
                       return (
                       <div key={purchase._id} className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
                         <div className="flex justify-between items-start mb-3">
@@ -810,56 +757,6 @@ function CustomerPage() {
                               }`}
                             >
                               בוטל
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-neutral-200">
-                          <p className="text-sm font-medium text-neutral-700 mb-2">
-                            תהליך החזר: {refundStatus}
-                          </p>
-                          <div className="flex gap-2 flex-wrap">
-                            <button
-                              onClick={() => handleCheckRefundEligibility(purchase._id)}
-                              disabled={refundBusy}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-                            >
-                              בדוק זכאות החזר
-                            </button>
-                            <button
-                              onClick={() => handleRequestRefund(purchase._id)}
-                              disabled={refundBusy || refundStatus === 'requested' || refundStatus === 'refunded'}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
-                            >
-                              פתח בקשת החזר
-                            </button>
-                            <button
-                              onClick={() => handleRefundAction(purchase._id, 'approve')}
-                              disabled={refundBusy || refundStatus !== 'requested'}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
-                            >
-                              ביצוע החזר
-                            </button>
-                            <button
-                              onClick={() => handleRefundAction(purchase._id, 'reject')}
-                              disabled={refundBusy || refundStatus !== 'requested'}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:opacity-50"
-                            >
-                              דחה בקשה
-                            </button>
-                            <button
-                              onClick={() => handleRefundAction(purchase._id, 'mark_refunded')}
-                              disabled={refundBusy}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
-                            >
-                              סמן הוחזר ידנית
-                            </button>
-                            <button
-                              onClick={() => handleRefundAction(purchase._id, 'mark_failed')}
-                              disabled={refundBusy}
-                              className="px-3 py-1.5 text-sm rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
-                            >
-                              סמן כשלון
                             </button>
                           </div>
                         </div>

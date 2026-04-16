@@ -112,18 +112,6 @@ export const purchaseService = {
     const response = await api.put(`/admin/purchases/${id}/status`, { status })
     return response.data
   },
-  getRefundEligibility: async (id) => {
-    const response = await api.get(`/purchases/${id}/refund-eligibility`)
-    return response.data
-  },
-  requestRefund: async (id, reason = '') => {
-    const response = await api.post(`/purchases/${id}/refund-request`, { reason })
-    return response.data
-  },
-  updateRefundRequest: async (id, action, reason = '') => {
-    const response = await api.put(`/purchases/${id}/refund-request`, { action, reason })
-    return response.data
-  },
 }
 
 export const bookingService = {
