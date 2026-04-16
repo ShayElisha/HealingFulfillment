@@ -34,6 +34,31 @@ const reviewSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Review content cannot exceed 1000 characters']
   },
+
+  // סרטון חוות דעת (אופציונלי)
+  video: {
+    url: {
+      type: String,
+      trim: true,
+      maxlength: 8192,
+    },
+    name: {
+      type: String,
+      trim: true,
+    },
+    size: {
+      type: Number,
+      min: 0,
+    },
+    uploadedAt: {
+      type: Date,
+    },
+  },
+
+  // מונע הענקת שבוע נוסף יותר מפעם אחת
+  videoRewardGrantedAt: {
+    type: Date,
+  },
   
   // סטטוס הביקורת (pending, approved, rejected)
   status: {

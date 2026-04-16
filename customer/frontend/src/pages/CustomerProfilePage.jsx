@@ -155,10 +155,13 @@ function CustomerProfilePage() {
   const [isFirstBookingUnlocked, setIsFirstBookingUnlocked] = useState(false)
   const [reviewForm, setReviewForm] = useState({
     rating: 0,
-    content: ''
+    content: '',
+    video: null,
   })
   const [myReview, setMyReview] = useState(null)
+  const [reviewEligibility, setReviewEligibility] = useState(null)
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+  const [isUploadingReviewVideo, setIsUploadingReviewVideo] = useState(false)
   const [bookingForm, setBookingForm] = useState({
     preferredDate: '',
     preferredTime: '',
@@ -201,12 +204,17 @@ function CustomerProfilePage() {
   const loadMyReview = async () => {
     try {
       const response = await reviewsService.getMyReview()
+      setReviewEligibility(response?.meta?.eligibility || null)
       if (response.data) {
         setMyReview(response.data)
         setReviewForm({
           rating: response.data.rating,
-          content: response.data.content
+          content: response.data.content,
+          video: response.data.video?.url ? response.data.video : null,
         })
+      } else {
+        setMyReview(null)
+        setReviewForm({ rating: 0, content: '', video: null })
       }
     } catch (error) {
       console.error('Error loading review:', error)
@@ -440,6 +448,7 @@ function CustomerProfilePage() {
   const canBookRegular =
     customerData.bookingUnlimitedBySubscription === true ||
     customerData.availableSessions > 0
+  const canManageReview = Boolean(reviewEligibility?.canSubmit)
 
   return (
     <>
@@ -665,13 +674,16 @@ function CustomerProfilePage() {
                 >
                   שנה סיסמה
                 </Button>
-                {(customerData.bookings?.filter(b => b.status === 'completed').length || 0) > 0 && (
+                {canManageReview && (
                   <Button
                     onClick={() => setShowReviewModal(true)}
                     variant="primary"
                   >
                     {myReview ? 'ערוך ביקורת' : 'הוסף ביקורת'}
                   </Button>
+                )}
+                {!canManageReview && reviewEligibility?.message && (
+                  <p className="text-sm text-neutral-500 self-center">{reviewEligibility.message}</p>
                 )}
                 <Button
                   onClick={handleLogout}
@@ -1336,11 +1348,17 @@ function CustomerProfilePage() {
               setIsSubmittingReview(true)
               try {
                 if (myReview) {
-                  await reviewsService.update(myReview._id, reviewForm)
+                  const result = await reviewsService.update(myReview._id, reviewForm)
                   toast.success('ביקורת עודכנה בהצלחה')
+                  if (result?.meta?.rewardApplied) {
+                    toast.success('כל הכבוד! קיבלת שבוע נוסף למנוי על העלאת סרטון.')
+                  }
                 } else {
-                  await reviewsService.create(reviewForm)
+                  const result = await reviewsService.create(reviewForm)
                   toast.success('ביקורת נשלחה בהצלחה וממתינה לאישור')
+                  if (result?.meta?.rewardApplied) {
+                    toast.success('כל הכבוד! קיבלת שבוע נוסף למנוי על העלאת סרטון.')
+                  }
                 }
                 setShowReviewModal(false)
                 await loadMyReview()
@@ -1395,6 +1413,63 @@ function CustomerProfilePage() {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  סרטון חוות דעת (אופציונלי)
+                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input
+                    type="file"
+                    accept="video/*"
+                    disabled={isUploadingReviewVideo || isSubmittingReview}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      try {
+                        setIsUploadingReviewVideo(true)
+                        const uploaded = await reviewsService.uploadVideo(file)
+                        setReviewForm((prev) => ({ ...prev, video: uploaded?.data || null }))
+                        toast.success('הסרטון הועלה בהצלחה')
+                      } catch (error) {
+                        toast.error(error.response?.data?.message || 'שגיאה בהעלאת הסרטון')
+                      } finally {
+                        setIsUploadingReviewVideo(false)
+                        e.target.value = ''
+                      }
+                    }}
+                    className="block w-full text-sm text-neutral-700 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-100 file:px-4 file:py-2 file:text-primary-700 hover:file:bg-primary-200"
+                  />
+                  {isUploadingReviewVideo && (
+                    <p className="text-xs text-neutral-500">מעלה סרטון...</p>
+                  )}
+                </div>
+                {reviewForm.video?.url && (
+                  <div className="mt-3 space-y-2">
+                    <video
+                      src={reviewForm.video.url}
+                      controls
+                      className="w-full max-h-56 rounded-lg border border-neutral-200"
+                    />
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-neutral-500">
+                        {reviewForm.video.name || 'סרטון הועלה'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="soft"
+                        className="text-xs"
+                        onClick={() => setReviewForm((prev) => ({ ...prev, video: null }))}
+                      >
+                        הסר סרטון
+                      </Button>
+                    </div>
+                    <p className="text-xs text-primary-700">
+                      העלאת סרטון מזכה בשבוע נוסף למנוי.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Submit Buttons */}
               <div className="flex gap-4">
                 <Button type="submit" variant="primary" disabled={isSubmittingReview}>
@@ -1405,7 +1480,7 @@ function CustomerProfilePage() {
                   onClick={() => {
                     setShowReviewModal(false)
                     if (!myReview) {
-                      setReviewForm({ rating: 0, content: '' })
+                      setReviewForm({ rating: 0, content: '', video: null })
                     }
                   }}
                   variant="soft"

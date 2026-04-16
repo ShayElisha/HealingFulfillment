@@ -1,7 +1,6 @@
 import express from 'express'
 import Review from '../models/Review.js'
 import Customer from '../models/Customer.js'
-import Booking from '../models/Booking.js'
 import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -11,6 +10,7 @@ router.get('/', async (req, res, next) => {
   try {
     const reviews = await Review.find({ status: 'approved' })
       .populate('customer', 'name')
+      .select('customer customerName rating content video createdAt status')
       .sort({ createdAt: -1 })
       .limit(50)
       .lean()
@@ -73,7 +73,7 @@ router.get('/stats', async (req, res, next) => {
 // POST /api/reviews - Create review (authenticated customer)
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
-    const { rating, content } = req.body
+    const { rating, content, video } = req.body
 
     // Validation
     if (!rating || rating < 1 || rating > 5) {
@@ -84,18 +84,6 @@ router.post('/', authenticateToken, async (req, res, next) => {
     }
     if (content.length > 1000) {
       return res.status(400).json({ message: 'Review content cannot exceed 1000 characters' })
-    }
-
-    // Check if customer has at least one completed booking
-    const completedBookings = await Booking.countDocuments({
-      customer: req.customerId,
-      status: 'completed'
-    })
-
-    if (completedBookings === 0) {
-      return res.status(400).json({ 
-        message: 'ניתן לכתוב ביקורת רק לאחר השלמת לפחות פגישה אחת' 
-      })
     }
 
     // Check if customer already wrote a review
@@ -118,6 +106,14 @@ router.post('/', authenticateToken, async (req, res, next) => {
       customerName: customer.name,
       rating: Math.round(rating),
       content: content.trim(),
+      video: video?.url
+        ? {
+            url: String(video.url).trim(),
+            name: String(video.name || '').trim(),
+            size: Number(video.size) || undefined,
+            uploadedAt: video.uploadedAt ? new Date(video.uploadedAt) : new Date(),
+          }
+        : undefined,
       status: 'pending'
     })
 
@@ -135,7 +131,7 @@ router.post('/', authenticateToken, async (req, res, next) => {
 // PUT /api/reviews/:id - Update review (authenticated customer - only their own)
 router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
-    const { rating, content } = req.body
+    const { rating, content, video } = req.body
 
     const review = await Review.findById(req.params.id)
     if (!review) {
@@ -162,6 +158,16 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
         return res.status(400).json({ message: 'Review content cannot exceed 1000 characters' })
       }
       review.content = content.trim()
+    }
+    if (video !== undefined) {
+      review.video = video?.url
+        ? {
+            url: String(video.url).trim(),
+            name: String(video.name || '').trim(),
+            size: Number(video.size) || undefined,
+            uploadedAt: video.uploadedAt ? new Date(video.uploadedAt) : new Date(),
+          }
+        : undefined
     }
 
     // Reset status to pending if it was approved/rejected

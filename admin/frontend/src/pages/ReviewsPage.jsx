@@ -158,6 +158,16 @@ function ReviewsPage() {
                       <p className="text-neutral-700 leading-relaxed mb-3 whitespace-pre-wrap">
                         {review.content}
                       </p>
+                      {review.video?.url && (
+                        <div className="mb-3">
+                          <p className="text-xs text-neutral-500 mb-2">סרטון מצורף:</p>
+                          <video
+                            src={review.video.url}
+                            controls
+                            className="w-full max-w-md rounded-lg border border-neutral-200"
+                          />
+                        </div>
+                      )}
 
                       {/* Details */}
                       <div className="flex flex-wrap gap-4 text-sm text-neutral-500">

@@ -21,6 +21,15 @@ export const reviewsService = {
     return response.data
   },
   
+  uploadVideo: async (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const response = await api.post('/reviews/upload-video', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
   update: async (id, data) => {
     const response = await api.put(`/reviews/${id}`, data)
     return response.data
