@@ -83,6 +83,13 @@ const TRIGGER_PART_LABELS = {
   late_evening: 'סוף ערב / לפני שינה',
 }
 
+const TRIGGER_BREATHING_LABELS = {
+  unaware_held: '1 עצורה לא מודעת',
+  fast_contracted: '2 מהירה מכווצת',
+  regular_flowing: '3 סדירה זורמת',
+  not_noticed: '4 לא שמתי לב',
+}
+
 function formatTriggerEntryDate(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -391,7 +398,7 @@ function CustomerPage() {
           {[
             { id: 'overview', label: 'סקירה כללית' },
             { id: 'questionnaire', label: 'שאלון ותקנון' },
-            { id: 'trigger-journal', label: 'תיעוד תריגרים' },
+            { id: 'trigger-journal', label: 'זיהוי ותיעוד' },
             { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
             { id: 'audio', label: `אודיו (${audioFiles.length})` },
             { id: 'sessions', label: `פגישות (${customer.bookings?.length || 0})` },
@@ -697,7 +704,7 @@ function CustomerPage() {
 
           {activeTab === 'trigger-journal' && (
             <Card>
-              <h3 className="text-xl font-semibold mb-2">תיעוד תריגרים (מהלקוח)</h3>
+              <h3 className="text-xl font-semibold mb-2">זיהוי ותיעוד (מהלקוח)</h3>
               <p className="text-sm text-neutral-600 mb-6">
                 רישומים יומיים שהלקוח שומר מתיק הלקוח. לצפייה בלבד.
               </p>
@@ -725,15 +732,24 @@ function CustomerPage() {
                       <p className="text-neutral-800 whitespace-pre-wrap">{row.triggerDescription}</p>
                       {row.contextOrBody ? (
                         <p className="text-sm text-neutral-600 mt-2">
-                          <span className="font-medium">הקשר / גוף: </span>
+                          <span className="font-medium">הקשר: </span>
                           {row.contextOrBody}
                         </p>
+                      ) : null}
+                      {row.thoughts ? (
+                        <p className="text-sm text-neutral-600 mt-1">מחשבות: {row.thoughts}</p>
                       ) : null}
                       {row.feelingsNotes ? (
                         <p className="text-sm text-neutral-600 mt-1">רגשות: {row.feelingsNotes}</p>
                       ) : null}
-                      {row.copingOrWhatHelped ? (
-                        <p className="text-sm text-neutral-600 mt-1">מה עזר: {row.copingOrWhatHelped}</p>
+                      <p className="text-sm text-neutral-600 mt-1">
+                        נשימה: {TRIGGER_BREATHING_LABELS[row.breathingType] || TRIGGER_BREATHING_LABELS.not_noticed}
+                      </p>
+                      {row.bodySensations ? (
+                        <p className="text-sm text-neutral-600 mt-1">תחושות בגוף: {row.bodySensations}</p>
+                      ) : null}
+                      {row.lessonLearned ? (
+                        <p className="text-sm text-neutral-600 mt-1">השיעור שלי: {row.lessonLearned}</p>
                       ) : null}
                       {row.notes ? (
                         <p className="text-sm text-neutral-500 mt-2 whitespace-pre-wrap">{row.notes}</p>

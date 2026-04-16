@@ -11,6 +11,13 @@ export const PART_OF_DAY_VALUES = [
   'late_evening',
 ]
 
+export const BREATHING_TYPE_VALUES = [
+  'unaware_held',
+  'fast_contracted',
+  'regular_flowing',
+  'not_noticed',
+]
+
 const triggerJournalEntrySchema = new mongoose.Schema(
   {
     customer: {
@@ -46,7 +53,24 @@ const triggerJournalEntrySchema = new mongoose.Schema(
       min: 1,
       max: 10,
     },
+    thoughts: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
+    },
+    breathingType: {
+      type: String,
+      enum: BREATHING_TYPE_VALUES,
+      default: 'not_noticed',
+    },
     feelingsNotes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
+    },
+    bodySensations: {
       type: String,
       trim: true,
       maxlength: 2000,
@@ -62,6 +86,12 @@ const triggerJournalEntrySchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 4000,
+      default: '',
+    },
+    lessonLearned: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
       default: '',
     },
   },

@@ -1,5 +1,8 @@
 import express from 'express'
-import TriggerJournalEntry, { PART_OF_DAY_VALUES } from '../models/TriggerJournalEntry.js'
+import TriggerJournalEntry, {
+  BREATHING_TYPE_VALUES,
+  PART_OF_DAY_VALUES,
+} from '../models/TriggerJournalEntry.js'
 import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -63,9 +66,13 @@ router.post('/', authenticateToken, async (req, res, next) => {
       triggerDescription,
       contextOrBody,
       intensity,
+      thoughts,
+      breathingType,
       feelingsNotes,
+      bodySensations,
       copingOrWhatHelped,
       notes,
+      lessonLearned,
     } = req.body || {}
 
     const entryDate = parseEntryDateYmd(
@@ -79,6 +86,9 @@ router.post('/', authenticateToken, async (req, res, next) => {
     }
     if (!triggerDescription || String(triggerDescription).trim().length < 1) {
       return res.status(400).json({ message: 'נא לתאר את התריגר או מה שקרה' })
+    }
+    if (breathingType != null && breathingType !== '' && !BREATHING_TYPE_VALUES.includes(breathingType)) {
+      return res.status(400).json({ message: 'סוג נשימה לא תקין' })
     }
 
     let intensityVal = null
@@ -97,9 +107,16 @@ router.post('/', authenticateToken, async (req, res, next) => {
       triggerDescription: String(triggerDescription).trim(),
       contextOrBody: contextOrBody != null ? String(contextOrBody).trim() : '',
       intensity: intensityVal,
+      thoughts: thoughts != null ? String(thoughts).trim() : '',
+      breathingType:
+        breathingType && BREATHING_TYPE_VALUES.includes(breathingType)
+          ? breathingType
+          : 'not_noticed',
       feelingsNotes: feelingsNotes != null ? String(feelingsNotes).trim() : '',
+      bodySensations: bodySensations != null ? String(bodySensations).trim() : '',
       copingOrWhatHelped: copingOrWhatHelped != null ? String(copingOrWhatHelped).trim() : '',
       notes: notes != null ? String(notes).trim() : '',
+      lessonLearned: lessonLearned != null ? String(lessonLearned).trim() : '',
     })
 
     res.status(201).json({
@@ -128,9 +145,13 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
       triggerDescription,
       contextOrBody,
       intensity,
+      thoughts,
+      breathingType,
       feelingsNotes,
+      bodySensations,
       copingOrWhatHelped,
       notes,
+      lessonLearned,
     } = req.body || {}
 
     if (entryDateRaw != null) {
@@ -150,9 +171,18 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
       entry.triggerDescription = t
     }
     if (contextOrBody !== undefined) entry.contextOrBody = String(contextOrBody || '').trim()
+    if (thoughts !== undefined) entry.thoughts = String(thoughts || '').trim()
+    if (breathingType !== undefined) {
+      if (!breathingType || !BREATHING_TYPE_VALUES.includes(breathingType)) {
+        return res.status(400).json({ message: 'סוג נשימה לא תקין' })
+      }
+      entry.breathingType = breathingType
+    }
     if (feelingsNotes !== undefined) entry.feelingsNotes = String(feelingsNotes || '').trim()
+    if (bodySensations !== undefined) entry.bodySensations = String(bodySensations || '').trim()
     if (copingOrWhatHelped !== undefined) entry.copingOrWhatHelped = String(copingOrWhatHelped || '').trim()
     if (notes !== undefined) entry.notes = String(notes || '').trim()
+    if (lessonLearned !== undefined) entry.lessonLearned = String(lessonLearned || '').trim()
 
     if (intensity !== undefined) {
       if (intensity === null || intensity === '') {

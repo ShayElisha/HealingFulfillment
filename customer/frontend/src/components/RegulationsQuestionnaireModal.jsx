@@ -318,8 +318,8 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId: _customerI
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup" aria-labelledby="q-trauma">
                   {[
-                    { value: 'yes', label: 'לדברתי יש לי אירועים טראומטיים לא פתורים מהעבר' },
-                    { value: 'no', label: 'לדברתי אין לי אירועים טראומטיים לא פתורים מהעבר' },
+                    { value: 'yes', label: 'לדעתי יש לי אירועים טראומטיים לא פתורים מהעבר' },
+                    { value: 'no', label: 'לדעתי אין לי אירועים טראומטיים לא פתורים מהעבר' },
                   ].map((opt) => (
                     <SelectRow
                       key={opt.value}

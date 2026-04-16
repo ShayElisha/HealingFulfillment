@@ -451,7 +451,7 @@ function CustomerProfilePage() {
           <div className="flex gap-2 mb-6 border-b border-neutral-200 overflow-x-auto">
             {[
               { id: 'overview', label: 'סקירה כללית' },
-              { id: 'trigger-journal', label: 'תיעוד תריגרים' },
+              { id: 'trigger-journal', label: 'זיהוי ותיעוד' },
               { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
               { id: 'audio', label: `אודיו (${audioOnlyFiles.length})` },
               { id: 'bookings', label: `פגישות (${customerData.bookings?.filter((b) => b.status !== 'completed').length || 0})` },

@@ -14,6 +14,13 @@ const PART_OF_DAY_OPTIONS = [
   { value: 'late_evening', label: 'סוף ערב / לפני שינה' },
 ]
 
+const BREATHING_OPTIONS = [
+  { value: 'unaware_held', label: '1 עצורה לא מודעת' },
+  { value: 'fast_contracted', label: '2 מהירה מכווצת' },
+  { value: 'regular_flowing', label: '3 סדירה זורמת' },
+  { value: 'not_noticed', label: '4 לא שמתי לב' },
+]
+
 function todayYmd() {
   const d = new Date()
   const y = d.getFullYear()
@@ -41,10 +48,13 @@ const emptyForm = () => ({
   entryDate: todayYmd(),
   partOfDay: 'afternoon',
   triggerDescription: '',
+  thoughts: '',
+  breathingType: 'not_noticed',
   contextOrBody: '',
   intensity: '',
   feelingsNotes: '',
-  copingOrWhatHelped: '',
+  bodySensations: '',
+  lessonLearned: '',
   notes: '',
 })
 
@@ -88,9 +98,12 @@ export default function TriggerJournalSection() {
         entryDate: form.entryDate,
         partOfDay: form.partOfDay,
         triggerDescription: form.triggerDescription.trim(),
+        thoughts: form.thoughts.trim(),
+        breathingType: form.breathingType,
         contextOrBody: form.contextOrBody.trim(),
         feelingsNotes: form.feelingsNotes.trim(),
-        copingOrWhatHelped: form.copingOrWhatHelped.trim(),
+        bodySensations: form.bodySensations.trim(),
+        lessonLearned: form.lessonLearned.trim(),
         notes: form.notes.trim(),
       }
       if (form.intensity !== '' && form.intensity != null) {
@@ -123,7 +136,8 @@ export default function TriggerJournalSection() {
       <Card className="border border-primary-100 bg-primary-50/30">
         <h3 className="text-xl font-semibold text-neutral-900 mb-2">תיעוד תריגרים</h3>
         <p className="text-sm text-neutral-600 leading-relaxed">
-          רישום קצר עוזר להבין דפוסים: מתי ביום זה קרה, מה היה התריגר, ומה עזר. הנתונים נשמרים במערכת
+          רישום קצר עוזר להבין דפוסים: אופי האירוע, המחשבות והתחושות בגוף, הנשימה והעוצמה.
+          הנתונים נשמרים במערכת
           וזמינים גם למטפל בתיק שלך.
         </p>
       </Card>
@@ -159,7 +173,7 @@ export default function TriggerJournalSection() {
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-              מה היה התריגר / מה קרה? *
+              אופי האירוע *
             </label>
             <textarea
               required
@@ -167,57 +181,86 @@ export default function TriggerJournalSection() {
               value={form.triggerDescription}
               onChange={(e) => setForm({ ...form, triggerDescription: e.target.value })}
               className="w-full px-3 py-2 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 resize-y min-h-[100px]"
-              placeholder="תאר בקצרה..."
+              placeholder="מה קרה באירוע?"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">
-              איפה בגוף / הקשר (אופציונלי)
+              מה היו המחשבות שלי
             </label>
-            <input
-              type="text"
-              value={form.contextOrBody}
-              onChange={(e) => setForm({ ...form, contextOrBody: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-neutral-300"
-              placeholder="למשל: חזה, בטן, לחות, לפני פגישה..."
+            <textarea
+              rows={2}
+              value={form.thoughts}
+              onChange={(e) => setForm({ ...form, thoughts: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-neutral-300 resize-y"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-1">נשימה</label>
+              <select
+                value={form.breathingType}
+                onChange={(e) => setForm({ ...form, breathingType: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500"
+              >
+                {BREATHING_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-neutral-700 mb-1">
-                עוצמה (1–10, אופציונלי)
+                עוצמה
               </label>
-              <input
-                type="number"
-                min={1}
-                max={10}
+              <select
                 value={form.intensity}
                 onChange={(e) => setForm({ ...form, intensity: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-neutral-300"
-                placeholder="ריק אם לא רלוונטי"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1">רגשות / מחשבות</label>
-              <input
-                type="text"
-                value={form.feelingsNotes}
-                onChange={(e) => setForm({ ...form, feelingsNotes: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-neutral-300"
-              />
+              >
+                <option value="">בחרי עוצמה</option>
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">מה עזר / מה ניסית</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              מה הרגשתי
+            </label>
             <textarea
               rows={2}
-              value={form.copingOrWhatHelped}
-              onChange={(e) => setForm({ ...form, copingOrWhatHelped: e.target.value })}
+              value={form.feelingsNotes}
+              onChange={(e) => setForm({ ...form, feelingsNotes: e.target.value })}
               className="w-full px-3 py-2 rounded-xl border border-neutral-300 resize-y"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">הערות נוספות</label>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">
+              תחושות בגוף
+            </label>
+            <textarea
+              rows={2}
+              value={form.bodySensations}
+              onChange={(e) => setForm({ ...form, bodySensations: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-neutral-300 resize-y"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">מה לדעתך השיעור שלך?</label>
+            <textarea
+              rows={2}
+              value={form.lessonLearned}
+              onChange={(e) => setForm({ ...form, lessonLearned: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border border-neutral-300 resize-y"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700 mb-1">הערות אישיות</label>
             <textarea
               rows={2}
               value={form.notes}
@@ -271,8 +314,14 @@ export default function TriggerJournalSection() {
                 <p className="text-neutral-800 whitespace-pre-wrap">{row.triggerDescription}</p>
                 {row.contextOrBody ? (
                   <p className="text-sm text-neutral-600 mt-2">
-                    <span className="font-medium">הקשר / גוף: </span>
+                    <span className="font-medium">הקשר: </span>
                     {row.contextOrBody}
+                  </p>
+                ) : null}
+                {row.thoughts ? (
+                  <p className="text-sm text-neutral-600 mt-1">
+                    <span className="font-medium">מחשבות: </span>
+                    {row.thoughts}
                   </p>
                 ) : null}
                 {row.feelingsNotes ? (
@@ -281,10 +330,21 @@ export default function TriggerJournalSection() {
                     {row.feelingsNotes}
                   </p>
                 ) : null}
-                {row.copingOrWhatHelped ? (
+                <p className="text-sm text-neutral-600 mt-1">
+                  <span className="font-medium">נשימה: </span>
+                  {BREATHING_OPTIONS.find((o) => o.value === row.breathingType)?.label ||
+                    BREATHING_OPTIONS.find((o) => o.value === 'not_noticed')?.label}
+                </p>
+                {row.bodySensations ? (
                   <p className="text-sm text-neutral-600 mt-1">
-                    <span className="font-medium">מה עזר: </span>
-                    {row.copingOrWhatHelped}
+                    <span className="font-medium">תחושות בגוף: </span>
+                    {row.bodySensations}
+                  </p>
+                ) : null}
+                {row.lessonLearned ? (
+                  <p className="text-sm text-neutral-600 mt-1">
+                    <span className="font-medium">השיעור שלי: </span>
+                    {row.lessonLearned}
                   </p>
                 ) : null}
                 {row.notes ? (

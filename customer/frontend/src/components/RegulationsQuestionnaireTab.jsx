@@ -84,8 +84,8 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire, showCard = true
   }
 
   const unresolvedTraumaLabels = {
-    yes: 'לדברתי יש לי אירועים טראומטיים לא פתורים מהעבר',
-    no: 'לדברתי אין לי אירועים טראומטיים לא פתורים מהעבר',
+    yes: 'לדעתי יש לי אירועים טראומטיים לא פתורים מהעבר',
+    no: 'לדעתי אין לי אירועים טראומטיים לא פתורים מהעבר',
   }
 
   const triggersLabels = {
