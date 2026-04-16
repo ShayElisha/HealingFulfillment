@@ -2,6 +2,8 @@ import express from 'express'
 import Purchase from '../models/Purchase.js'
 import Course from '../models/Course.js'
 import Customer from '../models/Customer.js'
+import Booking from '../models/Booking.js'
+import TriggerJournalEntry from '../models/TriggerJournalEntry.js'
 import Transaction from '../models/Transaction.js'
 import { sendPurchaseConfirmationEmail } from '../services/emailService.js'
 import {
@@ -12,6 +14,7 @@ import {
   fetchCardcomLowProfileIndicator,
   isCardcomConfigured,
   parseCardcomCallback,
+  cancelCardcomDealByInternalId,
   verifyCardcomWebhookSecret,
 } from '../services/cardcomService.js'
 import { applyAutoCoachingWindowIfNeeded } from '../utils/coachingPurchaseWindow.js'
@@ -24,6 +27,124 @@ import {
 const router = express.Router()
 const ORDER_ID_PARAM_RE = /^HF-[A-Za-z0-9_-]+$/
 const buildOrderId = () => `HF-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+const REFUND_WINDOW_HOURS = 24
+const REFUND_TRIGGER_MIN_PER_DAY = 3
+
+function startOfUtcDay(d) {
+  const x = new Date(d)
+  x.setUTCHours(0, 0, 0, 0)
+  return x
+}
+
+function endOfUtcDay(d) {
+  const x = new Date(d)
+  x.setUTCHours(23, 59, 59, 999)
+  return x
+}
+
+function ymdUtc(d) {
+  return new Date(d).toISOString().slice(0, 10)
+}
+
+function dayDiffInclusive(start, end) {
+  const ms = endOfUtcDay(end).getTime() - startOfUtcDay(start).getTime()
+  return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1
+}
+
+async function getRefundEligibility(purchase) {
+  const base = {
+    eligible: false,
+    reasons: [],
+    checks: {
+      providerIsCardcom: purchase.provider === 'cardcom',
+      paymentCompleted: isPaymentSucceededStatus(purchase.paymentStatus),
+      hasCustomer: Boolean(purchase.customer),
+      within24Hours: false,
+      hasLessThanThreeCompletedMeetings: false,
+      hasThreeTriggerLogsPerDay: false,
+    },
+    metrics: {
+      hoursSincePurchase: null,
+      completedMeetingsCount: 0,
+      triggerDaysEvaluated: 0,
+      triggerDaysMeetingThreshold: 0,
+      triggerThresholdPerDay: REFUND_TRIGGER_MIN_PER_DAY,
+    },
+  }
+
+  if (!base.checks.providerIsCardcom) base.reasons.push('החזר תהליךי זמין רק לרכישות Cardcom')
+  if (!base.checks.paymentCompleted) base.reasons.push('התשלום לא הושלם ולכן לא ניתן להתחיל תהליך החזר')
+  if (!base.checks.hasCustomer) base.reasons.push('הרכישה לא מקושרת ללקוח במערכת')
+  if (base.reasons.length) return base
+
+  const purchaseDate = purchase.paidAt || purchase.createdAt
+  if (purchaseDate) {
+    const hoursSincePurchase = (Date.now() - new Date(purchaseDate).getTime()) / (1000 * 60 * 60)
+    base.metrics.hoursSincePurchase = Number(hoursSincePurchase.toFixed(2))
+    base.checks.within24Hours = hoursSincePurchase <= REFUND_WINDOW_HOURS
+  }
+
+  const completedMeetings = await Booking.find({
+    customer: purchase.customer,
+    status: 'completed',
+    isIntroMeeting: false,
+  })
+    .sort({ preferredDate: 1, createdAt: 1 })
+    .select('preferredDate')
+    .lean()
+
+  base.metrics.completedMeetingsCount = completedMeetings.length
+  base.checks.hasLessThanThreeCompletedMeetings = completedMeetings.length < 3
+
+  if (base.checks.hasLessThanThreeCompletedMeetings && completedMeetings.length > 0) {
+    const firstMeetingDate = startOfUtcDay(completedMeetings[0].preferredDate)
+    const thirdMeetingDate = completedMeetings[2]?.preferredDate
+    const endDateRaw = thirdMeetingDate || new Date()
+    const rangeStart = firstMeetingDate
+    const rangeEnd = endOfUtcDay(endDateRaw)
+
+    const grouped = await TriggerJournalEntry.aggregate([
+      {
+        $match: {
+          customer: purchase.customer,
+          entryDate: { $gte: rangeStart, $lte: rangeEnd },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$entryDate', timezone: 'UTC' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ])
+
+    const byDay = new Map(grouped.map((g) => [g._id, g.count]))
+    const totalDays = dayDiffInclusive(rangeStart, rangeEnd)
+    let okDays = 0
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(rangeStart)
+      d.setUTCDate(d.getUTCDate() + i)
+      const key = ymdUtc(d)
+      if ((byDay.get(key) || 0) >= REFUND_TRIGGER_MIN_PER_DAY) okDays += 1
+    }
+    base.metrics.triggerDaysEvaluated = totalDays
+    base.metrics.triggerDaysMeetingThreshold = okDays
+    base.checks.hasThreeTriggerLogsPerDay = totalDays > 0 && okDays === totalDays
+  }
+
+  const ruleOne = base.checks.within24Hours
+  const ruleTwo = base.checks.hasLessThanThreeCompletedMeetings && base.checks.hasThreeTriggerLogsPerDay
+  base.eligible = ruleOne || ruleTwo
+
+  if (!base.eligible) {
+    base.reasons.push('לא עומד בתנאי 24 שעות מהרכישה')
+    base.reasons.push('לא עומד בתנאי מפגשים/תיעודי טריגרים עד למפגש השלישי')
+  }
+
+  return base
+}
 
 function isPaymentSucceededStatus(status) {
   return status === 'succeeded' || status === 'paid'
@@ -476,6 +597,123 @@ router.get('/', async (req, res, next) => {
         total,
         pages: Math.max(1, Math.ceil(total / limit)),
       },
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// GET /api/purchases/:id/refund-eligibility - evaluate refund process rules
+router.get('/:id/refund-eligibility', async (req, res, next) => {
+  try {
+    const purchase = await Purchase.findById(req.params.id).lean()
+    if (!purchase) return res.status(404).json({ message: 'Purchase not found' })
+    const eligibility = await getRefundEligibility(purchase)
+    return res.json({
+      message: 'Refund eligibility evaluated',
+      data: { purchaseId: purchase._id, eligibility },
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// POST /api/purchases/:id/refund-request - start refund process
+router.post('/:id/refund-request', async (req, res, next) => {
+  try {
+    const purchase = await Purchase.findById(req.params.id)
+    if (!purchase) return res.status(404).json({ message: 'Purchase not found' })
+
+    const eligibility = await getRefundEligibility(purchase.toObject())
+    if (!eligibility.eligible) {
+      return res.status(400).json({
+        message: 'הרכישה אינה עומדת בתנאי פתיחת תהליך החזר',
+        data: { eligibility },
+      })
+    }
+
+    purchase.refundStatus = 'requested'
+    purchase.refundRequestedAt = new Date()
+    purchase.refundRequestReason = String(req.body?.reason || '').trim()
+    purchase.refundDecisionReason = ''
+    purchase.refundEligibilitySnapshot = eligibility
+    await purchase.save()
+
+    return res.json({
+      message: 'תהליך החזר נפתח בהצלחה',
+      data: purchase,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// PUT /api/purchases/:id/refund-request - manager decision/progress
+router.put('/:id/refund-request', async (req, res, next) => {
+  try {
+    const purchase = await Purchase.findById(req.params.id)
+    if (!purchase) return res.status(404).json({ message: 'Purchase not found' })
+
+    const action = String(req.body?.action || '').trim()
+    const reason = String(req.body?.reason || '').trim()
+    const now = new Date()
+
+    if (!['approve', 'reject', 'mark_refunded', 'mark_failed'].includes(action)) {
+      return res.status(400).json({ message: 'action חייב להיות approve/reject/mark_refunded/mark_failed' })
+    }
+
+    if (action === 'approve') {
+      purchase.refundStatus = 'approved'
+      purchase.refundReviewedAt = now
+      purchase.refundDecisionReason = reason
+
+      if (purchase.provider === 'cardcom') {
+        const internalDealNumber = purchase.providerTransactionId || purchase.transactionId
+        if (!internalDealNumber) {
+          return res.status(400).json({
+            message: 'לא נמצא מזהה עסקה ל-Cardcom. לא ניתן לבצע זיכוי אוטומטי.',
+          })
+        }
+
+        try {
+          const refundRes = await cancelCardcomDealByInternalId({
+            internalDealNumber,
+            amount: purchase.amount || purchase.price,
+          })
+          purchase.refundStatus = 'refunded'
+          purchase.refundCompletedAt = new Date()
+          purchase.paymentStatus = 'cancelled'
+          purchase.status = 'cancelled'
+          purchase.providerResponse = {
+            ...(purchase.providerResponse || {}),
+            refundResponse: refundRes,
+          }
+        } catch (refundErr) {
+          purchase.refundStatus = 'failed'
+          purchase.refundCompletedAt = new Date()
+          purchase.refundDecisionReason = reason || `Cardcom refund failed: ${refundErr?.message || 'unknown error'}`
+        }
+      }
+    } else if (action === 'reject') {
+      purchase.refundStatus = 'rejected'
+      purchase.refundReviewedAt = now
+      purchase.refundDecisionReason = reason
+    } else if (action === 'mark_refunded') {
+      purchase.refundStatus = 'refunded'
+      purchase.refundCompletedAt = now
+      purchase.refundDecisionReason = reason || purchase.refundDecisionReason
+      purchase.paymentStatus = 'cancelled'
+      purchase.status = 'cancelled'
+    } else if (action === 'mark_failed') {
+      purchase.refundStatus = 'failed'
+      purchase.refundCompletedAt = now
+      purchase.refundDecisionReason = reason || purchase.refundDecisionReason
+    }
+
+    await purchase.save()
+    return res.json({
+      message: 'סטטוס תהליך ההחזר עודכן',
+      data: purchase,
     })
   } catch (error) {
     next(error)

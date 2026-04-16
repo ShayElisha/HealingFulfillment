@@ -59,6 +59,32 @@ function ReviewsPage() {
     }
   }
 
+  const handleDeleteVideo = async (reviewId) => {
+    const confirmed = window.confirm('האם למחוק את הסרטון מהביקורת? הפעולה תמחק גם מהענן.')
+    if (!confirmed) return
+    try {
+      await reviewService.deleteVideo(reviewId)
+      toast.success('הסרטון נמחק מהביקורת')
+      await loadReviews()
+    } catch (error) {
+      console.error('Error deleting review video:', error)
+      toast.error(error.response?.data?.message || 'שגיאה במחיקת הסרטון')
+    }
+  }
+
+  const handleDeleteReview = async (reviewId) => {
+    const confirmed = window.confirm('האם למחוק את הביקורת? אם קיים סרטון, הוא יימחק גם מהענן.')
+    if (!confirmed) return
+    try {
+      await reviewService.deleteReview(reviewId)
+      toast.success('הביקורת נמחקה בהצלחה')
+      await loadReviews()
+    } catch (error) {
+      console.error('Error deleting review:', error)
+      toast.error(error.response?.data?.message || 'שגיאה במחיקת הביקורת')
+    }
+  }
+
   const stats = listSummary || {
     total: pagination?.total ?? reviews.length,
     pending: 0,
@@ -211,6 +237,22 @@ function ReviewsPage() {
                         >
                           ❌ דחה
                         </Button>
+                        {review.video?.url && (
+                          <Button
+                            onClick={() => handleDeleteVideo(review._id)}
+                            variant="soft"
+                            className="text-sm px-4 py-2 text-orange-600 hover:text-orange-700"
+                          >
+                            🗑️ מחק סרטון
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleDeleteReview(review._id)}
+                          variant="soft"
+                          className="text-sm px-4 py-2 text-red-600 hover:text-red-700"
+                        >
+                          🗑️ מחק ביקורת
+                        </Button>
                       </div>
                     )}
                     {review.status === 'approved' && (
@@ -234,6 +276,22 @@ function ReviewsPage() {
                         >
                           ❌ דחה
                         </Button>
+                        {review.video?.url && (
+                          <Button
+                            onClick={() => handleDeleteVideo(review._id)}
+                            variant="soft"
+                            className="text-sm px-4 py-2 text-orange-600 hover:text-orange-700"
+                          >
+                            🗑️ מחק סרטון
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleDeleteReview(review._id)}
+                          variant="soft"
+                          className="text-sm px-4 py-2 text-red-600 hover:text-red-700"
+                        >
+                          🗑️ מחק ביקורת
+                        </Button>
                       </div>
                     )}
                     {review.status === 'rejected' && (
@@ -251,6 +309,22 @@ function ReviewsPage() {
                           className="text-sm px-4 py-2"
                         >
                           🔄 החזר לממתין
+                        </Button>
+                        {review.video?.url && (
+                          <Button
+                            onClick={() => handleDeleteVideo(review._id)}
+                            variant="soft"
+                            className="text-sm px-4 py-2 text-orange-600 hover:text-orange-700"
+                          >
+                            🗑️ מחק סרטון
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => handleDeleteReview(review._id)}
+                          variant="soft"
+                          className="text-sm px-4 py-2 text-red-600 hover:text-red-700"
+                        >
+                          🗑️ מחק ביקורת
                         </Button>
                       </div>
                     )}

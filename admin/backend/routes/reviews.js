@@ -3,6 +3,7 @@ import Review from '../models/Review.js'
 import Customer from '../models/Customer.js'
 import Subscription from '../models/Subscription.js'
 import { authenticateToken } from '../middleware/auth.js'
+import { deleteCloudinaryByUrl, isCloudinaryConfigured } from '../services/cloudinaryUpload.js'
 
 const router = express.Router()
 const VIDEO_REWARD_DAYS = 7
@@ -28,6 +29,28 @@ async function grantVideoRewardOnApprovalIfNeeded(review) {
   review.videoRewardGrantedAt = new Date()
   await review.save()
   return { rewardApplied: true, newSubscriptionEndAt: extendedEndsAt }
+}
+
+async function deleteReviewVideoAssetIfExists(videoUrl) {
+  if (!videoUrl || typeof videoUrl !== 'string') {
+    return { deleted: false, skipped: true }
+  }
+  const isCloudinaryUrl = videoUrl.includes('res.cloudinary.com')
+  if (!isCloudinaryUrl) {
+    return { deleted: false, skipped: true }
+  }
+  if (!isCloudinaryConfigured()) {
+    const err = new Error('Cloudinary is not configured on admin backend')
+    err.status = 503
+    throw err
+  }
+  const deleted = await deleteCloudinaryByUrl(videoUrl)
+  if (!deleted) {
+    const err = new Error('Failed to delete video asset from Cloudinary')
+    err.status = 502
+    throw err
+  }
+  return { deleted: true, skipped: false }
 }
 
 // GET /api/reviews - Get all approved reviews (public)
@@ -323,6 +346,54 @@ router.put('/admin/:id/status', async (req, res, next) => {
       message: 'Review status updated successfully',
       data: review,
       meta: rewardMeta,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Admin route - Delete only review video (DB + Cloudinary)
+router.delete('/admin/:id/video', async (req, res, next) => {
+  try {
+    const review = await Review.findById(req.params.id)
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' })
+    }
+    if (!review.video?.url) {
+      return res.status(400).json({ message: 'No video found on this review' })
+    }
+
+    await deleteReviewVideoAssetIfExists(review.video.url)
+
+    review.video = undefined
+    await review.save()
+
+    return res.json({
+      message: 'Review video deleted successfully',
+      data: review,
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Admin route - Delete review (and video from Cloudinary if exists)
+router.delete('/admin/:id', async (req, res, next) => {
+  try {
+    const review = await Review.findById(req.params.id)
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' })
+    }
+
+    if (review.video?.url) {
+      await deleteReviewVideoAssetIfExists(review.video.url)
+    }
+
+    await Review.deleteOne({ _id: review._id })
+
+    return res.json({
+      message: 'Review deleted successfully',
+      data: { id: String(review._id) },
     })
   } catch (error) {
     next(error)

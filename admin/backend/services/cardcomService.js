@@ -216,32 +216,20 @@ function escapeXmlText(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export async function fetchCardcomLowProfileIndicator(lowProfileCode) {
-  assertCardcomEnvConfigured()
-  const terminalNumber = trimEnv('CARDCOM_TERMINAL_NUMBER')
-  const userName = trimEnv('CARDCOM_USERNAME')
-  const code = String(lowProfileCode || '').trim()
-  if (!/^[0-9a-f-]{36}$/i.test(code)) throw new CardcomApiError('Invalid lowProfileCode format')
-
-  const soap = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <GetLowProfileIndicator xmlns="BillGoldService">
-      <terminalnumber>${escapeXmlText(terminalNumber)}</terminalnumber>
-      <username>${escapeXmlText(userName)}</username>
-      <lowProfileCode>${escapeXmlText(code)}</lowProfileCode>
-    </GetLowProfileIndicator>
-  </soap:Body>
-</soap:Envelope>`
-
+async function callCardcomSoap(action, soapBodyXml) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), CARDCOM_FETCH_TIMEOUT_MS)
   let response
   try {
     response = await fetch(BILL_GOLD_SOAP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '"BillGoldService/GetLowProfileIndicator"' },
-      body: soap,
+      headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: `"BillGoldService/${action}"` },
+      body: `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    ${soapBodyXml}
+  </soap:Body>
+</soap:Envelope>`,
       signal: controller.signal,
     })
   } catch (err) {
@@ -250,9 +238,59 @@ export async function fetchCardcomLowProfileIndicator(lowProfileCode) {
   } finally {
     clearTimeout(timeoutId)
   }
-
   const rawXml = await response.text()
   if (!response.ok) throw new CardcomApiError(`Cardcom BillGoldService HTTP ${response.status}`)
+  return rawXml
+}
+
+export async function cancelCardcomDealByInternalId({ internalDealNumber, amount }) {
+  assertCardcomEnvConfigured()
+  const terminalNumber = trimEnv('CARDCOM_TERMINAL_NUMBER')
+  const userName = trimEnv('CARDCOM_USERNAME')
+  const apiName = trimEnv('CARDCOM_API_NAME')
+  const apiPassword = trimEnv('CARDCOM_API_PASSWORD')
+  const deal = String(internalDealNumber || '').trim()
+  if (!deal) throw new CardcomApiError('Missing InternalDealNumber for refund')
+  const amountNumber = Number(amount)
+
+  const refundAmountXml =
+    Number.isFinite(amountNumber) && amountNumber > 0
+      ? `<Amount>${escapeXmlText(amountNumber.toFixed(2))}</Amount>`
+      : ''
+
+  const bodyXml = `<CancelDeal xmlns="BillGoldService">
+      <terminalnumber>${escapeXmlText(terminalNumber)}</terminalnumber>
+      <username>${escapeXmlText(userName)}</username>
+      <ApiName>${escapeXmlText(apiName)}</ApiName>
+      <ApiPassword>${escapeXmlText(apiPassword)}</ApiPassword>
+      <InternalDealNumber>${escapeXmlText(deal)}</InternalDealNumber>
+      ${refundAmountXml}
+    </CancelDeal>`
+
+  const rawXml = await callCardcomSoap('CancelDeal', bodyXml)
+  const resultBlock = firstInnerXml(rawXml, 'CancelDealResult')
+  if (!resultBlock) throw new CardcomApiError('Unexpected Cardcom refund response')
+  const responseCode = String(tagTextIn(resultBlock, 'ResponseCode') || '').trim()
+  const description = decodeDescription(tagTextIn(resultBlock, 'Description'))
+  const ok = responseCode === '0' || responseCode === '1'
+  if (!ok) throw new CardcomApiError(description || `Cardcom refund rejected (${responseCode || 'unknown'})`, { responseCode })
+  return { responseCode, description, rawXml }
+}
+
+export async function fetchCardcomLowProfileIndicator(lowProfileCode) {
+  assertCardcomEnvConfigured()
+  const terminalNumber = trimEnv('CARDCOM_TERMINAL_NUMBER')
+  const userName = trimEnv('CARDCOM_USERNAME')
+  const code = String(lowProfileCode || '').trim()
+  if (!/^[0-9a-f-]{36}$/i.test(code)) throw new CardcomApiError('Invalid lowProfileCode format')
+
+  const soapBodyXml = `<GetLowProfileIndicator xmlns="BillGoldService">
+      <terminalnumber>${escapeXmlText(terminalNumber)}</terminalnumber>
+      <username>${escapeXmlText(userName)}</username>
+      <lowProfileCode>${escapeXmlText(code)}</lowProfileCode>
+    </GetLowProfileIndicator>`
+
+  const rawXml = await callCardcomSoap('GetLowProfileIndicator', soapBodyXml)
   const resultBlock = firstInnerXml(rawXml, 'GetLowProfileIndicatorResult')
   if (!resultBlock) throw new CardcomApiError('Unexpected Cardcom response')
 

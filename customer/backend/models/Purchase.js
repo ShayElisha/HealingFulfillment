@@ -92,6 +92,39 @@ const purchaseSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  refundStatus: {
+    type: String,
+    enum: ['none', 'requested', 'approved', 'rejected', 'refunded', 'failed'],
+    default: 'none',
+  },
+  refundRequestedAt: {
+    type: Date,
+    default: null,
+  },
+  refundReviewedAt: {
+    type: Date,
+    default: null,
+  },
+  refundCompletedAt: {
+    type: Date,
+    default: null,
+  },
+  refundRequestReason: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Refund request reason cannot exceed 1000 characters'],
+    default: '',
+  },
+  refundDecisionReason: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Refund decision reason cannot exceed 1000 characters'],
+    default: '',
+  },
+  refundEligibilitySnapshot: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
   notes: {
     type: String,
     trim: true,
