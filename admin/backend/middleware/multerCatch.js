@@ -2,13 +2,20 @@
  * Multer מעביר שגיאות (גודל, סוג קובץ, פירוק multipart) ל-next(err).
  * בלי status — ה-middleware הגלובלי מחזיר 500. כאן מחזירים 400/413 עם הודעה.
  */
-export function catchMulterUpload(multerMiddleware) {
+/**
+ * @param {import('express').RequestHandler} multerMiddleware
+ * @param {{ limitFileSizeMessage?: string }} [options] — הודעה מותאמת כשקובץ חורג מ-limits של multer
+ */
+export function catchMulterUpload(multerMiddleware, options = {}) {
+  const { limitFileSizeMessage } = options
   return (req, res, next) => {
     multerMiddleware(req, res, (err) => {
       if (!err) return next()
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          message: 'הקובץ גדול מדי מהמותר. הקטן את הקובץ או העלה קובץ קטן יותר.',
+          message:
+            limitFileSizeMessage ||
+            'הקובץ גדול מדי מהמותר. הקטן את הקובץ או העלה קובץ קטן יותר.',
         })
       }
       if (err.name === 'MulterError') {

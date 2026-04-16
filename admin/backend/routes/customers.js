@@ -30,6 +30,20 @@ const router = express.Router()
 
 const DEFAULT_COACHING_MONTHS = 3
 
+/**
+ * מקסימום גודל קובץ לתיק לקוח (קבצים כלליים + אודיו), במגה-בייט.
+ * ברירת מחדל 512MB. סביבה: MAX_CUSTOMER_UPLOAD_MB=1024 (מקסימום 2048).
+ * הערה: ב-Vercel גוף הבקשה מוגבל בגודל; קבצים גדולים עלולים לקבל 413 מהפלטפורמה לפני Multer.
+ */
+function resolveMaxCustomerUploadMb() {
+  const raw = Number.parseInt(process.env.MAX_CUSTOMER_UPLOAD_MB, 10)
+  const mb = Number.isFinite(raw) && raw > 0 ? raw : 512
+  return Math.min(2048, Math.max(50, mb))
+}
+
+const MAX_CUSTOMER_UPLOAD_MB = resolveMaxCustomerUploadMb()
+const MAX_CUSTOMER_UPLOAD_BYTES = MAX_CUSTOMER_UPLOAD_MB * 1024 * 1024
+
 function customerTmpName(_req, file, cb) {
   const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
   cb(null, `cust-${uniqueSuffix}${path.extname(file.originalname || '')}`)
@@ -43,13 +57,13 @@ const customerTmpStorage = multer.diskStorage({
 const upload = multer({
   storage: customerTmpStorage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB
+    fileSize: MAX_CUSTOMER_UPLOAD_BYTES,
   },
 })
 
 const uploadAudio = multer({
   storage: customerTmpStorage,
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: MAX_CUSTOMER_UPLOAD_BYTES },
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('audio/')) {
       cb(null, true)
@@ -72,8 +86,7 @@ function handleMulterAudioUpload(req, res, next) {
     if (err) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(413).json({
-          message:
-            'הקובץ גדול מדי מהמותר. מקסימום 100MB.',
+          message: `הקובץ גדול מדי מהמותר. מקסימום ${MAX_CUSTOMER_UPLOAD_MB}MB.`,
         })
       }
       return res.status(400).json({
@@ -387,7 +400,12 @@ router.post(
 )
 
 // POST /api/admin/customers/:id/files — רק Cloudinary
-router.post('/admin/customers/:id/files', catchMulterUpload(upload.single('file')), async (req, res, next) => {
+router.post(
+  '/admin/customers/:id/files',
+  catchMulterUpload(upload.single('file'), {
+    limitFileSizeMessage: `הקובץ גדול מדי מהמותר. מקסימום ${MAX_CUSTOMER_UPLOAD_MB}MB.`,
+  }),
+  async (req, res, next) => {
   const cid = req.params.id
   const log = (step, extra = '') =>
     console.log(`[UPLOAD:files] customer=${cid} ${step}${extra ? ` ${extra}` : ''}`)
