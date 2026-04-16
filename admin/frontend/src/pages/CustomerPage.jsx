@@ -363,6 +363,30 @@ function CustomerPage() {
     }
   }
 
+  const handleOpenCaseAndCreateAccount = async () => {
+    const confirmed = window.confirm('האם אתה בטוח שברצונך לפתוח תיק לקוח וליצור משתמש ללקוח זה?')
+    if (!confirmed) {
+      return
+    }
+
+    setCreatingAccount(true)
+    setIsResetPassword(false)
+    try {
+      await customerService.openCase(id)
+      const response = await customerService.createAccount(id)
+      setInitialPassword(response.data.initialPassword)
+      setShowPasswordModal(true)
+      await loadCustomer()
+      toast.success('תיק לקוח נפתח ומשתמש נוצר בהצלחה!')
+    } catch (error) {
+      console.error('Error opening case and creating account:', error)
+      const errorMessage = error.response?.data?.message || 'שגיאה בפתיחת תיק ויצירת משתמש'
+      toast.error(errorMessage)
+    } finally {
+      setCreatingAccount(false)
+    }
+  }
+
   const handleResetPassword = async () => {
     const confirmed = window.confirm('האם אתה בטוח שברצונך ליצור סיסמה ראשונית חדשה? הלקוח יצטרך להתחבר עם הסיסמה החדשה ולשנות אותה.')
     if (!confirmed) {
@@ -495,15 +519,9 @@ function CustomerPage() {
                       תאריך התחלת הליווי ללקוח נקבע רק לאחר <strong>פתיחת תיק</strong>. עד אז לא תוגדר תקופת ליווי
                       לרכישות.
                     </p>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      disabled={coachingUiLoading === 'case'}
-                      onClick={handleOpenCustomerCase}
-                      className="text-sm"
-                    >
-                      {coachingUiLoading === 'case' ? 'פותח...' : 'פתיחת תיק לקוח'}
-                    </Button>
+                    <p className="text-xs text-amber-700">
+                      פתיחת תיק לקוח מתבצעת יחד עם יצירת המשתמש בכפתור המאוחד תחת אזור "חשבון משתמש".
+                    </p>
                   </div>
                 )}
               </Card>
@@ -555,13 +573,23 @@ function CustomerPage() {
                     ) : (
                       <div>
                         <p className="text-neutral-600 mb-4">למשתמש זה אין חשבון פעיל</p>
-                        <Button
-                          onClick={handleCreateAccount}
-                          variant="primary"
-                          disabled={creatingAccount}
-                        >
-                          {creatingAccount ? 'יוצר...' : 'צור משתמש ללקוח'}
-                        </Button>
+                        {!customer.caseOpenedAt ? (
+                          <Button
+                            onClick={handleOpenCaseAndCreateAccount}
+                            variant="primary"
+                            disabled={creatingAccount}
+                          >
+                            {creatingAccount ? 'מבצע...' : 'פתיחת תיק לקוח + צור משתמש ללקוח'}
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={handleCreateAccount}
+                            variant="primary"
+                            disabled={creatingAccount}
+                          >
+                            {creatingAccount ? 'יוצר...' : 'צור משתמש ללקוח'}
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -765,7 +793,7 @@ function CustomerPage() {
                               disabled={refundBusy || refundStatus !== 'requested'}
                               className="px-3 py-1.5 text-sm rounded-lg bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
                             >
-                              אשר והחזר
+                              ביצוע החזר
                             </button>
                             <button
                               onClick={() => handleRefundAction(purchase._id, 'reject')}

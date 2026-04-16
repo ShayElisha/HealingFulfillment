@@ -45,6 +45,10 @@ export const authService = {
     const response = await api.post(`/auth/booking/${bookingId}/cancel`)
     return response.data
   },
+  requestPurchaseRefund: async (purchaseId, reason = '') => {
+    const response = await api.post(`/auth/purchases/${purchaseId}/refund-request`, { reason })
+    return response.data
+  },
   
   getMessages: async () => {
     const response = await api.get('/auth/messages')

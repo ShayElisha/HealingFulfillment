@@ -297,7 +297,8 @@ router.get('/me', authenticateToken, async (req, res, next) => {
           select:
             'title price sessionsCount installmentsCount coachingProcessMonths coachingProcessStartAt coachingProcessEndAt'
         },
-        select: 'course price status createdAt paidAt coachingStartedAt coachingEndsAt'
+        select:
+          'course price status createdAt paidAt coachingStartedAt coachingEndsAt provider refundStatus refundRequestedAt refundReviewedAt refundCompletedAt refundRequestReason refundDecisionReason'
       })
       .populate(
         'bookings',
@@ -332,6 +333,48 @@ router.get('/me', authenticateToken, async (req, res, next) => {
     })
   } catch (error) {
     console.error('Get me error:', error)
+    next(error)
+  }
+})
+
+// POST /api/auth/purchases/:id/refund-request - customer submits refund request
+router.post('/purchases/:id/refund-request', authenticateToken, async (req, res, next) => {
+  try {
+    const purchase = await Purchase.findOne({
+      _id: req.params.id,
+      customer: req.customerId,
+    })
+
+    if (!purchase) {
+      return res.status(404).json({ message: 'רכישה לא נמצאה' })
+    }
+
+    if (purchase.status !== 'completed') {
+      return res.status(400).json({ message: 'ניתן לבקש החזר רק עבור רכישה שהושלמה' })
+    }
+
+    if (purchase.provider !== 'cardcom') {
+      return res.status(400).json({ message: 'בקשת החזר זמינה רק לרכישות שבוצעו דרך Cardcom' })
+    }
+
+    if (['requested', 'approved', 'refunded'].includes(purchase.refundStatus)) {
+      return res.status(400).json({ message: 'כבר קיימת בקשת החזר לרכישה זו' })
+    }
+
+    purchase.refundStatus = 'requested'
+    purchase.refundRequestedAt = new Date()
+    purchase.refundRequestReason = String(req.body?.reason || '').trim()
+    await purchase.save()
+
+    return res.json({
+      message: 'בקשת החזר נשלחה בהצלחה',
+      data: {
+        purchaseId: purchase._id,
+        refundStatus: purchase.refundStatus,
+        refundRequestedAt: purchase.refundRequestedAt,
+      },
+    })
+  } catch (error) {
     next(error)
   }
 })
