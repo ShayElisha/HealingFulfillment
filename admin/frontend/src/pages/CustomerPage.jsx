@@ -109,6 +109,10 @@ function CustomerPage() {
   const [audioInputKey, setAudioInputKey] = useState(0)
   const [noteContent, setNoteContent] = useState('')
   const [uploading, setUploading] = useState(false)
+  /** 'file' | 'audio' — איזה טופס מעלה כרגע (לפרוגרס) */
+  const [uploadKind, setUploadKind] = useState(null)
+  /** 0–100 או null אם אין אחוז (למשל לפני ידיעת גודל) */
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [initialPassword, setInitialPassword] = useState('')
   const [creatingAccount, setCreatingAccount] = useState(false)
@@ -188,13 +192,19 @@ function CustomerPage() {
       return
     }
 
+    setUploadKind('file')
+    setUploadProgress(0)
     setUploading(true)
     const formData = new FormData()
     formData.append('file', fileUpload)
     formData.append('description', fileDescription)
 
     try {
-      await customerService.uploadFile(id, formData)
+      await customerService.uploadFile(id, formData, {
+        onUploadProgress: (pct) => {
+          if (pct != null) setUploadProgress(pct)
+        },
+      })
       await loadCustomer()
       setFileUpload(null)
       setFileDescription('')
@@ -209,6 +219,8 @@ function CustomerPage() {
       toast.error(msg)
     } finally {
       setUploading(false)
+      setUploadKind(null)
+      setUploadProgress(0)
     }
   }
 
@@ -218,12 +230,18 @@ function CustomerPage() {
       toast.error('אנא בחר קובץ אודיו')
       return
     }
+    setUploadKind('audio')
+    setUploadProgress(0)
     setUploading(true)
     const formData = new FormData()
     formData.append('file', audioFileUpload)
     formData.append('description', audioFileDescription)
     try {
-      await customerService.uploadAudio(id, formData)
+      await customerService.uploadAudio(id, formData, {
+        onUploadProgress: (pct) => {
+          if (pct != null) setUploadProgress(pct)
+        },
+      })
       await loadCustomer()
       setAudioFileUpload(null)
       setAudioFileDescription('')
@@ -234,6 +252,8 @@ function CustomerPage() {
       toast.error(error.response?.data?.message || 'שגיאה בהעלאת האודיו')
     } finally {
       setUploading(false)
+      setUploadKind(null)
+      setUploadProgress(0)
     }
   }
 
@@ -806,8 +826,23 @@ function CustomerPage() {
                       rows="3"
                     />
                   </div>
+                  {uploading && uploadKind === 'file' && (
+                    <div className="space-y-2" aria-live="polite">
+                      <div className="h-2.5 w-full rounded-full bg-neutral-200 overflow-hidden">
+                        <div
+                          className="h-full bg-primary-500 transition-[width] duration-150 ease-out rounded-full"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-neutral-600">
+                        {uploadProgress < 100
+                          ? `מעלה את הקובץ… ${uploadProgress}%`
+                          : 'מסיים בעיבוד בשרת…'}
+                      </p>
+                    </div>
+                  )}
                   <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading ? 'מעלה...' : 'העלה קובץ'}
+                    {uploading && uploadKind === 'file' ? 'מעלה…' : 'העלה קובץ'}
                   </Button>
                 </form>
               </Card>
@@ -883,8 +918,23 @@ function CustomerPage() {
                       rows="3"
                     />
                   </div>
+                  {uploading && uploadKind === 'audio' && (
+                    <div className="space-y-2" aria-live="polite">
+                      <div className="h-2.5 w-full rounded-full bg-neutral-200 overflow-hidden">
+                        <div
+                          className="h-full bg-primary-500 transition-[width] duration-150 ease-out rounded-full"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-neutral-600">
+                        {uploadProgress < 100
+                          ? `מעלה את האודיו… ${uploadProgress}%`
+                          : 'מסיים בעיבוד בשרת…'}
+                      </p>
+                    </div>
+                  )}
                   <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading ? 'מעלה...' : 'העלה אודיו'}
+                    {uploading && uploadKind === 'audio' ? 'מעלה…' : 'העלה אודיו'}
                   </Button>
                 </form>
               </Card>

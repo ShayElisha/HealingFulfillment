@@ -25,18 +25,36 @@ export const customerService = {
     return response.data
   },
   /** קובץ ללקוח — נשמר ב-Cloudinary */
-  uploadFile: async (id, formData) => {
+  uploadFile: async (id, formData, options = {}) => {
+    const { onUploadProgress } = options
     const response = await api.post(`/admin/customers/${id}/files`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 15 * 60 * 1000,
+      onUploadProgress:
+        typeof onUploadProgress === 'function'
+          ? (e) => {
+              const total = e.total || 0
+              const pct = total ? Math.round((e.loaded * 100) / total) : null
+              onUploadProgress(pct, e.loaded, total)
+            }
+          : undefined,
     })
     return response.data
   },
   /** אודיו ללקוח — נשמר ב-Cloudinary */
-  uploadAudio: async (id, formData) => {
+  uploadAudio: async (id, formData, options = {}) => {
+    const { onUploadProgress } = options
     const response = await api.post(`/admin/customers/${id}/audio`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 15 * 60 * 1000,
+      onUploadProgress:
+        typeof onUploadProgress === 'function'
+          ? (e) => {
+              const total = e.total || 0
+              const pct = total ? Math.round((e.loaded * 100) / total) : null
+              onUploadProgress(pct, e.loaded, total)
+            }
+          : undefined,
     })
     return response.data
   },
