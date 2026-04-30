@@ -14,6 +14,8 @@ import {
   isCloudinaryConfigured,
   deleteCloudinaryByUrl,
   cloudinaryErrorToMessage,
+  createDirectUploadSignature,
+  getCloudinaryPublicUploadConfig,
 } from '../services/cloudinaryUpload.js'
 import bcrypt from 'bcrypt'
 import { sendAccountCreationEmail } from '../services/emailService.js'
@@ -95,6 +97,22 @@ function handleMulterAudioUpload(req, res, next) {
     }
     next()
   })
+}
+
+function resolveFileTypeByMimetype(mimetype = '', fallback = 'other') {
+  if (mimetype.startsWith('image/')) return 'image'
+  if (mimetype === 'application/pdf') return 'pdf'
+  if (mimetype.includes('video/')) return 'video'
+  if (mimetype.includes('audio/')) return 'audio'
+  if (
+    mimetype.includes('document') ||
+    mimetype.includes('word') ||
+    mimetype.includes('msword') ||
+    mimetype.includes('vnd.openxmlformats-officedocument')
+  ) {
+    return 'document'
+  }
+  return fallback
 }
 
 // GET /api/admin/customers - Get all customers
@@ -444,6 +462,69 @@ router.post(
       mimetype.includes('msword') ||
       mimetype.includes('vnd.openxmlformats-officedocument')
     )
+
+// POST /api/admin/customers/:id/files/direct-signature — browser uploads directly to Cloudinary
+router.post('/admin/customers/:id/files/direct-signature', async (req, res, next) => {
+  try {
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ message: 'Cloudinary לא מוגדר בשרת' })
+    }
+    const customer = await Customer.findById(req.params.id).select('_id')
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+    const mimetype = String(req.body?.mimetype || 'application/octet-stream')
+    const kind = String(req.body?.kind || 'file').toLowerCase()
+    const folder =
+      kind === 'audio' ? `customers/${req.params.id}/audio` : `customers/${req.params.id}`
+    const signed = createDirectUploadSignature({ folder, mimetype })
+    const pub = getCloudinaryPublicUploadConfig()
+    return res.json({
+      message: 'חתימת העלאה נוצרה',
+      data: {
+        ...pub,
+        ...signed,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// POST /api/admin/customers/:id/files/direct-complete — save uploaded Cloudinary file metadata
+router.post('/admin/customers/:id/files/direct-complete', async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id)
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' })
+    }
+    const url = String(req.body?.url || '').trim()
+    const name = String(req.body?.name || '').trim()
+    const mimetype = String(req.body?.mimetype || '')
+    const description = String(req.body?.description || '').trim()
+    const size = Number(req.body?.size || 0)
+    const kind = String(req.body?.kind || '').trim().toLowerCase()
+    if (!url || !name) {
+      return res.status(400).json({ message: 'חסרים url או name' })
+    }
+    const fileType = kind === 'audio' ? 'audio' : resolveFileTypeByMimetype(mimetype, 'other')
+    customer.files.push({
+      name,
+      url,
+      type: fileType,
+      size: Number.isFinite(size) && size > 0 ? size : undefined,
+      description,
+      uploadedBy: 'admin',
+    })
+    await customer.save()
+    return res.json({
+      message: 'הקובץ נשמר ללקוח בהצלחה',
+      data: customer.files[customer.files.length - 1],
+    })
+  } catch (error) {
+    next(error)
+  }
+})
       fileType = 'document'
 
     log(

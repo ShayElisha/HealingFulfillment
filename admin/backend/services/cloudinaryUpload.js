@@ -169,3 +169,43 @@ export function parseCloudinaryUrl(url) {
     return null
   }
 }
+
+function ensureConfiguredAndReadEnv() {
+  configure()
+  return readCloudinaryEnv()
+}
+
+export function getCloudinaryPublicUploadConfig() {
+  const { cloud_name, api_key } = ensureConfiguredAndReadEnv()
+  return { cloudName: cloud_name, apiKey: api_key }
+}
+
+export function buildCloudinaryFolder(folder) {
+  return folder.startsWith(FOLDER_PREFIX) ? folder : `${FOLDER_PREFIX}/${folder}`
+}
+
+export function createDirectUploadSignature({ folder, mimetype }) {
+  configure()
+  const resourceType = resourceTypeFromMimetype(mimetype)
+  const targetFolder = buildCloudinaryFolder(folder)
+  const timestamp = Math.floor(Date.now() / 1000)
+  const paramsToSign = {
+    folder: targetFolder,
+    resource_type: resourceType,
+    timestamp,
+    unique_filename: true,
+    use_filename: false,
+  }
+  const signature = cloudinary.utils.api_sign_request(
+    paramsToSign,
+    readCloudinaryEnv().api_secret
+  )
+  return {
+    signature,
+    timestamp,
+    folder: targetFolder,
+    resourceType,
+    uniqueFilename: true,
+    useFilename: false,
+  }
+}

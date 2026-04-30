@@ -1,4 +1,5 @@
 import api from './api'
+import axios from 'axios'
 
 export const customerService = {
   getAll: async (params = {}) => {
@@ -47,6 +48,39 @@ export const customerService = {
     const response = await api.post(`/admin/customers/${id}/audio`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 15 * 60 * 1000,
+      onUploadProgress:
+        typeof onUploadProgress === 'function'
+          ? (e) => {
+              const total = e.total || 0
+              const pct = total ? Math.round((e.loaded * 100) / total) : null
+              onUploadProgress(pct, e.loaded, total)
+            }
+          : undefined,
+    })
+    return response.data
+  },
+  getDirectUploadSignature: async (id, payload) => {
+    const response = await api.post(`/admin/customers/${id}/files/direct-signature`, payload)
+    return response.data
+  },
+  saveDirectUpload: async (id, payload) => {
+    const response = await api.post(`/admin/customers/${id}/files/direct-complete`, payload)
+    return response.data
+  },
+  uploadDirectToCloudinary: async (signatureData, file, onUploadProgress) => {
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${encodeURIComponent(
+      signatureData.cloudName
+    )}/${encodeURIComponent(signatureData.resourceType)}/upload`
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('api_key', signatureData.apiKey)
+    fd.append('timestamp', String(signatureData.timestamp))
+    fd.append('signature', signatureData.signature)
+    fd.append('folder', signatureData.folder)
+    fd.append('use_filename', String(Boolean(signatureData.useFilename)))
+    fd.append('unique_filename', String(Boolean(signatureData.uniqueFilename)))
+    const response = await axios.post(uploadUrl, fd, {
+      timeout: 20 * 60 * 1000,
       onUploadProgress:
         typeof onUploadProgress === 'function'
           ? (e) => {

@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader'
 import AdminModalLayout from '../components/AdminModalLayout'
 import EmptyState from '../components/EmptyState'
 import CustomerQuestionnaireTab from '../components/CustomerQuestionnaireTab'
+import UploadProgressStatus, { buttonText } from '../components/UploadProgressStatus'
 import toast from 'react-hot-toast'
 
 function addCalendarMonths(date, months) {
@@ -96,32 +97,6 @@ function formatTriggerEntryDate(iso) {
   return d.toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-/** חלק מהפס (0–1) שמוקדש לטעינת הקובץ מהדיסק לפני שליחה לשרת */
-const UPLOAD_READ_SHARE = 0.45
-
-/**
- * קורא את הקובץ לזיכרון עם התקדמות (לפני העלאת HTTP).
- * @param {(percent0to100: number) => void} onProgress
- */
-function readFileIntoMemoryWithProgress(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    let gotProgress = false
-    reader.onprogress = (ev) => {
-      if (ev.lengthComputable && ev.total > 0) {
-        gotProgress = true
-        onProgress(Math.min(100, Math.round((ev.loaded / ev.total) * 100)))
-      }
-    }
-    reader.onload = () => {
-      if (!gotProgress) onProgress(100)
-      resolve(reader.result)
-    }
-    reader.onerror = () => reject(reader.error || new Error('שגיאה בקריאת הקובץ'))
-    reader.readAsArrayBuffer(file)
-  })
-}
-
 function CustomerPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -137,9 +112,9 @@ function CustomerPage() {
   const [uploading, setUploading] = useState(false)
   /** 'file' | 'audio' — איזה טופס מעלה כרגע (לפרוגרס) */
   const [uploadKind, setUploadKind] = useState(null)
-  /** 0–100 משולב: טעינה מקומית (0–45) ואז שליחה לשרת (45–100) */
+  /** 0–100 התקדמות העלאה לרשת */
   const [uploadProgress, setUploadProgress] = useState(0)
-  /** reading = טעינת קובץ מהמחשב | uploading = שליחה לרשת | processing = אחרי תגובה, לפני רענון נתונים */
+  /** signing = בקשת חתימה | uploading = העלאה ל-Cloudinary | saving = שמירת מטא-דאטה בשרת */
   const [uploadStage, setUploadStage] = useState(null)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [initialPassword, setInitialPassword] = useState('')
@@ -222,37 +197,35 @@ function CustomerPage() {
 
     setUploadKind('file')
     setUploadProgress(0)
-    setUploadStage('reading')
+    setUploadStage('signing')
     setUploading(true)
 
     try {
-      const buf = await readFileIntoMemoryWithProgress(fileUpload, (readPct) => {
-        setUploadProgress(Math.round((readPct / 100) * UPLOAD_READ_SHARE * 100))
+      const signatureRes = await customerService.getDirectUploadSignature(id, {
+        kind: 'file',
+        mimetype: fileUpload.type || 'application/octet-stream',
       })
-
-      const formData = new FormData()
-      formData.append(
-        'file',
-        new File([buf], fileUpload.name, {
-          type: fileUpload.type || 'application/octet-stream',
-        })
-      )
-      formData.append('description', fileDescription)
+      const signatureData = signatureRes?.data
+      if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
 
       setUploadStage('uploading')
-      await customerService.uploadFile(id, formData, {
-        onUploadProgress: (pct) => {
-          if (pct != null) {
-            setUploadProgress(
-              Math.round(
-                UPLOAD_READ_SHARE * 100 + (pct / 100) * (1 - UPLOAD_READ_SHARE) * 100
-              )
-            )
-          }
-        },
-      })
-      setUploadStage('processing')
+      const cloudinaryRes = await customerService.uploadDirectToCloudinary(
+        signatureData,
+        fileUpload,
+        (pct) => {
+          if (pct != null) setUploadProgress(pct)
+        }
+      )
+      setUploadStage('saving')
       setUploadProgress(100)
+      await customerService.saveDirectUpload(id, {
+        kind: 'file',
+        url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
+        name: fileUpload.name,
+        size: cloudinaryRes?.bytes || fileUpload.size,
+        mimetype: fileUpload.type || 'application/octet-stream',
+        description: fileDescription,
+      })
       await loadCustomer()
       setFileUpload(null)
       setFileDescription('')
@@ -281,37 +254,35 @@ function CustomerPage() {
     }
     setUploadKind('audio')
     setUploadProgress(0)
-    setUploadStage('reading')
+    setUploadStage('signing')
     setUploading(true)
 
     try {
-      const buf = await readFileIntoMemoryWithProgress(audioFileUpload, (readPct) => {
-        setUploadProgress(Math.round((readPct / 100) * UPLOAD_READ_SHARE * 100))
+      const signatureRes = await customerService.getDirectUploadSignature(id, {
+        kind: 'audio',
+        mimetype: audioFileUpload.type || 'application/octet-stream',
       })
-
-      const formData = new FormData()
-      formData.append(
-        'file',
-        new File([buf], audioFileUpload.name, {
-          type: audioFileUpload.type || 'application/octet-stream',
-        })
-      )
-      formData.append('description', audioFileDescription)
+      const signatureData = signatureRes?.data
+      if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
 
       setUploadStage('uploading')
-      await customerService.uploadAudio(id, formData, {
-        onUploadProgress: (pct) => {
-          if (pct != null) {
-            setUploadProgress(
-              Math.round(
-                UPLOAD_READ_SHARE * 100 + (pct / 100) * (1 - UPLOAD_READ_SHARE) * 100
-              )
-            )
-          }
-        },
-      })
-      setUploadStage('processing')
+      const cloudinaryRes = await customerService.uploadDirectToCloudinary(
+        signatureData,
+        audioFileUpload,
+        (pct) => {
+          if (pct != null) setUploadProgress(pct)
+        }
+      )
+      setUploadStage('saving')
       setUploadProgress(100)
+      await customerService.saveDirectUpload(id, {
+        kind: 'audio',
+        url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
+        name: audioFileUpload.name,
+        size: cloudinaryRes?.bytes || audioFileUpload.size,
+        mimetype: audioFileUpload.type || 'application/octet-stream',
+        description: audioFileDescription,
+      })
       await loadCustomer()
       setAudioFileUpload(null)
       setAudioFileDescription('')
@@ -897,53 +868,14 @@ function CustomerPage() {
                       rows="3"
                     />
                   </div>
-                  {uploading && uploadKind === 'file' && (
-                    <div className="space-y-2" aria-live="polite">
-                      <div className="h-2.5 w-full rounded-full bg-neutral-200 overflow-hidden">
-                        <div
-                          className="h-full bg-primary-500 transition-[width] duration-150 ease-out rounded-full"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-neutral-600">
-                        {uploadStage === 'reading' && (
-                          <>
-                            טוען קובץ מהמחשב…{' '}
-                            {Math.min(
-                              100,
-                              Math.round(
-                                (uploadProgress / (UPLOAD_READ_SHARE * 100)) * 100
-                              )
-                            )}
-                            %
-                          </>
-                        )}
-                        {uploadStage === 'uploading' && (
-                          <>
-                            מעלה לשרת…{' '}
-                            {Math.min(
-                              100,
-                              Math.round(
-                                ((uploadProgress - UPLOAD_READ_SHARE * 100) /
-                                  ((1 - UPLOAD_READ_SHARE) * 100)) *
-                                  100
-                              )
-                            )}
-                            %
-                          </>
-                        )}
-                        {uploadStage === 'processing' && 'מסיים בעיבוד בשרת…'}
-                      </p>
-                    </div>
-                  )}
+                  <UploadProgressStatus
+                    active={uploading && uploadKind === 'file'}
+                    stage={uploadStage}
+                    progress={uploadProgress}
+                    itemLabel="קובץ"
+                  />
                   <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading && uploadKind === 'file'
-                      ? uploadStage === 'reading'
-                        ? 'טוען קובץ…'
-                        : uploadStage === 'processing'
-                          ? 'מעבד…'
-                          : 'מעלה…'
-                      : 'העלה קובץ'}
+                    {uploading && uploadKind === 'file' ? buttonText(uploadStage, 'העלה קובץ') : 'העלה קובץ'}
                   </Button>
                 </form>
               </Card>
@@ -1019,52 +951,15 @@ function CustomerPage() {
                       rows="3"
                     />
                   </div>
-                  {uploading && uploadKind === 'audio' && (
-                    <div className="space-y-2" aria-live="polite">
-                      <div className="h-2.5 w-full rounded-full bg-neutral-200 overflow-hidden">
-                        <div
-                          className="h-full bg-primary-500 transition-[width] duration-150 ease-out rounded-full"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-neutral-600">
-                        {uploadStage === 'reading' && (
-                          <>
-                            טוען אודיו מהמחשב…{' '}
-                            {Math.min(
-                              100,
-                              Math.round(
-                                (uploadProgress / (UPLOAD_READ_SHARE * 100)) * 100
-                              )
-                            )}
-                            %
-                          </>
-                        )}
-                        {uploadStage === 'uploading' && (
-                          <>
-                            מעלה אודיו לשרת…{' '}
-                            {Math.min(
-                              100,
-                              Math.round(
-                                ((uploadProgress - UPLOAD_READ_SHARE * 100) /
-                                  ((1 - UPLOAD_READ_SHARE) * 100)) *
-                                  100
-                              )
-                            )}
-                            %
-                          </>
-                        )}
-                        {uploadStage === 'processing' && 'מסיים בעיבוד בשרת…'}
-                      </p>
-                    </div>
-                  )}
+                  <UploadProgressStatus
+                    active={uploading && uploadKind === 'audio'}
+                    stage={uploadStage}
+                    progress={uploadProgress}
+                    itemLabel="אודיו"
+                  />
                   <Button type="submit" variant="primary" disabled={uploading}>
                     {uploading && uploadKind === 'audio'
-                      ? uploadStage === 'reading'
-                        ? 'טוען אודיו…'
-                        : uploadStage === 'processing'
-                          ? 'מעבד…'
-                          : 'מעלה…'
+                      ? buttonText(uploadStage, 'העלה אודיו')
                       : 'העלה אודיו'}
                   </Button>
                 </form>
