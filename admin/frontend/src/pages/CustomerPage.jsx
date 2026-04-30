@@ -233,7 +233,12 @@ function CustomerPage() {
       toast.success('קובץ הועלה בהצלחה!')
     } catch (error) {
       console.error('Error uploading file:', error)
+      const isCloudinary413 =
+        (error?.response?.status === 413 || /413/.test(String(error?.message || ''))) &&
+        String(error?.config?.url || '').includes('api.cloudinary.com')
       const msg =
+        (isCloudinary413 &&
+          'הקובץ גדול מדי להעלאה ישירה. נסה קובץ קטן יותר או צור קשר לעדכון תשתית ההעלאה.') ||
         error.response?.data?.message ||
         error.message ||
         'שגיאה בהעלאת הקובץ'
@@ -290,7 +295,15 @@ function CustomerPage() {
       toast.success('קובץ אודיו הועלה בהצלחה!')
     } catch (error) {
       console.error('Error uploading audio:', error)
-      toast.error(error.response?.data?.message || 'שגיאה בהעלאת האודיו')
+      const isCloudinary413 =
+        (error?.response?.status === 413 || /413/.test(String(error?.message || ''))) &&
+        String(error?.config?.url || '').includes('api.cloudinary.com')
+      toast.error(
+        (isCloudinary413 &&
+          'קובץ האודיו גדול מדי להעלאה ישירה. נסה קובץ קטן יותר או צור קשר לעדכון תשתית ההעלאה.') ||
+          error.response?.data?.message ||
+          'שגיאה בהעלאת האודיו'
+      )
     } finally {
       setUploading(false)
       setUploadKind(null)

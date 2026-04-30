@@ -462,6 +462,61 @@ router.post(
       mimetype.includes('msword') ||
       mimetype.includes('vnd.openxmlformats-officedocument')
     )
+      fileType = 'document'
+
+    log(
+      'שולח ל-Cloudinary',
+      `path=${req.file.path} mimetype=${mimetype} type=${fileType} size=${req.file.size ?? '?'}`
+    )
+    const result = await uploadLocalFileToCloudinary(req.file.path, {
+      folder: `customers/${cid}`,
+      mimetype,
+    })
+    log('Cloudinary הצליח', `bytes=${result?.bytes} url_prefix=${result?.secure_url?.slice(0, 48)}…`)
+    safeUnlink(req.file.path)
+
+    customer.files.push({
+      name: req.file.originalname,
+      url: result.secure_url,
+      type: fileType,
+      size: result.bytes,
+      description: req.body.description || '',
+      uploadedBy: 'admin',
+    })
+
+    await customer.save()
+    log('הושלם — נשמר ב-Mongo')
+
+    res.json({
+      message: 'File uploaded successfully',
+      data: customer.files[customer.files.length - 1],
+    })
+  } catch (error) {
+    safeUnlink(req.file?.path)
+    console.error(
+      `[UPLOAD:files] customer=${cid} שגיאה:`,
+      error?.name,
+      error?.message,
+      error?.http_code != null ? `http_code=${error.http_code}` : ''
+    )
+    if (error?.name === 'CastError') {
+      return res.status(400).json({ message: 'מזהה לקוח לא תקין' })
+    }
+    const code = Number(error?.http_code)
+    let status = Number.isFinite(code) && code >= 400 && code < 600 ? code : 502
+    if (error?.name === 'ValidationError') status = 400
+    return res.status(status).json({
+      message:
+        error?.name === 'ValidationError'
+          ? error.message || 'שגיאת ולידציה בשמירת הלקוח'
+          : cloudinaryErrorToMessage(error),
+      ...(process.env.NODE_ENV === 'development' && {
+        detail: error.message,
+        cloudinary: error.http_code != null ? { http_code: error.http_code, error: error.error } : undefined,
+      }),
+    })
+  }
+})
 
 // POST /api/admin/customers/:id/files/direct-signature — browser uploads directly to Cloudinary
 router.post('/admin/customers/:id/files/direct-signature', async (req, res, next) => {
@@ -523,61 +578,6 @@ router.post('/admin/customers/:id/files/direct-complete', async (req, res, next)
     })
   } catch (error) {
     next(error)
-  }
-})
-      fileType = 'document'
-
-    log(
-      'שולח ל-Cloudinary',
-      `path=${req.file.path} mimetype=${mimetype} type=${fileType} size=${req.file.size ?? '?'}`
-    )
-    const result = await uploadLocalFileToCloudinary(req.file.path, {
-      folder: `customers/${cid}`,
-      mimetype,
-    })
-    log('Cloudinary הצליח', `bytes=${result?.bytes} url_prefix=${result?.secure_url?.slice(0, 48)}…`)
-    safeUnlink(req.file.path)
-
-    customer.files.push({
-      name: req.file.originalname,
-      url: result.secure_url,
-      type: fileType,
-      size: result.bytes,
-      description: req.body.description || '',
-      uploadedBy: 'admin',
-    })
-
-    await customer.save()
-    log('הושלם — נשמר ב-Mongo')
-
-    res.json({
-      message: 'File uploaded successfully',
-      data: customer.files[customer.files.length - 1],
-    })
-  } catch (error) {
-    safeUnlink(req.file?.path)
-    console.error(
-      `[UPLOAD:files] customer=${cid} שגיאה:`,
-      error?.name,
-      error?.message,
-      error?.http_code != null ? `http_code=${error.http_code}` : ''
-    )
-    if (error?.name === 'CastError') {
-      return res.status(400).json({ message: 'מזהה לקוח לא תקין' })
-    }
-    const code = Number(error?.http_code)
-    let status = Number.isFinite(code) && code >= 400 && code < 600 ? code : 502
-    if (error?.name === 'ValidationError') status = 400
-    return res.status(status).json({
-      message:
-        error?.name === 'ValidationError'
-          ? error.message || 'שגיאת ולידציה בשמירת הלקוח'
-          : cloudinaryErrorToMessage(error),
-      ...(process.env.NODE_ENV === 'development' && {
-        detail: error.message,
-        cloudinary: error.http_code != null ? { http_code: error.http_code, error: error.error } : undefined,
-      }),
-    })
   }
 })
 

@@ -1,6 +1,18 @@
 import api from './api'
 import axios from 'axios'
 
+const CLOUDINARY_CHUNK_SIZE = 20 * 1024 * 1024
+
+function cloudinaryProgressHandler(onUploadProgress, uploadedBytesBeforeChunk, totalSize) {
+  if (typeof onUploadProgress !== 'function') return undefined
+  return (e) => {
+    const chunkLoaded = e?.loaded || 0
+    const loaded = Math.min(totalSize, uploadedBytesBeforeChunk + chunkLoaded)
+    const pct = totalSize > 0 ? Math.round((loaded * 100) / totalSize) : null
+    onUploadProgress(pct, loaded, totalSize)
+  }
+}
+
 export const customerService = {
   getAll: async (params = {}) => {
     const response = await api.get('/admin/customers', { params })
@@ -71,26 +83,55 @@ export const customerService = {
     const uploadUrl = `https://api.cloudinary.com/v1_1/${encodeURIComponent(
       signatureData.cloudName
     )}/${encodeURIComponent(signatureData.resourceType)}/upload`
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('api_key', signatureData.apiKey)
-    fd.append('timestamp', String(signatureData.timestamp))
-    fd.append('signature', signatureData.signature)
-    fd.append('folder', signatureData.folder)
-    fd.append('use_filename', String(Boolean(signatureData.useFilename)))
-    fd.append('unique_filename', String(Boolean(signatureData.uniqueFilename)))
-    const response = await axios.post(uploadUrl, fd, {
-      timeout: 20 * 60 * 1000,
-      onUploadProgress:
-        typeof onUploadProgress === 'function'
-          ? (e) => {
-              const total = e.total || 0
-              const pct = total ? Math.round((e.loaded * 100) / total) : null
-              onUploadProgress(pct, e.loaded, total)
-            }
-          : undefined,
-    })
-    return response.data
+    const sharedFields = {
+      api_key: signatureData.apiKey,
+      timestamp: String(signatureData.timestamp),
+      signature: signatureData.signature,
+      folder: signatureData.folder,
+      use_filename: String(Boolean(signatureData.useFilename)),
+      unique_filename: String(Boolean(signatureData.uniqueFilename)),
+    }
+
+    const totalSize = Number(file?.size || 0)
+    const shouldChunk = totalSize > CLOUDINARY_CHUNK_SIZE
+
+    if (!shouldChunk) {
+      const fd = new FormData()
+      fd.append('file', file)
+      Object.entries(sharedFields).forEach(([k, v]) => fd.append(k, v))
+      const response = await axios.post(uploadUrl, fd, {
+        timeout: 20 * 60 * 1000,
+        onUploadProgress: cloudinaryProgressHandler(onUploadProgress, 0, totalSize),
+      })
+      return response.data
+    }
+
+    const uploadId =
+      (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+      `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    let lastResponseData = null
+
+    for (let start = 0; start < totalSize; start += CLOUDINARY_CHUNK_SIZE) {
+      const endExclusive = Math.min(totalSize, start + CLOUDINARY_CHUNK_SIZE)
+      const chunk = file.slice(start, endExclusive)
+      const fd = new FormData()
+      fd.append('file', chunk)
+      Object.entries(sharedFields).forEach(([k, v]) => fd.append(k, v))
+      const response = await axios.post(uploadUrl, fd, {
+        timeout: 20 * 60 * 1000,
+        headers: {
+          'Content-Range': `bytes ${start}-${endExclusive - 1}/${totalSize}`,
+          'X-Unique-Upload-Id': uploadId,
+        },
+        onUploadProgress: cloudinaryProgressHandler(onUploadProgress, start, totalSize),
+      })
+      lastResponseData = response.data
+    }
+
+    if (!lastResponseData?.secure_url && !lastResponseData?.url) {
+      throw new Error('Cloudinary chunk upload completed without file URL')
+    }
+    return lastResponseData
   },
   deleteFile: async (customerId, fileId) => {
     const response = await api.delete(`/admin/customers/${customerId}/files/${fileId}`)
