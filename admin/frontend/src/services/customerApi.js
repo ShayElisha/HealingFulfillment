@@ -2,6 +2,14 @@ import api from './api'
 import axios from 'axios'
 
 const CLOUDINARY_CHUNK_SIZE = 20 * 1024 * 1024
+const LARGE_RAW_BACKEND_RELAY_THRESHOLD = 100 * 1024 * 1024
+
+function isLikelyRawFile(file) {
+  const t = String(file?.type || '').toLowerCase()
+  if (!t) return true
+  if (t === 'application/octet-stream') return true
+  return !(t.startsWith('image/') || t.startsWith('video/') || t.startsWith('audio/'))
+}
 
 function cloudinaryProgressHandler(onUploadProgress, uploadedBytesBeforeChunk, totalSize) {
   if (typeof onUploadProgress !== 'function') return undefined
@@ -132,6 +140,10 @@ export const customerService = {
       throw new Error('Cloudinary chunk upload completed without file URL')
     }
     return lastResponseData
+  },
+  shouldUseBackendRelayForLargeRaw: (file) => {
+    const size = Number(file?.size || 0)
+    return size >= LARGE_RAW_BACKEND_RELAY_THRESHOLD && isLikelyRawFile(file)
   },
   deleteFile: async (customerId, fileId) => {
     const response = await api.delete(`/admin/customers/${customerId}/files/${fileId}`)

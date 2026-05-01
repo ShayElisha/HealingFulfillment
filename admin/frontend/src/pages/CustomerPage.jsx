@@ -201,36 +201,80 @@ function CustomerPage() {
     setUploading(true)
 
     try {
-      const signatureRes = await customerService.getDirectUploadSignature(id, {
-        kind: 'file',
-        mimetype: fileUpload.type || 'application/octet-stream',
-      })
-      const signatureData = signatureRes?.data
-      if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
+      const useBackendRelay = customerService.shouldUseBackendRelayForLargeRaw(fileUpload)
+      if (useBackendRelay) {
+        setUploadStage('uploading')
+        const formData = new FormData()
+        formData.append('file', fileUpload)
+        formData.append('description', fileDescription)
+        await customerService.uploadFile(id, formData, {
+          onUploadProgress: (pct) => {
+            if (pct != null) setUploadProgress(pct)
+          },
+        })
+        setUploadStage('saving')
+        setUploadProgress(100)
+        await loadCustomer()
+        setFileUpload(null)
+        setFileDescription('')
+        e.target.reset()
+        toast.success('קובץ גדול הועלה בהצלחה דרך נתיב שרת ייעודי')
+        return
+      }
 
-      setUploadStage('uploading')
-      const cloudinaryRes = await customerService.uploadDirectToCloudinary(
-        signatureData,
-        fileUpload,
-        (pct) => {
-          if (pct != null) setUploadProgress(pct)
-        }
-      )
-      setUploadStage('saving')
-      setUploadProgress(100)
-      await customerService.saveDirectUpload(id, {
-        kind: 'file',
-        url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
-        name: fileUpload.name,
-        size: cloudinaryRes?.bytes || fileUpload.size,
-        mimetype: fileUpload.type || 'application/octet-stream',
-        description: fileDescription,
-      })
-      await loadCustomer()
-      setFileUpload(null)
-      setFileDescription('')
-      e.target.reset()
-      toast.success('קובץ הועלה בהצלחה!')
+      try {
+        const signatureRes = await customerService.getDirectUploadSignature(id, {
+          kind: 'file',
+          mimetype: fileUpload.type || 'application/octet-stream',
+        })
+        const signatureData = signatureRes?.data
+        if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
+
+        setUploadStage('uploading')
+        const cloudinaryRes = await customerService.uploadDirectToCloudinary(
+          signatureData,
+          fileUpload,
+          (pct) => {
+            if (pct != null) setUploadProgress(pct)
+          }
+        )
+        setUploadStage('saving')
+        setUploadProgress(100)
+        await customerService.saveDirectUpload(id, {
+          kind: 'file',
+          url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
+          name: fileUpload.name,
+          size: cloudinaryRes?.bytes || fileUpload.size,
+          mimetype: fileUpload.type || 'application/octet-stream',
+          description: fileDescription,
+        })
+        await loadCustomer()
+        setFileUpload(null)
+        setFileDescription('')
+        e.target.reset()
+        toast.success('קובץ הועלה בהצלחה!')
+      } catch (directErr) {
+        const status = Number(directErr?.response?.status || 0)
+        const isDirectAuthIssue = status === 401 || status === 403
+        if (!isDirectAuthIssue) throw directErr
+        setUploadStage('uploading')
+        setUploadProgress(0)
+        const formData = new FormData()
+        formData.append('file', fileUpload)
+        formData.append('description', fileDescription)
+        await customerService.uploadFile(id, formData, {
+          onUploadProgress: (pct) => {
+            if (pct != null) setUploadProgress(pct)
+          },
+        })
+        setUploadStage('saving')
+        setUploadProgress(100)
+        await loadCustomer()
+        setFileUpload(null)
+        setFileDescription('')
+        e.target.reset()
+        toast.success('ההעלאה הושלמה דרך נתיב שרת חלופי')
+      }
     } catch (error) {
       console.error('Error uploading file:', error)
       const isCloudinary413 =
@@ -263,36 +307,59 @@ function CustomerPage() {
     setUploading(true)
 
     try {
-      const signatureRes = await customerService.getDirectUploadSignature(id, {
-        kind: 'audio',
-        mimetype: audioFileUpload.type || 'application/octet-stream',
-      })
-      const signatureData = signatureRes?.data
-      if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
+      try {
+        const signatureRes = await customerService.getDirectUploadSignature(id, {
+          kind: 'audio',
+          mimetype: audioFileUpload.type || 'application/octet-stream',
+        })
+        const signatureData = signatureRes?.data
+        if (!signatureData) throw new Error('לא התקבלה חתימת העלאה')
 
-      setUploadStage('uploading')
-      const cloudinaryRes = await customerService.uploadDirectToCloudinary(
-        signatureData,
-        audioFileUpload,
-        (pct) => {
-          if (pct != null) setUploadProgress(pct)
-        }
-      )
-      setUploadStage('saving')
-      setUploadProgress(100)
-      await customerService.saveDirectUpload(id, {
-        kind: 'audio',
-        url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
-        name: audioFileUpload.name,
-        size: cloudinaryRes?.bytes || audioFileUpload.size,
-        mimetype: audioFileUpload.type || 'application/octet-stream',
-        description: audioFileDescription,
-      })
-      await loadCustomer()
-      setAudioFileUpload(null)
-      setAudioFileDescription('')
-      setAudioInputKey((k) => k + 1)
-      toast.success('קובץ אודיו הועלה בהצלחה!')
+        setUploadStage('uploading')
+        const cloudinaryRes = await customerService.uploadDirectToCloudinary(
+          signatureData,
+          audioFileUpload,
+          (pct) => {
+            if (pct != null) setUploadProgress(pct)
+          }
+        )
+        setUploadStage('saving')
+        setUploadProgress(100)
+        await customerService.saveDirectUpload(id, {
+          kind: 'audio',
+          url: cloudinaryRes?.secure_url || cloudinaryRes?.url,
+          name: audioFileUpload.name,
+          size: cloudinaryRes?.bytes || audioFileUpload.size,
+          mimetype: audioFileUpload.type || 'application/octet-stream',
+          description: audioFileDescription,
+        })
+        await loadCustomer()
+        setAudioFileUpload(null)
+        setAudioFileDescription('')
+        setAudioInputKey((k) => k + 1)
+        toast.success('קובץ אודיו הועלה בהצלחה!')
+      } catch (directErr) {
+        const status = Number(directErr?.response?.status || 0)
+        const isDirectAuthIssue = status === 401 || status === 403
+        if (!isDirectAuthIssue) throw directErr
+        setUploadStage('uploading')
+        setUploadProgress(0)
+        const formData = new FormData()
+        formData.append('file', audioFileUpload)
+        formData.append('description', audioFileDescription)
+        await customerService.uploadAudio(id, formData, {
+          onUploadProgress: (pct) => {
+            if (pct != null) setUploadProgress(pct)
+          },
+        })
+        setUploadStage('saving')
+        setUploadProgress(100)
+        await loadCustomer()
+        setAudioFileUpload(null)
+        setAudioFileDescription('')
+        setAudioInputKey((k) => k + 1)
+        toast.success('העלאת האודיו הושלמה דרך נתיב שרת חלופי')
+      }
     } catch (error) {
       console.error('Error uploading audio:', error)
       const isCloudinary413 =
