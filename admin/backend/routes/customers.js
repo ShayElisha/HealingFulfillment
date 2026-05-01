@@ -581,6 +581,46 @@ router.post('/admin/customers/:id/files/direct-complete', async (req, res, next)
   }
 })
 
+// POST /api/admin/customers/:id/files/link — save external link as customer file item
+router.post('/admin/customers/:id/files/link', async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.params.id)
+    if (!customer) return res.status(404).json({ message: 'Customer not found' })
+
+    const url = String(req.body?.url || '').trim()
+    const name = String(req.body?.name || '').trim()
+    const description = String(req.body?.description || '').trim()
+    if (!url || !name) {
+      return res.status(400).json({ message: 'חסרים url או name' })
+    }
+
+    let parsed
+    try {
+      parsed = new URL(url)
+    } catch {
+      return res.status(400).json({ message: 'כתובת הקישור אינה תקינה' })
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ message: 'הקישור חייב להתחיל ב-http או https' })
+    }
+
+    customer.files.push({
+      name,
+      url: parsed.toString(),
+      type: 'link',
+      description,
+      uploadedBy: 'admin',
+    })
+    await customer.save()
+    return res.json({
+      message: 'קישור נשמר בהצלחה',
+      data: customer.files[customer.files.length - 1],
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // POST /api/admin/customers/:id/audio — רק Cloudinary
 router.post('/admin/customers/:id/audio', handleMulterAudioUpload, async (req, res, next) => {
   const cid = req.params.id

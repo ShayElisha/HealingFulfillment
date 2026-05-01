@@ -109,6 +109,10 @@ function CustomerPage() {
   const [audioFileDescription, setAudioFileDescription] = useState('')
   const [audioInputKey, setAudioInputKey] = useState(0)
   const [noteContent, setNoteContent] = useState('')
+  const [filesInputMode, setFilesInputMode] = useState('file')
+  const [linkName, setLinkName] = useState('')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkDescription, setLinkDescription] = useState('')
   const [uploading, setUploading] = useState(false)
   /** 'file' | 'audio' — איזה טופס מעלה כרגע (לפרוגרס) */
   const [uploadKind, setUploadKind] = useState(null)
@@ -392,6 +396,36 @@ function CustomerPage() {
     } catch (error) {
       console.error('Error deleting file:', error)
       toast.error('שגיאה במחיקת הקובץ')
+    }
+  }
+
+  const handleLinkSave = async (e) => {
+    e.preventDefault()
+    if (!linkName.trim() || !linkUrl.trim()) {
+      toast.error('אנא מלא שם קישור וכתובת מלאה')
+      return
+    }
+    try {
+      setUploadKind('file')
+      setUploadStage('saving')
+      setUploading(true)
+      await customerService.addLinkFile(id, {
+        name: linkName.trim(),
+        url: linkUrl.trim(),
+        description: linkDescription.trim(),
+      })
+      await loadCustomer()
+      setLinkName('')
+      setLinkUrl('')
+      setLinkDescription('')
+      toast.success('הקישור נשמר בהצלחה')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'שגיאה בשמירת הקישור')
+    } finally {
+      setUploading(false)
+      setUploadKind(null)
+      setUploadStage(null)
+      setUploadProgress(0)
     }
   }
 
@@ -924,40 +958,99 @@ function CustomerPage() {
                 <p className="text-sm text-neutral-600 mb-4">
                   להקלטות והודעות קוליות השתמשו בלשונית <strong>אודיו</strong>.
                 </p>
-                <form onSubmit={handleFileUpload} className="space-y-4">
-                  <div>
-                    <label className="admin-label">
-                      בחר קובץ
-                    </label>
-                    <input
-                      type="file"
-                      onChange={(e) => setFileUpload(e.target.files[0])}
-                      className="admin-input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="admin-label">
-                      תיאור הקובץ (אופציונלי)
-                    </label>
-                    <textarea
-                      value={fileDescription}
-                      onChange={(e) => setFileDescription(e.target.value)}
-                      placeholder="תיאור הקובץ..."
-                      className="admin-textarea"
-                      rows="3"
-                    />
-                  </div>
-                  <UploadProgressStatus
-                    active={uploading && uploadKind === 'file'}
-                    stage={uploadStage}
-                    progress={uploadProgress}
-                    itemLabel="קובץ"
-                  />
-                  <Button type="submit" variant="primary" disabled={uploading}>
-                    {uploading && uploadKind === 'file' ? buttonText(uploadStage, 'העלה קובץ') : 'העלה קובץ'}
+                <div className="mb-4 flex gap-2">
+                  <Button
+                    type="button"
+                    variant={filesInputMode === 'file' ? 'primary' : 'soft'}
+                    onClick={() => setFilesInputMode('file')}
+                    disabled={uploading}
+                  >
+                    קובץ
                   </Button>
-                </form>
+                  <Button
+                    type="button"
+                    variant={filesInputMode === 'link' ? 'primary' : 'soft'}
+                    onClick={() => setFilesInputMode('link')}
+                    disabled={uploading}
+                  >
+                    קישור
+                  </Button>
+                </div>
+
+                {filesInputMode === 'file' ? (
+                  <form onSubmit={handleFileUpload} className="space-y-4">
+                    <div>
+                      <label className="admin-label">
+                        בחר קובץ
+                      </label>
+                      <input
+                        type="file"
+                        onChange={(e) => setFileUpload(e.target.files[0])}
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-label">
+                        תיאור הקובץ (אופציונלי)
+                      </label>
+                      <textarea
+                        value={fileDescription}
+                        onChange={(e) => setFileDescription(e.target.value)}
+                        placeholder="תיאור הקובץ..."
+                        className="admin-textarea"
+                        rows="3"
+                      />
+                    </div>
+                    <UploadProgressStatus
+                      active={uploading && uploadKind === 'file'}
+                      stage={uploadStage}
+                      progress={uploadProgress}
+                      itemLabel="קובץ"
+                    />
+                    <Button type="submit" variant="primary" disabled={uploading}>
+                      {uploading && uploadKind === 'file' ? buttonText(uploadStage, 'העלה קובץ') : 'העלה קובץ'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLinkSave} className="space-y-4">
+                    <div>
+                      <label className="admin-label">שם לקישור</label>
+                      <input
+                        type="text"
+                        value={linkName}
+                        onChange={(e) => setLinkName(e.target.value)}
+                        placeholder="לדוגמה: תיקיית דרייב של הלקוח"
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-label">כתובת קישור מלאה</label>
+                      <input
+                        type="url"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="admin-input"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-label">תיאור (אופציונלי)</label>
+                      <textarea
+                        value={linkDescription}
+                        onChange={(e) => setLinkDescription(e.target.value)}
+                        placeholder="תיאור הקישור..."
+                        className="admin-textarea"
+                        rows="3"
+                      />
+                    </div>
+                    <Button type="submit" variant="primary" disabled={uploading}>
+                      {uploading && uploadKind === 'file' ? buttonText(uploadStage, 'שמור קישור') : 'שמור קישור'}
+                    </Button>
+                  </form>
+                )}
               </Card>
 
               {nonAudioFiles.length > 0 ? (
@@ -978,7 +1071,10 @@ function CustomerPage() {
                       )}
                       <div className="flex items-center justify-between mt-3">
                         <span className="text-xs text-neutral-500">
-                          {file.type} | {(file.size / 1024).toFixed(1)} KB
+                          {file.type}
+                          {Number.isFinite(file.size) && file.size > 0
+                            ? ` | ${(file.size / 1024).toFixed(1)} KB`
+                            : ''}
                         </span>
                         <a
                           href={resolveCustomerFileUrl(file.url)}

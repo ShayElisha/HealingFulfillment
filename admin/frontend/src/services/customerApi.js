@@ -87,6 +87,10 @@ export const customerService = {
     const response = await api.post(`/admin/customers/${id}/files/direct-complete`, payload)
     return response.data
   },
+  addLinkFile: async (id, payload) => {
+    const response = await api.post(`/admin/customers/${id}/files/link`, payload)
+    return response.data
+  },
   uploadDirectToCloudinary: async (signatureData, file, onUploadProgress) => {
     const uploadUrl = `https://api.cloudinary.com/v1_1/${encodeURIComponent(
       signatureData.cloudName

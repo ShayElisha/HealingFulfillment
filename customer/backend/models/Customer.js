@@ -45,7 +45,7 @@ const customerSchema = new mongoose.Schema({
     },
     type: {
       type: String,
-      enum: ['image', 'pdf', 'document', 'video', 'audio', 'other'],
+      enum: ['image', 'pdf', 'document', 'video', 'audio', 'link', 'other'],
       default: 'other'
     },
     size: {
