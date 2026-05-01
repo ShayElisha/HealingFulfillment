@@ -1,8 +1,8 @@
 import Card from './Card'
 
 const REGULATIONS_TEXT_SHORT = `
-תקנון ושאלון
-נא לקרוא את מה שסיכמנו ולמלא את השאלון כנדרש לפני פגישה ראשונה.
+אבחון ראשוני
+נא לקרוא את מה שסיכמנו ולמלא את האבחון הראשוני כנדרש לפני פגישה ראשונה.
 `
 
 const answerOrDash = (value) => {
@@ -56,7 +56,7 @@ function CustomerQuestionnaireTab({ customer }) {
       <Card>
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
-            <h3 className="text-xl font-semibold mb-1">שאלון ותקנון</h3>
+            <h3 className="text-xl font-semibold mb-1">אבחון ראשוני</h3>
             <p className="text-sm text-neutral-600">
               סטטוס: {isCompleted ? 'מולא ומאושר' : 'טרם מולא'} {isAccepted ? '' : ''}
             </p>

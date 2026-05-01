@@ -104,7 +104,7 @@ function RegulationsQuestionnaireTab({ regulationsQuestionnaire, showCard = true
     <>
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          <h3 className="text-xl font-semibold mb-1">שאלון ותקנון</h3>
+          <h3 className="text-xl font-semibold mb-1">אבחון ראשוני</h3>
           <p className="text-sm text-neutral-600">
             סטטוס: {isCompleted ? 'מולא ומאושר' : 'טרם מולא'}
           </p>

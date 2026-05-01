@@ -596,7 +596,7 @@ function CustomerPage() {
         <div className="admin-tabs-bar mb-8 overflow-x-auto max-w-full">
           {[
             { id: 'overview', label: 'סקירה כללית' },
-            { id: 'questionnaire', label: 'שאלון ותקנון' },
+            { id: 'questionnaire', label: 'אבחון ראשוני' },
             { id: 'trigger-journal', label: 'זיהוי ותיעוד' },
             { id: 'files', label: `קבצים (${nonAudioFiles.length})` },
             { id: 'audio', label: `אודיו (${audioFiles.length})` },

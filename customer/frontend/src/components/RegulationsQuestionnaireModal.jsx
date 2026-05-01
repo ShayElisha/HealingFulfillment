@@ -199,7 +199,7 @@ function RegulationsQuestionnaireModal({ isOpen, onClose, customerId: _customerI
             <div className="flex items-center justify-between">
               <div>
                 <h2 id="regulations-modal-title" className="mb-1 font-serif text-xl font-bold sm:text-2xl">
-                  תקנון ושאלון
+                  אבחון ראשוני
                 </h2>
                 <p className="text-sm text-primary-100">נא לקרוא ולמלא לפני קביעת פגישה ראשונה</p>
               </div>

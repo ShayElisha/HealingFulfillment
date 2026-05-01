@@ -375,7 +375,7 @@ function CustomerProfilePage() {
               { id: 'new-booking', label: 'קביעת פגישות' },
               { id: 'purchases', label: `רכישות (${customerData.purchases?.length || 0})` },
               { id: 'history', label: `היסטוריית פגישות (${customerData.bookings?.filter((b) => b.status === 'completed').length || 0})` },
-              { id: 'questionnaire', label: 'שאלון ותקנון' },
+              { id: 'questionnaire', label: 'אבחון ראשוני' },
               { id: 'messages', label: `הודעות (${messages.length})` },
             ].map((tab) => (
               <button
@@ -917,15 +917,15 @@ function CustomerProfilePage() {
                 {shouldGateFirstBooking ? (
                   <div className="space-y-4">
                     <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
-                      <p className="text-yellow-800 font-medium mb-1">לפני קביעת הפגישה הראשונה צריך למלא תקנון ושאלון.</p>
-                      <p className="text-yellow-700 text-sm">רק לאחר מילוי השאלון ניתן לשלוח בקשה לקביעת פגישה.</p>
+                      <p className="text-yellow-800 font-medium mb-1">לפני קביעת הפגישה הראשונה צריך למלא אבחון ראשוני.</p>
+                      <p className="text-yellow-700 text-sm">רק לאחר מילוי האבחון הראשוני ניתן לשלוח בקשה לקביעת פגישה.</p>
                     </div>
                     <Button
                       variant="primary"
                       className="w-full"
                       onClick={() => setIsRegulationsModalOpen(true)}
                     >
-                      פתיחת תקנון ושאלון
+                      פתיחת אבחון ראשוני
                     </Button>
                   </div>
                 ) : canBookRegular ? (
