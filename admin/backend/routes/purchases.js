@@ -421,7 +421,7 @@ router.post('/cardcom/confirm-from-redirect', async (req, res, next) => {
 // POST /api/purchases - Create new purchase
 router.post('/', async (req, res, next) => {
   try {
-    const { courseId, customerName, customerEmail, customerPhone, paymentMethod, notes, status } = req.body
+    const { courseId, customerName, customerEmail, customerPhone, paymentMethod, notes } = req.body
     const normalizedName = String(customerName || '').trim()
     const normalizedEmail = String(customerEmail || '').trim().toLowerCase()
     const normalizedPhone = String(customerPhone || '').trim()
@@ -490,8 +490,10 @@ router.post('/', async (req, res, next) => {
       paymentMethod: paymentMethod || 'other',
       notes: notes || '',
       provider: 'manual',
-      paymentStatus: status === 'completed' ? 'succeeded' : 'pending',
-      status: status || 'pending'
+      // Manual admin purchase is approved immediately.
+      paymentStatus: 'succeeded',
+      status: 'completed',
+      paidAt: new Date(),
     })
 
     await purchase.save()

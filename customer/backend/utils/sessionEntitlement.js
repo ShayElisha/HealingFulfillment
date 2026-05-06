@@ -54,6 +54,40 @@ async function computePurchasesOnlyEntitlement(customerId) {
   }
 }
 
+async function computeActiveCoachingWindowFallback(customerId) {
+  const now = new Date()
+  const purchaseWithActiveWindow = await Purchase.findOne({
+    customer: customerId,
+    status: 'completed',
+    coachingStartedAt: { $lte: now },
+    coachingEndsAt: { $gte: now },
+  })
+    .populate('course', 'title coachingProcessMonths sessionsCount')
+    .select('course coachingStartedAt coachingEndsAt')
+    .sort({ coachingEndsAt: -1 })
+    .lean()
+
+  if (!purchaseWithActiveWindow) return null
+
+  return {
+    planSnapshot: {
+      title: purchaseWithActiveWindow.course?.title || 'מסלול',
+      coachingProcessMonths:
+        purchaseWithActiveWindow.course?.coachingProcessMonths != null
+          ? Number(purchaseWithActiveWindow.course.coachingProcessMonths)
+          : null,
+      sessionsCount:
+        purchaseWithActiveWindow.course?.sessionsCount != null
+          ? Number(purchaseWithActiveWindow.course.sessionsCount)
+          : null,
+    },
+    startedAt: purchaseWithActiveWindow.coachingStartedAt,
+    endsAt: purchaseWithActiveWindow.coachingEndsAt,
+    status: 'active',
+    source: 'purchase_window',
+  }
+}
+
 /**
  * זכאות למפגשים: אם יש מנוי בתוקף — קביעה לפי תוקף המנוי בלבד (ללא מכסת מספר פגישות).
  * אחרת — סכימת רכישות שהושלמו מול פגישות שנקבעו.
@@ -106,6 +140,23 @@ export async function computeSessionEntitlementForCustomerId(customerId) {
       entitlementSource: 'subscription',
     }
   }
+
+  const coachingWindowFallback = await computeActiveCoachingWindowFallback(customerId)
+  if (coachingWindowFallback) {
+    const usedBookings = await countUsedRegularBookings(customerId, {
+      start: coachingWindowFallback.startedAt,
+      end: coachingWindowFallback.endsAt,
+    })
+    return {
+      totalSessionsPurchased: null,
+      usedBookings,
+      availableSessions: 1,
+      bookingUnlimitedBySubscription: true,
+      activeSubscription: coachingWindowFallback,
+      entitlementSource: 'purchase_window',
+    }
+  }
+
   return computePurchasesOnlyEntitlement(customerId)
 }
 

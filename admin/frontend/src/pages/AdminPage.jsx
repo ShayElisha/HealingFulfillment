@@ -92,7 +92,7 @@ function AdminPage() {
     paymentProvider: 'manual',
     paymentMethod: 'other',
     notes: '',
-    status: 'pending'
+    status: 'completed'
   })
 
   const [bookingForm, setBookingForm] = useState({
@@ -564,9 +564,9 @@ function AdminPage() {
         paymentProvider: 'manual',
         paymentMethod: 'other',
         notes: '',
-        status: 'pending'
+        status: 'completed'
       })
-      toast.success('רכישה נוצרה בהצלחה!' + (purchaseForm.status === 'completed' ? ' הכנסה נוצרה אוטומטית.' : ''))
+      toast.success('רכישה נוצרה בהצלחה! הכנסה נוצרה אוטומטית.')
       // ברכישה ידנית נשארים מחוברים ומתקדמים אוטומטית לרשימת לקוחות
       navigate('/customers')
     } catch (error) {
@@ -1452,7 +1452,7 @@ function AdminPage() {
                               ...purchaseForm,
                               paymentProvider: e.target.value,
                               paymentMethod: e.target.value === 'cardcom' ? 'credit_card' : purchaseForm.paymentMethod,
-                              status: e.target.value === 'cardcom' ? 'pending' : purchaseForm.status,
+                              status: e.target.value === 'cardcom' ? 'pending' : 'completed',
                             })
                           }
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1485,12 +1485,14 @@ function AdminPage() {
                           required
                           value={purchaseForm.status}
                           onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}
-                          disabled={purchaseForm.paymentProvider === 'cardcom'}
+                          disabled
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         >
-                          <option value="pending">ממתין</option>
-                          <option value="completed">הושלם</option>
-                          <option value="cancelled">בוטל</option>
+                          {purchaseForm.paymentProvider === 'cardcom' ? (
+                            <option value="pending">ממתין לאישור סליקה</option>
+                          ) : (
+                            <option value="completed">הושלם (מאושר אוטומטית)</option>
+                          )}
                         </select>
                         {purchaseForm.status === 'completed' && (
                           <p className="mt-2 text-xs text-green-600">
@@ -1529,7 +1531,7 @@ function AdminPage() {
                             paymentProvider: 'manual',
                             paymentMethod: 'other',
                             notes: '',
-                            status: 'pending'
+                            status: 'completed'
                           })
                         }}
                         className="px-6 py-3"
