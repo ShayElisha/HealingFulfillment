@@ -333,6 +333,9 @@ function CustomerProfilePage() {
   const canBookRegular =
     customerData.bookingUnlimitedBySubscription === true ||
     customerData.availableSessions > 0
+  const customerPurchases = Array.isArray(customerData.purchases) ? customerData.purchases : []
+  const hasAnyPurchase = customerPurchases.length > 0
+  const hasPendingPurchase = customerPurchases.some((p) => p?.status === 'pending')
   const canManageReview = Boolean(reviewEligibility?.canSubmit)
 
   return (
@@ -1137,17 +1140,19 @@ function CustomerProfilePage() {
                 ) : (
                   <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200 text-center">
                     <p className="text-yellow-800 font-medium mb-4">אין לך מפגשים זמינים</p>
-                    <p className="text-yellow-700 mb-4">
-                      על מנת לקבוע פגישה, נא לרכוש מסלול טיפול או לפנות למנהל.
-                    </p>
-                    <Button
-                      type="button"
-                      disabled
-                      variant="primary"
-                      className="cursor-not-allowed opacity-50"
-                    >
-                      רכוש מסלול
-                    </Button>
+                    {hasPendingPurchase ? (
+                      <p className="text-yellow-700 mb-2">
+                        זיהינו רכישה חדשה שממתינה לאישור. מיד כשהרכישה תאושר, יתרת המפגשים תתעדכן אוטומטית.
+                      </p>
+                    ) : hasAnyPurchase ? (
+                      <p className="text-yellow-700 mb-2">
+                        זיהינו רכישות בחשבון. אם רכשת עכשיו ועדיין אין מפגשים זמינים, פנה למנהל לעדכון היתרה.
+                      </p>
+                    ) : (
+                      <p className="text-yellow-700 mb-2">
+                        על מנת לקבוע פגישה, נא לרכוש מסלול טיפול או לפנות למנהל.
+                      </p>
+                    )}
                   </div>
                 )}
               </Card>
