@@ -14,6 +14,12 @@ const transporter = nodemailer.createTransport({
   },
 })
 
+const DEFAULT_CUSTOMER_LOGIN_URL = 'https://healing-fulfillment.vercel.app/customer/login'
+const getCustomerLoginUrl = () => {
+  const configuredUrl = String(process.env.CUSTOMER_LOGIN_URL || DEFAULT_CUSTOMER_LOGIN_URL).trim()
+  return configuredUrl || DEFAULT_CUSTOMER_LOGIN_URL
+}
+
 // תבנית HTML בסיסית
 export const getBaseTemplate = (title, content) => {
   return `
@@ -167,6 +173,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 
 // תבנית אימייל לרכישה
 export const sendPurchaseConfirmationEmail = async (purchase, course, customer) => {
+  const loginUrl = getCustomerLoginUrl()
   const content = `
     <h2>תודה על רכישתך!</h2>
     <p>שלום ${customer.name},</p>
@@ -181,6 +188,9 @@ export const sendPurchaseConfirmationEmail = async (purchase, course, customer) 
         day: 'numeric'
       })}</p>
     </div>
+    <p style="text-align: center;">
+      <a href="${loginUrl}" class="button">התחברות לתיק לקוח</a>
+    </p>
     <p>ניצור איתך קשר בקרוב כדי לתאם את הפגישות.</p>
     <p>אם יש לך שאלות, אנא צור קשר איתנו.</p>
     <p>בברכה,<br>צוות ריפוי והגשמה</p>
@@ -258,7 +268,7 @@ export const sendRegularMeetingConfirmationEmail = async (booking) => {
 
 // תבנית אימייל ליצירת חשבון
 export const sendAccountCreationEmail = async (customer, initialPassword) => {
-  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/customer/login`
+  const loginUrl = getCustomerLoginUrl()
 
   const content = `
     <h2>חשבון נוצר עבורך!</h2>
