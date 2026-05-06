@@ -92,7 +92,6 @@ function AdminPage() {
     paymentProvider: 'manual',
     paymentMethod: 'other',
     notes: '',
-    status: 'completed'
   })
 
   const [bookingForm, setBookingForm] = useState({
@@ -564,7 +563,6 @@ function AdminPage() {
         paymentProvider: 'manual',
         paymentMethod: 'other',
         notes: '',
-        status: 'completed'
       })
       toast.success('רכישה נוצרה בהצלחה! הכנסה נוצרה אוטומטית.')
       // ברכישה ידנית נשארים מחוברים ומתקדמים אוטומטית לרשימת לקוחות
@@ -1452,7 +1450,6 @@ function AdminPage() {
                               ...purchaseForm,
                               paymentProvider: e.target.value,
                               paymentMethod: e.target.value === 'cardcom' ? 'credit_card' : purchaseForm.paymentMethod,
-                              status: e.target.value === 'cardcom' ? 'pending' : 'completed',
                             })
                           }
                           className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -1477,30 +1474,13 @@ function AdminPage() {
                           <option value="paypal">PayPal</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-neutral-900">
-                          סטטוס *
-                        </label>
-                        <select
-                          required
-                          value={purchaseForm.status}
-                          onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}
-                          disabled
-                          className="w-full px-4 py-3 rounded-lg border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        >
-                          {purchaseForm.paymentProvider === 'cardcom' ? (
-                            <option value="pending">ממתין לאישור סליקה</option>
-                          ) : (
-                            <option value="completed">הושלם (מאושר אוטומטית)</option>
-                          )}
-                        </select>
-                        {purchaseForm.status === 'completed' && (
-                          <p className="mt-2 text-xs text-green-600">
-                            💡 הכנסה תיווצר אוטומטית
-                          </p>
-                        )}
-                      </div>
                     </div>
+
+                    {purchaseForm.paymentProvider === 'manual' && (
+                      <p className="text-xs text-green-600 -mt-2">
+                        💡 רכישה ידנית נשמרת אוטומטית כ״הושלם״ והכנסה נוצרת מיידית.
+                      </p>
+                    )}
 
                     <div>
                       <label className="block text-sm font-medium mb-2 text-neutral-900">
@@ -1531,7 +1511,6 @@ function AdminPage() {
                             paymentProvider: 'manual',
                             paymentMethod: 'other',
                             notes: '',
-                            status: 'completed'
                           })
                         }}
                         className="px-6 py-3"
