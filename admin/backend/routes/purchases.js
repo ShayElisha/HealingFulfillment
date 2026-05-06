@@ -422,6 +422,15 @@ router.post('/cardcom/confirm-from-redirect', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { courseId, customerName, customerEmail, customerPhone, paymentMethod, notes, status } = req.body
+    const normalizedName = String(customerName || '').trim()
+    const normalizedEmail = String(customerEmail || '').trim().toLowerCase()
+    const normalizedPhone = String(customerPhone || '').trim()
+
+    if (!normalizedName || !normalizedEmail || !normalizedPhone) {
+      return res.status(400).json({
+        message: 'חובה למלא שם מלא, אימייל וטלפון ברכישה ידנית.',
+      })
+    }
 
     // Get course details
     const course = await Course.findById(courseId)
@@ -434,17 +443,32 @@ router.post('/', async (req, res, next) => {
     }
 
     // Find or create customer
-    let customer = await Customer.findOne({ email: customerEmail.toLowerCase() })
+    let customer = await Customer.findOne({ email: normalizedEmail })
     
     if (!customer) {
-      // Create new customer
-      customer = new Customer({
-        name: customerName,
-        email: customerEmail.toLowerCase(),
-        phone: customerPhone,
-        status: 'active'
+      // Create new customer (resilient to race conditions on unique email)
+      try {
+        customer = new Customer({
+          name: normalizedName,
+          email: normalizedEmail,
+          phone: normalizedPhone,
+          status: 'active',
+          caseOpenedAt: new Date(),
+        })
+        await customer.save()
+      } catch (customerCreateError) {
+        if (customerCreateError?.code === 11000) {
+          customer = await Customer.findOne({ email: normalizedEmail })
+        } else {
+          throw customerCreateError
+        }
+      }
+    }
+
+    if (!customer) {
+      return res.status(500).json({
+        message: 'הרכישה נשמרה ללא יצירת לקוח עקב שגיאה בלתי צפויה. נסה שוב.',
       })
-      await customer.save()
     }
 
     if (await hasActiveSubscriptionForCustomerId(customer._id)) {
@@ -458,9 +482,9 @@ router.post('/', async (req, res, next) => {
     const purchase = new Purchase({
       course: courseId,
       customer: customer._id,
-      customerName,
-      customerEmail,
-      customerPhone,
+      customerName: normalizedName,
+      customerEmail: normalizedEmail,
+      customerPhone: normalizedPhone,
       price: manualCharge,
       amount: Number(Number(manualCharge || 0).toFixed(2)),
       paymentMethod: paymentMethod || 'other',
