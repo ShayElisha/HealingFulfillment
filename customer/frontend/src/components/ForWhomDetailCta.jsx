@@ -1,10 +1,7 @@
-import { usePurchase } from '../context/PurchaseContext'
 import Button from './Button'
 
 /** קריאה לפעולה בתחתית עמוד «למי זה מתאים» — פגישה ראשונית או רכישה */
 export default function ForWhomDetailCta() {
-  const { openPurchaseModal } = usePurchase()
-
   return (
     <div className="relative mt-14 overflow-hidden rounded-3xl border border-primary-200/60 bg-gradient-to-br from-[#fffaf2] via-white to-[#f7efe3] p-8 shadow-[0_28px_60px_-28px_rgba(120,80,40,0.35)] ring-1 ring-white/80 sm:p-10">
       <div
@@ -27,9 +24,9 @@ export default function ForWhomDetailCta() {
         </Button>
         <Button
           type="button"
+          disabled
           variant="secondary"
-          className="min-h-[48px] flex-1 px-6 text-base sm:flex-initial sm:min-w-[200px]"
-          onClick={() => openPurchaseModal(null)}
+          className="min-h-[48px] flex-1 cursor-not-allowed px-6 text-base opacity-50 sm:flex-initial sm:min-w-[200px]"
         >
           מעבר לרכישה
         </Button>

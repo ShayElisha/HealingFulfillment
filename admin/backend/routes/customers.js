@@ -83,6 +83,23 @@ function safeUnlink(p) {
   }
 }
 
+function normalizeUploadedFilename(filename) {
+  const raw = String(filename || '').trim()
+  if (!raw) return 'file'
+
+  // Some browsers send multipart filename bytes in latin1; this restores UTF-8 (Hebrew included).
+  const looksMojibake = /[Ã×ØÐ]/.test(raw) && !/[\u0590-\u05FF]/.test(raw)
+  if (!looksMojibake) return raw
+
+  try {
+    const fixed = Buffer.from(raw, 'latin1').toString('utf8').trim()
+    if (!fixed || fixed.includes('\uFFFD')) return raw
+    return fixed
+  } catch {
+    return raw
+  }
+}
+
 function handleMulterAudioUpload(req, res, next) {
   uploadAudio.single('file')(req, res, (err) => {
     if (err) {
@@ -476,7 +493,7 @@ router.post(
     safeUnlink(req.file.path)
 
     customer.files.push({
-      name: req.file.originalname,
+      name: normalizeUploadedFilename(req.file.originalname),
       url: result.secure_url,
       type: fileType,
       size: result.bytes,
@@ -658,7 +675,7 @@ router.post('/admin/customers/:id/audio', handleMulterAudioUpload, async (req, r
     logA('Cloudinary הצליח', `bytes=${result?.bytes}`)
     safeUnlink(req.file.path)
     customer.files.push({
-      name: req.file.originalname,
+      name: normalizeUploadedFilename(req.file.originalname),
       url: result.secure_url,
       type: 'audio',
       size: result.bytes,

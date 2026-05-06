@@ -1141,8 +1141,10 @@ function CustomerProfilePage() {
                       על מנת לקבוע פגישה, נא לרכוש מסלול טיפול או לפנות למנהל.
                     </p>
                     <Button
-                      onClick={() => navigate('/courses')}
+                      type="button"
+                      disabled
                       variant="primary"
+                      className="cursor-not-allowed opacity-50"
                     >
                       רכוש מסלול
                     </Button>

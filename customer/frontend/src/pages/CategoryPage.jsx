@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { categoriesService } from '../services/categoriesApi'
-import { usePurchase } from '../context/PurchaseContext'
 import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
@@ -14,7 +13,6 @@ function CategoryPage() {
   const { id } = useParams()
   const [category, setCategory] = useState(null)
   const [loading, setLoading] = useState(true)
-  const { openPurchaseModal } = usePurchase()
   const [showMainVideo, setShowMainVideo] = useState(false)
 
   useEffect(() => {
@@ -417,8 +415,9 @@ function CategoryPage() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                   <button
                     type="button"
-                    onClick={() => openPurchaseModal()}
-                    className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-white text-emerald-700 border border-white hover:bg-emerald-50 transition-all duration-300 shadow-md hover:shadow-lg font-semibold"
+                    disabled
+                    aria-disabled="true"
+                    className="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-white text-emerald-700 border border-white transition-all duration-300 shadow-md font-semibold opacity-50 cursor-not-allowed"
                   >
                     רכוש מסלול
                   </button>

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { coursesService } from '../services/coursesApi'
-import { usePurchase } from '../context/PurchaseContext'
 import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
@@ -11,7 +10,6 @@ import Button from '../components/Button'
 function CoursesPage() {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
-  const { openPurchaseModal } = usePurchase()
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -27,10 +25,6 @@ function CoursesPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handlePurchaseClick = (course) => {
-    openPurchaseModal(course)
   }
 
   return (
@@ -146,9 +140,10 @@ function CoursesPage() {
                     )
                   })()}
                   <Button
+                    type="button"
+                    disabled
                     variant="primary"
-                    onClick={() => handlePurchaseClick(course)}
-                    className="w-full"
+                    className="w-full cursor-not-allowed opacity-50"
                   >
                     רכוש מסלול
                   </Button>

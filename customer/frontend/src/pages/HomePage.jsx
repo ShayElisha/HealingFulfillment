@@ -6,7 +6,6 @@ import Section from '../components/Section'
 import AnimatedSection from '../components/AnimatedSection'
 import Card from '../components/Card'
 import ReviewsCarousel from '../components/ReviewsCarousel'
-import { usePurchase } from '../context/PurchaseContext'
 import { reviewsService } from '../services/reviewsApi'
 import { categoryService, forWhomAudienceService } from '../services/api'
 import ForWhomAudienceDoorCard from '../components/ForWhomAudienceDoorCard'
@@ -22,7 +21,6 @@ const SOCIAL_LINKS = [
 ]
 
 function HomePage() {
-  const { openPurchaseModal } = usePurchase()
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(true)
   const [reviewsError, setReviewsError] = useState('')
@@ -132,9 +130,10 @@ function HomePage() {
                 </p>
                 <div className="flex min-w-0 w-full max-w-full flex-row flex-nowrap items-stretch gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-3">
                   <Button
-                    onClick={() => openPurchaseModal()}
+                    type="button"
+                    disabled
                     variant="secondary"
-                    className="min-h-[2.75rem] min-w-0 flex-1 basis-0 px-1.5 py-2 text-center text-[11px] leading-tight whitespace-normal sm:px-2 sm:text-xs md:px-3 md:py-3 md:text-sm lg:px-4 lg:text-base"
+                    className="min-h-[2.75rem] min-w-0 flex-1 basis-0 cursor-not-allowed px-1.5 py-2 text-center text-[11px] leading-tight opacity-50 whitespace-normal sm:px-2 sm:text-xs md:px-3 md:py-3 md:text-sm lg:px-4 lg:text-base"
                   >
                     רכוש מסלול
                   </Button>
@@ -407,7 +406,12 @@ function HomePage() {
               וכנה.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              <Button onClick={() => openPurchaseModal()} variant="primary" className="w-full sm:w-auto">
+              <Button
+                type="button"
+                disabled
+                variant="primary"
+                className="w-full cursor-not-allowed opacity-50 sm:w-auto"
+              >
                 רכוש מסלול
               </Button>
               <Button to="/booking" variant="primary" className="w-full sm:w-auto">

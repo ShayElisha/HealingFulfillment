@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { usePurchase } from '../context/PurchaseContext'
 import { useAuth } from '../context/AuthContext'
 import logoImage from '../assets/IMG_1562-Photoroom.png'
 
 function Header({ isScrolled }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const location = useLocation()
-  const { openPurchaseModal } = usePurchase()
   const { isAuthenticated } = useAuth()
 
   const navItems = [
@@ -60,29 +58,41 @@ function Header({ isScrolled }) {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-reverse space-x-8">
             {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`relative px-3 py-2 font-medium transition-colors duration-200 ${
-                  isActive(item.path)
-                    ? 'text-primary-600'
-                    : 'text-neutral-700 hover:text-primary-600'
-                }`}
-              >
-                {item.label}
-                {isActive(item.path) && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0 right-0 left-0 h-0.5 bg-primary-500 rounded-full"
-                    initial={false}
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </Link>
+              item.path === '/courses' ? (
+                <span
+                  key={item.path}
+                  aria-disabled="true"
+                  className="relative px-3 py-2 font-medium text-neutral-400 cursor-not-allowed"
+                >
+                  {item.label}
+                </span>
+              ) : (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`relative px-3 py-2 font-medium transition-colors duration-200 ${
+                    isActive(item.path)
+                      ? 'text-primary-600'
+                      : 'text-neutral-700 hover:text-primary-600'
+                  }`}
+                >
+                  {item.label}
+                  {isActive(item.path) && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute bottom-0 right-0 left-0 h-0.5 bg-primary-500 rounded-full"
+                      initial={false}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              )
             ))}
             <button
-              onClick={() => openPurchaseModal()}
-              className="btn-secondary text-sm px-5 py-2.5"
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="btn-secondary text-sm px-5 py-2.5 opacity-50 cursor-not-allowed hover:translate-y-0 active:scale-100"
             >
               רכוש מסלול
             </button>
@@ -145,25 +155,34 @@ function Header({ isScrolled }) {
             >
               <div className="py-4 space-y-2 border-t border-neutral-200 mt-4 bg-white/98 backdrop-blur-md rounded-b-xl shadow-lg">
                 {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-lg font-medium transition-colors ${
-                      isActive(item.path)
-                        ? 'bg-primary-50 text-primary-600'
-                        : 'text-neutral-700 hover:bg-neutral-100'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
+                  item.path === '/courses' ? (
+                    <span
+                      key={item.path}
+                      aria-disabled="true"
+                      className="block px-4 py-3 rounded-lg font-medium text-neutral-400 cursor-not-allowed"
+                    >
+                      {item.label}
+                    </span>
+                  ) : (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-lg font-medium transition-colors ${
+                        isActive(item.path)
+                          ? 'bg-primary-50 text-primary-600'
+                          : 'text-neutral-700 hover:bg-neutral-100'
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  )
                 ))}
                 <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false)
-                    openPurchaseModal()
-                  }}
-                  className="block btn-secondary text-center mx-4 mt-4 w-auto"
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="block btn-secondary text-center mx-4 mt-4 w-auto opacity-50 cursor-not-allowed hover:translate-y-0 active:scale-100"
                 >
                   רכוש מסלול
                 </button>
