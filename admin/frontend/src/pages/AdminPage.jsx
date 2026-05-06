@@ -18,6 +18,7 @@ import { useNavCounts } from '../context/NavCountsContext'
 import { triggerConfetti } from '../utils/confetti'
 import BookingCard from '../components/admin/BookingCard'
 import {
+  formatCourseCoachingLine,
   effectiveCoachingMonthsForForm,
   courseTimelineLabelForSelect,
 } from '../utils/courseCoaching'
