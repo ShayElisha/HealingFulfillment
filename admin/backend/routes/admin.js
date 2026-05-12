@@ -12,6 +12,7 @@ import {
   sendPurchaseCompletedEmail,
   sendPurchaseCancelledEmail
 } from '../services/emailService.js'
+import { isPreferredTimeAllowed, formatYmd } from '../services/availabilityService.js'
 import Transaction from '../models/Transaction.js'
 import { applyAutoCoachingWindowIfNeeded } from '../utils/coachingPurchaseWindow.js'
 import { createSubscriptionForCompletedPurchase } from '../utils/subscriptionFromPurchase.js'
@@ -779,6 +780,89 @@ router.put('/bookings/:id/zoom-link', async (req, res, next) => {
     })
   } catch (error) {
     console.error('Error updating zoom link:', error)
+    next(error)
+  }
+})
+
+// PUT /api/admin/bookings/:id/details - Update meeting details (admin only)
+router.put('/bookings/:id/details', async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    const preferredDateRaw = String(req.body?.preferredDate || '').trim()
+    const preferredTimeRaw = String(req.body?.preferredTime || '').trim()
+    const meetingTypeRaw = String(req.body?.meetingType || '').trim()
+    const notesRaw = String(req.body?.notes || '')
+
+    if (!preferredDateRaw) {
+      return res.status(400).json({ message: 'תאריך פגישה הוא שדה חובה' })
+    }
+    if (!['frontend', 'zoom'].includes(meetingTypeRaw)) {
+      return res.status(400).json({ message: 'סוג פגישה לא תקין' })
+    }
+    if (preferredTimeRaw && !/^\d{1,2}:\d{2}$/.test(preferredTimeRaw)) {
+      return res.status(400).json({ message: 'פורמט שעה לא תקין. יש להזין HH:MM' })
+    }
+
+    const preferredDateObj = new Date(preferredDateRaw)
+    if (Number.isNaN(preferredDateObj.getTime())) {
+      return res.status(400).json({ message: 'תאריך פגישה לא תקין' })
+    }
+
+    const dateStart = new Date(preferredDateObj)
+    dateStart.setHours(0, 0, 0, 0)
+    const dateEnd = new Date(preferredDateObj)
+    dateEnd.setHours(23, 59, 59, 999)
+
+    const activeStatuses = ['pending', 'confirmed']
+    if (preferredTimeRaw) {
+      const existingSameSlot = await Booking.findOne({
+        _id: { $ne: booking._id },
+        preferredDate: { $gte: dateStart, $lte: dateEnd },
+        preferredTime: preferredTimeRaw,
+        status: { $in: activeStatuses },
+      })
+      if (existingSameSlot) {
+        return res.status(400).json({ message: 'יש כבר פגישה בתאריך ושעה אלו' })
+      }
+      const ymd =
+        /^\d{4}-\d{2}-\d{2}$/.test(preferredDateRaw)
+          ? preferredDateRaw
+          : formatYmd(preferredDateObj)
+      const isAllowed = await isPreferredTimeAllowed(
+        ymd,
+        preferredTimeRaw,
+        meetingTypeRaw,
+        booking.isIntroMeeting === true
+      )
+      if (!isAllowed) {
+        return res.status(400).json({ message: 'השעה שנבחרה אינה זמינה לפי הגדרות היומן' })
+      }
+    } else {
+      const existingSameDay = await Booking.findOne({
+        _id: { $ne: booking._id },
+        preferredDate: { $gte: dateStart, $lte: dateEnd },
+        status: { $in: activeStatuses },
+      })
+      if (existingSameDay) {
+        return res.status(400).json({ message: 'יש כבר פגישה בתאריך זה. בחר שעה או תאריך אחר' })
+      }
+    }
+
+    booking.preferredDate = preferredDateObj
+    booking.preferredTime = preferredTimeRaw
+    booking.meetingType = meetingTypeRaw
+    booking.notes = notesRaw
+    await booking.save()
+
+    return res.json({
+      message: 'פרטי הפגישה עודכנו בהצלחה',
+      data: booking,
+    })
+  } catch (error) {
     next(error)
   }
 })

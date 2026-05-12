@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { customerService } from '../services/customerApi'
+import { bookingService } from '../services/adminApi'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Navbar from '../components/Navbar'
@@ -124,6 +125,14 @@ function CustomerPage() {
   const [initialPassword, setInitialPassword] = useState('')
   const [creatingAccount, setCreatingAccount] = useState(false)
   const [isResetPassword, setIsResetPassword] = useState(false)
+  const [editingBooking, setEditingBooking] = useState(null)
+  const [bookingEditForm, setBookingEditForm] = useState({
+    preferredDate: '',
+    preferredTime: '',
+    meetingType: 'frontend',
+    notes: '',
+  })
+  const [savingBookingEdit, setSavingBookingEdit] = useState(false)
   const [coachingUiLoading, setCoachingUiLoading] = useState(null)
   const [triggerJournalEntries, setTriggerJournalEntries] = useState([])
   const [triggerJournalLoading, setTriggerJournalLoading] = useState(false)
@@ -531,6 +540,54 @@ function CustomerPage() {
       toast.success(nextStatus === 'inactive' ? 'הלקוח הוגדר כלא פעיל' : 'הלקוח חזר להיות פעיל')
     } catch (error) {
       toast.error(error.response?.data?.message || 'שגיאה בעדכון סטטוס הלקוח')
+    }
+  }
+
+  const handleOpenEditBooking = (booking) => {
+    const dateValue = booking?.preferredDate
+      ? new Date(booking.preferredDate).toISOString().slice(0, 10)
+      : ''
+    setEditingBooking(booking)
+    setBookingEditForm({
+      preferredDate: dateValue,
+      preferredTime: booking?.preferredTime || '',
+      meetingType: booking?.meetingType === 'zoom' ? 'zoom' : 'frontend',
+      notes: booking?.notes || '',
+    })
+  }
+
+  const handleCloseEditBooking = () => {
+    setEditingBooking(null)
+    setSavingBookingEdit(false)
+    setBookingEditForm({
+      preferredDate: '',
+      preferredTime: '',
+      meetingType: 'frontend',
+      notes: '',
+    })
+  }
+
+  const handleSaveBookingEdit = async () => {
+    if (!editingBooking?._id) return
+    if (!bookingEditForm.preferredDate) {
+      toast.error('יש לבחור תאריך לפגישה')
+      return
+    }
+    try {
+      setSavingBookingEdit(true)
+      await bookingService.updateDetails(editingBooking._id, {
+        preferredDate: bookingEditForm.preferredDate,
+        preferredTime: bookingEditForm.preferredTime.trim(),
+        meetingType: bookingEditForm.meetingType,
+        notes: bookingEditForm.notes,
+      })
+      await loadCustomer()
+      toast.success('פרטי הפגישה עודכנו')
+      handleCloseEditBooking()
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'שגיאה בעדכון פרטי הפגישה')
+    } finally {
+      setSavingBookingEdit(false)
     }
   }
 
@@ -1201,6 +1258,9 @@ function CustomerPage() {
                           {booking.meetingType === 'zoom' ? '💻 אונליין' : '🏢 פרונטאלי'}
                           {booking.isIntroMeeting && ' | ⭐ פגישת היכרות'}
                         </p>
+                        {booking.preferredTime && (
+                          <p className="text-sm text-neutral-600 mt-1">🕐 שעה: {booking.preferredTime}</p>
+                        )}
                         {booking.meetingType === 'zoom' && booking.zoomLink && (
                           <div className="mt-2">
                             <a
@@ -1237,6 +1297,14 @@ function CustomerPage() {
                          booking.status === 'cancelled' ? 'בוטל' :
                          'ממתין'}
                       </span>
+                      <Button
+                        type="button"
+                        variant="soft"
+                        className="!px-3 !py-1.5 text-xs mt-2"
+                        onClick={() => handleOpenEditBooking(booking)}
+                      >
+                        ערוך פגישה
+                      </Button>
                     </div>
                   </Card>
                 ))
@@ -1353,6 +1421,78 @@ function CustomerPage() {
               <p className="mt-2 text-xs text-neutral-500">
                 אנא העברו את הסיסמה ללקוח. הוא יוכל לשנות אותה בהתחברות הראשונה.
               </p>
+            </div>
+          </div>
+        </AdminModalLayout>
+      )}
+
+      {editingBooking && (
+        <AdminModalLayout
+          title="עריכת פגישה"
+          onClose={handleCloseEditBooking}
+          footer={
+            <>
+              <Button type="button" variant="soft" onClick={handleCloseEditBooking}>
+                ביטול
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveBookingEdit}
+                disabled={savingBookingEdit}
+              >
+                {savingBookingEdit ? 'שומר...' : 'שמור שינויים'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="admin-label">תאריך *</label>
+              <input
+                type="date"
+                className="admin-input"
+                value={bookingEditForm.preferredDate}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, preferredDate: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <label className="admin-label">שעה</label>
+              <input
+                type="time"
+                className="admin-input"
+                value={bookingEditForm.preferredTime}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, preferredTime: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="admin-label">סוג פגישה</label>
+              <select
+                className="admin-input"
+                value={bookingEditForm.meetingType}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, meetingType: e.target.value }))
+                }
+              >
+                <option value="frontend">פרונטאלי</option>
+                <option value="zoom">אונליין</option>
+              </select>
+            </div>
+            <div>
+              <label className="admin-label">הערות</label>
+              <textarea
+                rows="4"
+                className="admin-textarea"
+                value={bookingEditForm.notes}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+              />
             </div>
           </div>
         </AdminModalLayout>

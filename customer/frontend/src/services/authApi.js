@@ -36,6 +36,10 @@ export const authService = {
     const response = await api.get('/auth/me')
     return response.data
   },
+  updateProfile: async (payload) => {
+    const response = await api.put('/auth/me/profile', payload)
+    return response.data
+  },
   
   createBooking: async (bookingData) => {
     const response = await api.post('/auth/booking', bookingData)

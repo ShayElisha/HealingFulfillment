@@ -139,6 +139,10 @@ export const bookingService = {
     const response = await api.put(`/admin/bookings/${id}/session-summary`, { sessionSummary })
     return response.data
   },
+  updateDetails: async (id, payload) => {
+    const response = await api.put(`/admin/bookings/${id}/details`, payload)
+    return response.data
+  },
   delete: async (id) => {
     const response = await api.delete(`/admin/bookings/${id}`)
     return response.data

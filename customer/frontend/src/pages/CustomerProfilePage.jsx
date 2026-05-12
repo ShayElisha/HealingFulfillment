@@ -55,6 +55,12 @@ function CustomerProfilePage() {
   })
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false)
   const [bookingError, setBookingError] = useState('')
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    phone: '',
+  })
   const [bookingAvailability, setBookingAvailability] = useState({
     unavailableTimes: [],
     availableTimes: [],
@@ -140,6 +146,36 @@ function CustomerProfilePage() {
       toast.error('שגיאה בטעינת פרטי הלקוח')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleOpenProfileEdit = () => {
+    setProfileForm({
+      name: customerData?.name || '',
+      phone: customerData?.phone || '',
+    })
+    setIsEditingProfile(true)
+  }
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    if (!profileForm.name.trim() || !profileForm.phone.trim()) {
+      toast.error('יש למלא שם וטלפון')
+      return
+    }
+    try {
+      setIsSavingProfile(true)
+      await authService.updateProfile({
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim(),
+      })
+      await loadCustomerData()
+      setIsEditingProfile(false)
+      toast.success('הפרטים האישיים עודכנו בהצלחה')
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'שגיאה בעדכון פרטים אישיים')
+    } finally {
+      setIsSavingProfile(false)
     }
   }
 
@@ -428,6 +464,11 @@ function CustomerProfilePage() {
                        'לא פעיל'}
                     </span>
                   </div>
+                </div>
+                <div className="mt-4">
+                  <Button type="button" variant="soft" onClick={handleOpenProfileEdit}>
+                    עריכת פרטים אישיים
+                  </Button>
                 </div>
               </Card>
 
@@ -1400,6 +1441,55 @@ function CustomerProfilePage() {
           setIsRegulationsModalOpen(false)
         }}
       />
+
+      {isEditingProfile && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setIsEditingProfile(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-lg w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold text-neutral-900 mb-6">עריכת פרטים אישיים</h2>
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">שם מלא</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">טלפון</label>
+                <input
+                  type="tel"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" variant="primary" disabled={isSavingProfile}>
+                  {isSavingProfile ? 'שומר...' : 'שמור'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="soft"
+                  onClick={() => setIsEditingProfile(false)}
+                  disabled={isSavingProfile}
+                >
+                  ביטול
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -348,6 +348,53 @@ router.get('/me', authenticateToken, async (req, res, next) => {
   }
 })
 
+// PUT /api/auth/me/profile - Update logged-in customer personal details
+router.put('/me/profile', authenticateToken, async (req, res, next) => {
+  try {
+    const customer = await Customer.findById(req.customerId)
+    if (!customer) {
+      return res.status(404).json({ message: 'לקוח לא נמצא' })
+    }
+    if (!ensureCustomerIsActive(customer, res)) return
+
+    const name = String(req.body?.name || '').trim()
+    const phone = String(req.body?.phone || '').trim()
+
+    if (!name) {
+      return res.status(400).json({ message: 'שם מלא הוא שדה חובה' })
+    }
+    if (!phone) {
+      return res.status(400).json({ message: 'טלפון הוא שדה חובה' })
+    }
+
+    customer.name = name
+    customer.phone = phone
+    await customer.save()
+
+    // Keep booking cards aligned with updated customer details
+    await Booking.updateMany(
+      { customer: customer._id },
+      {
+        $set: {
+          name: customer.name,
+          phone: customer.phone,
+        },
+      }
+    )
+
+    return res.json({
+      message: 'הפרטים האישיים עודכנו בהצלחה',
+      data: {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+      },
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 // POST /api/auth/purchases/:id/refund-request - customer submits refund request
 router.post('/purchases/:id/refund-request', authenticateToken, async (req, res, next) => {
   try {
