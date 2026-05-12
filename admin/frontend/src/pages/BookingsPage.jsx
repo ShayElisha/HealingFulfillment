@@ -25,6 +25,14 @@ function BookingsPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
   const [activeTab, setActiveTab] = useState('intro') // 'intro', 'regular', או 'history'
+  const [editingBooking, setEditingBooking] = useState(null)
+  const [bookingEditForm, setBookingEditForm] = useState({
+    preferredDate: '',
+    preferredTime: '',
+    meetingType: 'frontend',
+    notes: '',
+  })
+  const [savingBookingEdit, setSavingBookingEdit] = useState(false)
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const [summaryBooking, setSummaryBooking] = useState(null) // הפגישה שעבורה נוסיף סיכום
   const [sessionSummary, setSessionSummary] = useState('')
@@ -154,6 +162,54 @@ function BookingsPage() {
     } catch (error) {
       console.error('Error deleting booking:', error)
       toast.error(error?.response?.data?.message || 'שגיאה במחיקת הפגישה')
+    }
+  }
+
+  const handleOpenEditBooking = (booking) => {
+    const dateValue = booking?.preferredDate
+      ? new Date(booking.preferredDate).toISOString().slice(0, 10)
+      : ''
+    setEditingBooking(booking)
+    setBookingEditForm({
+      preferredDate: dateValue,
+      preferredTime: booking?.preferredTime || '',
+      meetingType: booking?.meetingType === 'zoom' ? 'zoom' : 'frontend',
+      notes: booking?.notes || '',
+    })
+  }
+
+  const handleCloseEditBooking = () => {
+    setEditingBooking(null)
+    setSavingBookingEdit(false)
+    setBookingEditForm({
+      preferredDate: '',
+      preferredTime: '',
+      meetingType: 'frontend',
+      notes: '',
+    })
+  }
+
+  const handleSaveBookingEdit = async () => {
+    if (!editingBooking?._id) return
+    if (!bookingEditForm.preferredDate) {
+      toast.error('יש לבחור תאריך לפגישה')
+      return
+    }
+    try {
+      setSavingBookingEdit(true)
+      await bookingService.updateDetails(editingBooking._id, {
+        preferredDate: bookingEditForm.preferredDate,
+        preferredTime: bookingEditForm.preferredTime.trim(),
+        meetingType: bookingEditForm.meetingType,
+        notes: bookingEditForm.notes,
+      })
+      await loadData()
+      toast.success('פרטי הפגישה עודכנו')
+      handleCloseEditBooking()
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'שגיאה בעדכון פרטי הפגישה')
+    } finally {
+      setSavingBookingEdit(false)
     }
   }
 
@@ -438,6 +494,14 @@ function BookingsPage() {
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 items-end ml-4 shrink-0 min-w-[9rem]">
+                        <Button
+                          type="button"
+                          variant="soft"
+                          className="!px-3 !py-1.5 text-xs w-full"
+                          onClick={() => handleOpenEditBooking(booking)}
+                        >
+                          ערוך פגישה
+                        </Button>
                         <span
                           className={`px-3 py-1 text-xs rounded-full whitespace-nowrap font-medium border ${
                             booking.status === 'confirmed'
@@ -611,6 +675,78 @@ function BookingsPage() {
               required
             />
             <p className="mt-1 text-xs text-neutral-500">{sessionSummary.length}/5000 תווים</p>
+          </div>
+        </AdminModalLayout>
+      )}
+
+      {editingBooking && (
+        <AdminModalLayout
+          title="עריכת פגישה"
+          onClose={handleCloseEditBooking}
+          footer={
+            <>
+              <Button type="button" variant="soft" onClick={handleCloseEditBooking}>
+                ביטול
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleSaveBookingEdit}
+                disabled={savingBookingEdit}
+              >
+                {savingBookingEdit ? 'שומר...' : 'שמור שינויים'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="admin-label">תאריך *</label>
+              <input
+                type="date"
+                className="admin-input"
+                value={bookingEditForm.preferredDate}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, preferredDate: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div>
+              <label className="admin-label">שעה</label>
+              <input
+                type="time"
+                className="admin-input"
+                value={bookingEditForm.preferredTime}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, preferredTime: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="admin-label">סוג פגישה</label>
+              <select
+                className="admin-input"
+                value={bookingEditForm.meetingType}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, meetingType: e.target.value }))
+                }
+              >
+                <option value="frontend">פרונטאלי</option>
+                <option value="zoom">אונליין</option>
+              </select>
+            </div>
+            <div>
+              <label className="admin-label">הערות</label>
+              <textarea
+                rows="4"
+                className="admin-textarea"
+                value={bookingEditForm.notes}
+                onChange={(e) =>
+                  setBookingEditForm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+              />
+            </div>
           </div>
         </AdminModalLayout>
       )}
