@@ -59,6 +59,7 @@ function CustomerProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [profileForm, setProfileForm] = useState({
     name: '',
+    email: '',
     phone: '',
   })
   const [bookingAvailability, setBookingAvailability] = useState({
@@ -152,6 +153,7 @@ function CustomerProfilePage() {
   const handleOpenProfileEdit = () => {
     setProfileForm({
       name: customerData?.name || '',
+      email: customerData?.email || '',
       phone: customerData?.phone || '',
     })
     setIsEditingProfile(true)
@@ -159,14 +161,20 @@ function CustomerProfilePage() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
-    if (!profileForm.name.trim() || !profileForm.phone.trim()) {
-      toast.error('יש למלא שם וטלפון')
+    if (!profileForm.name.trim() || !profileForm.phone.trim() || !profileForm.email.trim()) {
+      toast.error('יש למלא שם, אימייל וטלפון')
+      return
+    }
+    const normalizedEmail = profileForm.email.trim().toLowerCase()
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      toast.error('פורמט אימייל לא תקין')
       return
     }
     try {
       setIsSavingProfile(true)
       await authService.updateProfile({
         name: profileForm.name.trim(),
+        email: normalizedEmail,
         phone: profileForm.phone.trim(),
       })
       await loadCustomerData()
@@ -1460,6 +1468,16 @@ function CustomerProfilePage() {
                   className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">אימייל</label>
+                <input
+                  type="email"
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm((prev) => ({ ...prev, email: e.target.value }))}
                   required
                 />
               </div>

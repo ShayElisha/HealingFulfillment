@@ -359,6 +359,7 @@ router.put('/me/profile', authenticateToken, async (req, res, next) => {
 
     const name = String(req.body?.name || '').trim()
     const phone = String(req.body?.phone || '').trim()
+    const emailRaw = String(req.body?.email || '').trim().toLowerCase()
 
     if (!name) {
       return res.status(400).json({ message: 'שם מלא הוא שדה חובה' })
@@ -366,9 +367,24 @@ router.put('/me/profile', authenticateToken, async (req, res, next) => {
     if (!phone) {
       return res.status(400).json({ message: 'טלפון הוא שדה חובה' })
     }
+    if (!emailRaw) {
+      return res.status(400).json({ message: 'אימייל הוא שדה חובה' })
+    }
+    if (!/^\S+@\S+\.\S+$/.test(emailRaw)) {
+      return res.status(400).json({ message: 'פורמט אימייל לא תקין' })
+    }
+
+    const existingByEmail = await Customer.findOne({
+      _id: { $ne: customer._id },
+      email: emailRaw,
+    }).select('_id')
+    if (existingByEmail) {
+      return res.status(409).json({ message: 'האימייל כבר קיים במערכת' })
+    }
 
     customer.name = name
     customer.phone = phone
+    customer.email = emailRaw
     await customer.save()
 
     // Keep booking cards aligned with updated customer details
@@ -378,6 +394,7 @@ router.put('/me/profile', authenticateToken, async (req, res, next) => {
         $set: {
           name: customer.name,
           phone: customer.phone,
+          email: customer.email,
         },
       }
     )
