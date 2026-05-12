@@ -25,8 +25,6 @@ function BookingsPage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
   const [activeTab, setActiveTab] = useState('intro') // 'intro', 'regular', או 'history'
-  const [editingZoomLink, setEditingZoomLink] = useState(null) // ID של פגישה בעריכה
-  const [zoomLinkValue, setZoomLinkValue] = useState('')
   const [showSummaryModal, setShowSummaryModal] = useState(false)
   const [summaryBooking, setSummaryBooking] = useState(null) // הפגישה שעבורה נוסיף סיכום
   const [sessionSummary, setSessionSummary] = useState('')
@@ -110,44 +108,6 @@ function BookingsPage() {
       if (match) return match
     }
     return null
-  }
-
-  const handleEditZoomLink = (booking) => {
-    setEditingZoomLink(booking._id)
-    setZoomLinkValue(booking.zoomLink || '')
-  }
-
-  const handleCancelEditZoomLink = () => {
-    setEditingZoomLink(null)
-    setZoomLinkValue('')
-  }
-
-  const handleSaveZoomLink = async (bookingId) => {
-    try {
-      await bookingService.updateZoomLink(bookingId, zoomLinkValue)
-      await loadData()
-      setEditingZoomLink(null)
-      setZoomLinkValue('')
-      toast.success(zoomLinkValue ? 'קישור אונליין עודכן בהצלחה!' : 'קישור אונליין נמחק בהצלחה!')
-    } catch (error) {
-      console.error('Error updating zoom link:', error)
-      toast.error('שגיאה בעדכון קישור אונליין')
-    }
-  }
-
-  const handleDeleteZoomLink = async (bookingId) => {
-    const confirmed = window.confirm('האם אתה בטוח שברצונך למחוק את קישור האונליין?')
-    if (!confirmed) {
-      return
-    }
-    try {
-      await bookingService.updateZoomLink(bookingId, '')
-      await loadData()
-      toast.success('קישור אונליין נמחק בהצלחה!')
-    } catch (error) {
-      console.error('Error deleting zoom link:', error)
-      toast.error('שגיאה במחיקת קישור אונליין')
-    }
   }
 
   const handleStatusChange = async (booking, newStatus) => {
@@ -439,67 +399,18 @@ function BookingsPage() {
                           )}
                           {booking.meetingType === 'zoom' && (
                             <div className="mt-2 p-3 bg-blue-50 rounded border border-blue-200">
-                              {editingZoomLink === booking._id ? (
-                                <div className="space-y-2">
-                                  <label className="text-xs text-blue-700 font-medium block">
-                                    🔗 קישור אונליין:
-                                  </label>
-                                  <input
-                                    type="url"
-                                    value={zoomLinkValue}
-                                    onChange={(e) => setZoomLinkValue(e.target.value)}
-                                    placeholder="https://zoom.us/j/..."
-                                    className="w-full px-3 py-2 text-sm border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleSaveZoomLink(booking._id)}
-                                      className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                                    >
-                                      שמור
-                                    </button>
-                                    <button
-                                      onClick={handleCancelEditZoomLink}
-                                      className="px-3 py-1 bg-neutral-200 text-neutral-700 text-xs rounded hover:bg-neutral-300"
-                                    >
-                                      ביטול
-                                    </button>
-                                  </div>
-                                </div>
+                              <p className="text-xs text-blue-700 font-medium mb-1">🔗 קישור אונליין:</p>
+                              {booking.zoomLink ? (
+                                <a
+                                  href={booking.zoomLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline break-all text-xs block"
+                                >
+                                  {booking.zoomLink}
+                                </a>
                               ) : (
-                                <div>
-                                  <div className="flex items-center justify-between mb-1">
-                                    <p className="text-xs text-blue-700 font-medium">🔗 קישור אונליין:</p>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => handleEditZoomLink(booking)}
-                                        className="text-xs text-blue-600 hover:text-blue-800 underline"
-                                      >
-                                        {booking.zoomLink ? 'ערוך' : 'הוסף קישור'}
-                                      </button>
-                                      {booking.zoomLink && (
-                                        <button
-                                          onClick={() => handleDeleteZoomLink(booking._id)}
-                                          className="text-xs text-red-600 hover:text-red-800 underline"
-                                        >
-                                          מחק
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {booking.zoomLink ? (
-                                    <a
-                                      href={booking.zoomLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:text-blue-800 underline break-all text-xs block"
-                                    >
-                                      {booking.zoomLink}
-                                    </a>
-                                  ) : (
-                                    <p className="text-xs text-blue-600 italic">עדיין לא נוסף קישור</p>
-                                  )}
-                                </div>
+                                <p className="text-xs text-blue-600 italic">עדיין לא נוסף קישור</p>
                               )}
                             </div>
                           )}
@@ -508,16 +419,7 @@ function BookingsPage() {
                           )}
                           {booking.status === 'completed' && booking.sessionSummary && (
                             <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-xs text-green-700 font-medium">📋 סיכום פגישה:</p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenSummaryModal(booking)}
-                                  className="text-xs text-green-600 hover:text-green-800 underline"
-                                >
-                                  ערוך
-                                </button>
-                              </div>
+                              <p className="text-xs text-green-700 font-medium mb-1">📋 סיכום פגישה:</p>
                               <p className="text-sm text-neutral-700 whitespace-pre-wrap">{booking.sessionSummary}</p>
                             </div>
                           )}
@@ -635,28 +537,8 @@ function BookingsPage() {
                             </Button>
                           </div>
                         )}
-                        {activeTab !== 'history' && booking.status === 'completed' && (
-                          <Button
-                            type="button"
-                            variant="soft"
-                            className="!px-3 !py-1.5 text-xs w-full border border-green-200 text-green-800"
-                            onClick={() => handleOpenSummaryModal(booking)}
-                          >
-                            {booking.sessionSummary ? 'ערוך סיכום' : 'הוסף סיכום'}
-                          </Button>
-                        )}
                         {activeTab !== 'history' && booking.status === 'cancelled' && (
                           <p className="text-xs text-neutral-500 text-right leading-snug">הפגישה בוטלה</p>
-                        )}
-                        {activeTab === 'history' && booking.status === 'completed' && (
-                          <Button
-                            type="button"
-                            variant="soft"
-                            className="!px-3 !py-1.5 text-xs w-full border border-green-200 text-green-800"
-                            onClick={() => handleOpenSummaryModal(booking)}
-                          >
-                            {booking.sessionSummary ? 'ערוך סיכום' : 'הוסף סיכום'}
-                          </Button>
                         )}
                       </div>
                     </div>
