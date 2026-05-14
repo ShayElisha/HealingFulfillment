@@ -57,10 +57,40 @@ const getTransporter = () => {
   return createTransporter()
 }
 
-const DEFAULT_CUSTOMER_LOGIN_URL = 'https://healing-fulfillment.vercel.app/customer/login'
+const PUBLIC_APP_ORIGIN = 'https://healing-fulfillment.vercel.app'
+
+const isLocalEmailHost = (hostname) => {
+  const h = String(hostname || '').toLowerCase()
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '::1'
+}
+
+/** מיילים חייבים להפנות לאתר בפרודקשן — לא ל-localhost מ-.env או קישורים שנשמרו בטעות */
+const rewriteLocalhostToProductionAppUrl = (urlString) => {
+  const s = String(urlString || '').trim()
+  if (!s) return s
+  try {
+    const u = new URL(s)
+    if (!isLocalEmailHost(u.hostname)) return s
+    return `${PUBLIC_APP_ORIGIN}${u.pathname}${u.search}${u.hash}`
+  } catch {
+    return s
+  }
+}
+
+const DEFAULT_CUSTOMER_LOGIN_URL = `${PUBLIC_APP_ORIGIN}/customer/login`
 const getCustomerLoginUrl = () => {
   const configuredUrl = String(process.env.CUSTOMER_LOGIN_URL || DEFAULT_CUSTOMER_LOGIN_URL).trim()
-  return configuredUrl || DEFAULT_CUSTOMER_LOGIN_URL
+  const url = configuredUrl || DEFAULT_CUSTOMER_LOGIN_URL
+  return rewriteLocalhostToProductionAppUrl(url)
+}
+
+const zoomLinkParagraphForEmail = (booking, reminderStyle = false) => {
+  if (booking.meetingType !== 'zoom' || !booking.zoomLink) return ''
+  const url = rewriteLocalhostToProductionAppUrl(booking.zoomLink)
+  if (reminderStyle) {
+    return `<p><strong>🔗 קישור אונליין:</strong> <a href="${url}" style="color: #8B5CF6; font-weight: bold;">${url}</a></p>`
+  }
+  return `<p><strong>קישור אונליין:</strong> <a href="${url}">${url}</a></p>`
 }
 
 // תבנית HTML בסיסית
@@ -313,7 +343,7 @@ export const sendIntroMeetingConfirmationEmail = async (booking) => {
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
       <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      ${zoomLinkParagraphForEmail(booking)}
     </div>
     <p>פגישת ההיכרות היא הזדמנות להכיר, להבין מה אתה מחפש, ולראות אם אנחנו מתאימים לעבוד יחד.</p>
     <p>ללא התחייבות, רק שיחה פתוחה וכנה.</p>
@@ -345,7 +375,7 @@ export const sendRegularMeetingConfirmationEmail = async (booking) => {
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
       <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      ${zoomLinkParagraphForEmail(booking)}
     </div>
     <p>ניצור איתך קשר בקרוב לאישור סופי של הפגישה.</p>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו.</p>
@@ -410,7 +440,7 @@ export const sendBookingConfirmedEmail = async (booking) => {
       <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
       ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
       <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
+      ${zoomLinkParagraphForEmail(booking)}
     </div>
     <p>אנא ודא שאתה זמין בתאריך ובשעה שנקבעו.</p>
     <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו בהקדם.</p>
@@ -597,7 +627,7 @@ export const sendBookingReminderEmail = async (booking) => {
       <p><strong>📅 תאריך:</strong> ${dateStr}</p>
       ${timeStr ? `<p><strong>🕐 שעה:</strong> ${timeStr}</p>` : ''}
       <p><strong>📍 סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>🔗 קישור אונליין:</strong> <a href="${booking.zoomLink}" style="color: #8B5CF6; font-weight: bold;">${booking.zoomLink}</a></p>` : ''}
+      ${zoomLinkParagraphForEmail(booking, true)}
     </div>
     <h3>הכנות מומלצות:</h3>
     <ul>
