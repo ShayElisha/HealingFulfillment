@@ -79,7 +79,8 @@ router.post('/login', async (req, res, next) => {
   console.log('[Auth Route] Request path:', req.path)
   console.log('[Auth Route] Request originalUrl:', req.originalUrl)
   try {
-    const { email, password } = req.body
+    const { password } = req.body
+    const email = String(req.body?.email ?? '').trim().toLowerCase()
 
     if (!email || !password) {
       return res.status(400).json({ 
@@ -87,8 +88,9 @@ router.post('/login', async (req, res, next) => {
       })
     }
 
-    // מצא את הלקוח לפי אימייל עם passwordHash
-    const customer = await Customer.findOne({ email: email.toLowerCase() })
+    // מצא לקוח (כולל רשומות ישנות עם אותיות גדולות במסד — אחרי התחברות מנרמלים לשמירה)
+    const customer = await Customer.findOne({ email })
+      .collation({ locale: 'en', strength: 2 })
       .select('+passwordHash')
 
     if (!customer) {
@@ -128,7 +130,8 @@ router.post('/login', async (req, res, next) => {
       })
     }
 
-    // עדכן תאריך התחברות אחרונה
+    // עדכן תאריך התחברות; יישור אימייל לאותיות קטנות אם במסד נשמרו אותיות גדולות
+    customer.email = email
     customer.lastLoginAt = new Date()
     await customer.save()
 
@@ -188,7 +191,9 @@ router.post('/forgot-password', async (req, res, next) => {
       message: 'אם האימייל קיים במערכת, נשלח אליו קישור לאיפוס סיסמה.',
     }
 
-    const customer = await Customer.findOne({ email }).select('+passwordHash')
+    const customer = await Customer.findOne({ email })
+      .collation({ locale: 'en', strength: 2 })
+      .select('+passwordHash')
     if (!customer || !customer.hasAccount || !customer.email) {
       return res.json(generic)
     }

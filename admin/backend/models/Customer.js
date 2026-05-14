@@ -168,6 +168,9 @@ const customerSchema = new mongoose.Schema({
 })
 
 customerSchema.pre('save', function(next) {
+  if (typeof this.email === 'string') {
+    this.email = this.email.trim().toLowerCase()
+  }
   this.updatedAt = Date.now()
   next()
 })
