@@ -928,6 +928,22 @@ router.post('/admin/customers/:id/reset-password', async (req, res, next) => {
     customer.mustChangePassword = true // דרוש שינוי סיסמה בהתחברות הבאה
     
     await customer.save()
+
+    if (customer.email) {
+      console.log('📧 Attempting to send password reset email to:', customer.email)
+      try {
+        const emailResult = await sendAccountCreationEmail(customer, newPassword)
+        if (emailResult.success) {
+          console.log('✅ Password reset email sent successfully')
+        } else {
+          console.error('❌ Failed to send password reset email:', emailResult.error || emailResult.message)
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending password reset email:', emailError)
+      }
+    } else {
+      console.warn('⚠️  No email address for customer, skipping email')
+    }
     
     res.json({
       message: 'סיסמה ראשונית חדשה נוצרה בהצלחה',
