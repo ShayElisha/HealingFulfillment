@@ -454,6 +454,56 @@ export const sendBookingConfirmedEmail = async (booking) => {
   })
 }
 
+const formatBookingDateHe = (date) => {
+  if (!date) return ''
+  return new Date(date).toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+}
+
+const meetingTypeLabelHe = (meetingType) =>
+  meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'
+
+// תבנית אימייל לעדכון מועד/פרטי פגישה
+export const sendBookingRescheduledEmail = async (booking, previous) => {
+  const oldDateStr = formatBookingDateHe(previous?.preferredDate)
+  const newDateStr = formatBookingDateHe(booking.preferredDate)
+  const oldTime = previous?.preferredTime || ''
+  const newTime = booking.preferredTime || ''
+  const oldMeetingType = previous?.meetingType
+  const newMeetingType = booking.meetingType
+
+  const content = `
+    <h2>מועד הפגישה עודכן 📅</h2>
+    <p>שלום ${booking.name},</p>
+    <p>אנו מעדכנים אותך שפרטי הפגישה שלך שונו:</p>
+    <div class="info-box" style="background-color: #f8f9fa; border-right-color: #6c757d;">
+      <p style="margin-top: 0;"><strong>מועד קודם:</strong></p>
+      <p><strong>תאריך:</strong> ${oldDateStr || '—'}</p>
+      ${oldTime ? `<p><strong>שעה:</strong> ${oldTime}</p>` : ''}
+      ${oldMeetingType ? `<p><strong>סוג פגישה:</strong> ${meetingTypeLabelHe(oldMeetingType)}</p>` : ''}
+    </div>
+    <div class="info-box" style="background-color: #e8f5e9; border-right-color: #4caf50;">
+      <p style="margin-top: 0;"><strong>מועד חדש:</strong></p>
+      <p><strong>תאריך:</strong> ${newDateStr}</p>
+      ${newTime ? `<p><strong>שעה:</strong> ${newTime}</p>` : ''}
+      <p><strong>סוג פגישה:</strong> ${meetingTypeLabelHe(newMeetingType)}</p>
+      ${zoomLinkParagraphForEmail(booking)}
+    </div>
+    <p>אנא ודא שאתה זמין במועד החדש. אם המועד לא מתאים לך, צור קשר איתנו בהקדם.</p>
+    <p>מצפים לראותך!<br>יניב טנעמי</p>
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: 'עדכון מועד פגישה - ריפוי והגשמה',
+    html: getBaseTemplate('עדכון מועד פגישה', content),
+  })
+}
+
 // תבנית אימייל לביטול פגישה
 export const sendBookingCancelledEmail = async (booking, cancellationReason) => {
   const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {

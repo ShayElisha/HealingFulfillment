@@ -8,6 +8,7 @@ import {
   sendBookingConfirmedEmail, 
   sendBookingCancelledEmail, 
   sendBookingCompletedEmail,
+  sendBookingRescheduledEmail,
   sendSessionSummaryEmail,
   sendPurchaseCompletedEmail,
   sendPurchaseCancelledEmail
@@ -792,6 +793,12 @@ router.put('/bookings/:id/details', async (req, res, next) => {
       return res.status(404).json({ message: 'Booking not found' })
     }
 
+    const previousDetails = {
+      preferredDate: booking.preferredDate,
+      preferredTime: booking.preferredTime || '',
+      meetingType: booking.meetingType,
+    }
+
     const preferredDateRaw = String(req.body?.preferredDate || '').trim()
     const preferredTimeRaw = String(req.body?.preferredTime || '').trim()
     const meetingTypeRaw = String(req.body?.meetingType || '').trim()
@@ -857,6 +864,28 @@ router.put('/bookings/:id/details', async (req, res, next) => {
     booking.meetingType = meetingTypeRaw
     booking.notes = notesRaw
     await booking.save()
+
+    const dateChanged =
+      formatYmd(previousDetails.preferredDate) !== formatYmd(booking.preferredDate)
+    const timeChanged =
+      (previousDetails.preferredTime || '') !== (booking.preferredTime || '')
+    const meetingTypeChanged = previousDetails.meetingType !== booking.meetingType
+
+    if (booking.email && (dateChanged || timeChanged || meetingTypeChanged)) {
+      try {
+        const emailResult = await sendBookingRescheduledEmail(booking, previousDetails)
+        if (emailResult?.success) {
+          console.log(`✅ Booking rescheduled email sent to ${booking.email}`)
+        } else {
+          console.error(
+            '❌ Failed to send booking rescheduled email:',
+            emailResult?.error || emailResult?.message
+          )
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending booking rescheduled email:', emailError)
+      }
+    }
 
     return res.json({
       message: 'פרטי הפגישה עודכנו בהצלחה',
