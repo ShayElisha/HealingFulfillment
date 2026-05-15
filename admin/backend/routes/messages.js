@@ -89,18 +89,40 @@ router.post('/', async (req, res, next) => {
 
     await message.save()
 
-    // Send messages asynchronously
-    sendMessagesAsync(message, recipients, channels).catch(error => {
-      console.error('Error sending messages:', error)
-    })
+    // חובה להמתין לסיום השליחה לפני תשובת HTTP — ב-Vercel Serverless עבודה ברקע נקטעת אחרי res.json
+    let sendSummary
+    try {
+      sendSummary = await sendMessagesAsync(message, recipients, channels)
+    } catch (sendError) {
+      console.error('Error sending messages:', sendError)
+      sendSummary = {
+        status: 'failed',
+        successCount: 0,
+        failCount: recipients.length * channels.length,
+        sendResults: [],
+        error: sendError.message,
+      }
+    }
+
+    const updated = await Message.findById(message._id).lean()
 
     res.status(201).json({
-      message: 'Message created and sending started',
+      message:
+        sendSummary.status === 'sent'
+          ? 'ההודעה נשלחה בהצלחה'
+          : sendSummary.status === 'partially_sent'
+            ? 'ההודעה נשלחה חלקית — חלק מהנמענים נכשלו'
+            : 'שליחת ההודעה נכשלה',
       data: {
         id: message._id,
         recipientsCount: recipients.length,
-        channels
-      }
+        channels,
+        status: updated?.status || sendSummary.status,
+        sendResults: updated?.sendResults || sendSummary.sendResults,
+        emailSent: sendSummary.emailSent,
+        emailFailed: sendSummary.emailFailed,
+        systemSent: sendSummary.systemSent,
+      },
     })
   } catch (error) {
     next(error)
@@ -146,13 +168,15 @@ router.get('/customer/:customerId', async (req, res, next) => {
   }
 })
 
-// Helper function to send messages asynchronously
+// שליחת הודעות לכל הנמענים (חייבת להסתיים לפני תשובת HTTP ב-Vercel)
 async function sendMessagesAsync(message, recipients, channels) {
   const sendResults = []
   let successCount = 0
   let failCount = 0
+  let emailSent = 0
+  let emailFailed = 0
+  let systemSent = 0
 
-  // Update status to sending
   await Message.findByIdAndUpdate(message._id, { status: 'sending' })
 
   for (const recipient of recipients) {
@@ -161,39 +185,47 @@ async function sendMessagesAsync(message, recipients, channels) {
         customer: recipient._id,
         channel,
         status: 'pending',
-        sentAt: null
+        sentAt: null,
       }
 
       try {
         if (channel === 'email') {
-          if (recipient.email) {
+          const to = String(recipient.email || '').trim()
+          if (!to) {
+            result.status = 'failed'
+            result.error = 'No email address'
+            failCount++
+            emailFailed++
+          } else {
+            console.log(`📧 Sending admin message email to ${to}`)
             const emailResult = await sendEmail({
-              to: recipient.email,
+              to,
               subject: message.subject,
-              html: getBaseTemplate(message.subject, message.content.replace(/\n/g, '<br>'))
+              html: getBaseTemplate(
+                message.subject,
+                message.content.replace(/\n/g, '<br>')
+              ),
             })
-            
+
             if (emailResult.success) {
               result.status = 'sent'
               result.sentAt = new Date()
               successCount++
+              emailSent++
+              console.log(`✅ Admin message email sent to ${to}`)
             } else {
               result.status = 'failed'
-              result.error = emailResult.error || 'Unknown error'
+              result.error = emailResult.error || emailResult.message || 'Unknown error'
               failCount++
+              emailFailed++
+              console.error(`❌ Admin message email failed for ${to}:`, result.error)
             }
-          } else {
-            result.status = 'failed'
-            result.error = 'No email address'
-            failCount++
           }
         } else if (channel === 'system') {
-          // System message - saved in customer's messages array
-          // The message is already saved in the Message collection
-          // We just need to mark it as sent for system channel
           result.status = 'sent'
           result.sentAt = new Date()
           successCount++
+          systemSent++
         }
 
         sendResults.push(result)
@@ -201,18 +233,31 @@ async function sendMessagesAsync(message, recipients, channels) {
         result.status = 'failed'
         result.error = error.message
         failCount++
+        if (channel === 'email') emailFailed++
         sendResults.push(result)
+        console.error('❌ Message send error:', error)
       }
     }
   }
 
-  // Update message with results
-  const finalStatus = failCount === 0 ? 'sent' : (successCount === 0 ? 'failed' : 'partially_sent')
+  const finalStatus =
+    failCount === 0 ? 'sent' : successCount === 0 ? 'failed' : 'partially_sent'
+
   await Message.findByIdAndUpdate(message._id, {
     status: finalStatus,
     sendResults,
-    sentAt: new Date()
+    sentAt: new Date(),
   })
+
+  return {
+    status: finalStatus,
+    successCount,
+    failCount,
+    sendResults,
+    emailSent,
+    emailFailed,
+    systemSent,
+  }
 }
 
 export default router

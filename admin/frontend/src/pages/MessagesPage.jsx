@@ -115,14 +115,36 @@ function MessagesPage() {
     }
 
     try {
-      await messageService.send({
+      const result = await messageService.send({
         recipientIds: selectedCustomers,
         subject: formData.subject,
         content: formData.content,
         channels: formData.channels
       })
-      
-      toast.success(`הודעה נשלחה ל-${selectedCustomers.length} לקוחות`)
+
+      const data = result?.data
+      const status = data?.status
+      const hasEmail = formData.channels.includes('email')
+
+      if (status === 'failed') {
+        if (hasEmail && data?.emailFailed > 0) {
+          toast.error(
+            'שליחת המייל נכשלה. בדוק הגדרות SMTP ב-Vercel (SMTP_USER, SMTP_PASSWORD).'
+          )
+        } else {
+          toast.error(result?.message || 'שליחת ההודעה נכשלה')
+        }
+      } else if (status === 'partially_sent') {
+        toast.error(
+          `נשלח חלקית: ${data?.emailSent ?? 0} מיילים הצליחו, ${data?.emailFailed ?? 0} נכשלו`
+        )
+      } else if (hasEmail && (data?.emailSent ?? 0) > 0) {
+        toast.success(
+          `הודעה נשלחה — ${data.emailSent} מיילים${data.systemSent ? `, ${data.systemSent} במערכת` : ''}`
+        )
+      } else {
+        toast.success(`הודעה נשלחה ל-${selectedCustomers.length} לקוחות`)
+      }
       setShowSendForm(false)
       setFormData({
         subject: '',
