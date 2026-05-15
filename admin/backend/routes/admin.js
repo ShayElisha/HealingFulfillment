@@ -13,7 +13,7 @@ import {
   sendPurchaseCompletedEmail,
   sendPurchaseCancelledEmail
 } from '../services/emailService.js'
-import { isPreferredTimeAllowed, formatYmd } from '../services/availabilityService.js'
+import { isPreferredTimeAllowed, formatYmd, parseLocalDateOnly } from '../services/availabilityService.js'
 import Transaction from '../models/Transaction.js'
 import { applyAutoCoachingWindowIfNeeded } from '../utils/coachingPurchaseWindow.js'
 import { createSubscriptionForCompletedPurchase } from '../utils/subscriptionFromPurchase.js'
@@ -21,6 +21,21 @@ import { createSubscriptionForCompletedPurchase } from '../utils/subscriptionFro
 const router = express.Router()
 
 const COACHING_DEFAULT_MONTHS = 3
+
+function ymdFromBookingDate(date) {
+  if (!date) return ''
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  return formatYmd(d)
+}
+
+async function resolveBookingRecipientEmail(booking) {
+  const direct = String(booking?.email || '').trim()
+  if (direct) return direct
+  if (!booking?.customer) return ''
+  const customer = await Customer.findById(booking.customer).select('email').lean()
+  return String(customer?.email || '').trim()
+}
 
 function escapeRegex(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -814,10 +829,25 @@ router.put('/bookings/:id/details', async (req, res, next) => {
       return res.status(400).json({ message: 'פורמט שעה לא תקין. יש להזין HH:MM' })
     }
 
-    const preferredDateObj = new Date(preferredDateRaw)
-    if (Number.isNaN(preferredDateObj.getTime())) {
+    const preferredDateObj =
+      parseLocalDateOnly(preferredDateRaw) ||
+      (() => {
+        const d = new Date(preferredDateRaw)
+        return Number.isNaN(d.getTime()) ? null : d
+      })()
+    if (!preferredDateObj) {
       return res.status(400).json({ message: 'תאריך פגישה לא תקין' })
     }
+
+    const previousDateYmd = ymdFromBookingDate(previousDetails.preferredDate)
+    const newDateYmd = /^\d{4}-\d{2}-\d{2}$/.test(preferredDateRaw)
+      ? preferredDateRaw
+      : ymdFromBookingDate(preferredDateObj)
+    const dateChanged = previousDateYmd !== newDateYmd
+    const timeChanged =
+      String(previousDetails.preferredTime || '').trim() !== preferredTimeRaw
+    const meetingTypeChanged = previousDetails.meetingType !== meetingTypeRaw
+    const scheduleChanged = dateChanged || timeChanged || meetingTypeChanged
 
     const dateStart = new Date(preferredDateObj)
     dateStart.setHours(0, 0, 0, 0)
@@ -859,30 +889,59 @@ router.put('/bookings/:id/details', async (req, res, next) => {
       }
     }
 
+    if (!booking.email) {
+      const resolvedEmail = await resolveBookingRecipientEmail(booking)
+      if (resolvedEmail) booking.email = resolvedEmail
+    }
+
     booking.preferredDate = preferredDateObj
     booking.preferredTime = preferredTimeRaw
     booking.meetingType = meetingTypeRaw
     booking.notes = notesRaw
     await booking.save()
 
-    const dateChanged =
-      formatYmd(previousDetails.preferredDate) !== formatYmd(booking.preferredDate)
-    const timeChanged =
-      (previousDetails.preferredTime || '') !== (booking.preferredTime || '')
-    const meetingTypeChanged = previousDetails.meetingType !== booking.meetingType
+    const recipientEmail = await resolveBookingRecipientEmail(booking)
+    let emailNotification = {
+      attempted: false,
+      sent: false,
+      skippedReason: null,
+    }
 
-    if (booking.email && (dateChanged || timeChanged || meetingTypeChanged)) {
+    if (!scheduleChanged) {
+      emailNotification.skippedReason = 'no_schedule_change'
+      console.log('📧 Reschedule email skipped: no date/time/meeting type change', {
+        bookingId: booking._id,
+        previousDateYmd,
+        newDateYmd,
+        previousTime: previousDetails.preferredTime,
+        newTime: preferredTimeRaw,
+      })
+    } else if (!recipientEmail) {
+      emailNotification.skippedReason = 'no_email'
+      console.warn('⚠️ Reschedule email skipped: no email on booking or linked customer', {
+        bookingId: booking._id,
+        customerId: booking.customer,
+      })
+    } else {
+      emailNotification.attempted = true
       try {
-        const emailResult = await sendBookingRescheduledEmail(booking, previousDetails)
+        const emailResult = await sendBookingRescheduledEmail(
+          booking,
+          previousDetails,
+          recipientEmail
+        )
+        emailNotification.sent = Boolean(emailResult?.success)
         if (emailResult?.success) {
-          console.log(`✅ Booking rescheduled email sent to ${booking.email}`)
+          console.log(`✅ Booking rescheduled email sent to ${recipientEmail}`)
         } else {
+          emailNotification.skippedReason = 'smtp_failed'
           console.error(
             '❌ Failed to send booking rescheduled email:',
             emailResult?.error || emailResult?.message
           )
         }
       } catch (emailError) {
+        emailNotification.skippedReason = 'smtp_error'
         console.error('❌ Error sending booking rescheduled email:', emailError)
       }
     }
@@ -890,6 +949,7 @@ router.put('/bookings/:id/details', async (req, res, next) => {
     return res.json({
       message: 'פרטי הפגישה עודכנו בהצלחה',
       data: booking,
+      emailNotification,
     })
   } catch (error) {
     next(error)

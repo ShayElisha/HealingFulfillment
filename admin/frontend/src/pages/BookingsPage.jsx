@@ -10,6 +10,7 @@ import PageHeader from '../components/PageHeader'
 import AdminModalLayout from '../components/AdminModalLayout'
 import AdminPager from '../components/AdminPager'
 import toast from 'react-hot-toast'
+import { toLocalDateInputValue } from '../utils/bookingDate.js'
 
 const BOOKINGS_PAGE_SIZE = 25
 
@@ -166,9 +167,7 @@ function BookingsPage() {
   }
 
   const handleOpenEditBooking = (booking) => {
-    const dateValue = booking?.preferredDate
-      ? new Date(booking.preferredDate).toISOString().slice(0, 10)
-      : ''
+    const dateValue = toLocalDateInputValue(booking?.preferredDate)
     setEditingBooking(booking)
     setBookingEditForm({
       preferredDate: dateValue,
@@ -197,7 +196,7 @@ function BookingsPage() {
     }
     try {
       setSavingBookingEdit(true)
-      await bookingService.updateDetails(editingBooking._id, {
+      const result = await bookingService.updateDetails(editingBooking._id, {
         preferredDate: bookingEditForm.preferredDate,
         preferredTime: bookingEditForm.preferredTime.trim(),
         meetingType: bookingEditForm.meetingType,
@@ -205,6 +204,12 @@ function BookingsPage() {
       })
       await loadData()
       toast.success('פרטי הפגישה עודכנו')
+      const email = result?.emailNotification
+      if (email?.attempted && !email?.sent) {
+        toast.error('הפגישה עודכנה אך המייל ללקוח לא נשלח. בדוק הגדרות SMTP בשרת.')
+      } else if (email?.skippedReason === 'no_email') {
+        toast.error('הפגישה עודכנה אך אין אימייל ללקוח — לא נשלח מייל.')
+      }
       handleCloseEditBooking()
     } catch (error) {
       toast.error(error?.response?.data?.message || 'שגיאה בעדכון פרטי הפגישה')

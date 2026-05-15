@@ -468,7 +468,12 @@ const meetingTypeLabelHe = (meetingType) =>
   meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'
 
 // תבנית אימייל לעדכון מועד/פרטי פגישה
-export const sendBookingRescheduledEmail = async (booking, previous) => {
+export const sendBookingRescheduledEmail = async (booking, previous, toEmail) => {
+  const to = String(toEmail || booking.email || '').trim()
+  if (!to) {
+    return { success: false, message: 'No recipient email', error: 'No recipient email' }
+  }
+
   const oldDateStr = formatBookingDateHe(previous?.preferredDate)
   const newDateStr = formatBookingDateHe(booking.preferredDate)
   const oldTime = previous?.preferredTime || ''
@@ -498,7 +503,7 @@ export const sendBookingRescheduledEmail = async (booking, previous) => {
   `
 
   return await sendEmail({
-    to: booking.email,
+    to,
     subject: 'עדכון מועד פגישה - ריפוי והגשמה',
     html: getBaseTemplate('עדכון מועד פגישה', content),
   })
