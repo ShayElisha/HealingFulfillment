@@ -8,6 +8,7 @@ import {
   sendBookingConfirmedEmail, 
   sendBookingCancelledEmail, 
   sendBookingCompletedEmail,
+  sendFirstMeetingFollowUpEmail,
   sendBookingRescheduledEmail,
   sendSessionSummaryEmail,
   sendPurchaseCompletedEmail,
@@ -659,12 +660,33 @@ router.put('/bookings/:id/status', async (req, res, next) => {
             console.error('❌ Failed to send booking cancelled email:', emailResult?.error || emailResult?.message)
           }
         } else if (status === 'completed' && oldBooking.status !== 'completed') {
-          // Send completion email
-          emailResult = await sendBookingCompletedEmail(booking)
-          if (emailResult && emailResult.success) {
-            console.log(`✅ Booking completed email sent to ${booking.email}`)
+          const priorCompleted = booking.customer
+            ? await Booking.countDocuments({
+                customer: booking.customer,
+                status: 'completed',
+                _id: { $ne: booking._id },
+              })
+            : 1
+          if (priorCompleted === 0) {
+            emailResult = await sendFirstMeetingFollowUpEmail(booking)
+            if (emailResult?.success) {
+              console.log(`✅ First meeting follow-up email sent to ${booking.email}`)
+            } else {
+              console.error(
+                '❌ Failed to send first meeting follow-up email:',
+                emailResult?.error || emailResult?.message
+              )
+            }
           } else {
-            console.error('❌ Failed to send booking completed email:', emailResult?.error || emailResult?.message)
+            emailResult = await sendBookingCompletedEmail(booking)
+            if (emailResult?.success) {
+              console.log(`✅ Booking completed email sent to ${booking.email}`)
+            } else {
+              console.error(
+                '❌ Failed to send booking completed email:',
+                emailResult?.error || emailResult?.message
+              )
+            }
           }
         }
       } catch (emailError) {

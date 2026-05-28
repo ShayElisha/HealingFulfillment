@@ -1,326 +1,214 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
+import {
+  getBaseTemplate,
+  getCustomerLoginUrl,
+  getCustomerProfileUrl,
+  emailButton,
+  emailInfoBox,
+  emailInfoRow,
+  emailSignature,
+  escapeHtml,
+  formatDateHeLong,
+  formatDateHeShort,
+  meetingTypeLabel,
+  meetingLocationHtml,
+  paymentMethodLabelHe,
+  BRAND_PROGRAM,
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+} from '../utils/emailBranding.js'
 
 dotenv.config()
 
-// יצירת transporter
+export { getBaseTemplate }
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
 })
 
-const DEFAULT_CUSTOMER_LOGIN_URL = 'https://healing-fulfillment.vercel.app/customer/login'
-const getCustomerLoginUrl = () => {
-  const configuredUrl = String(process.env.CUSTOMER_LOGIN_URL || DEFAULT_CUSTOMER_LOGIN_URL).trim()
-  return configuredUrl || DEFAULT_CUSTOMER_LOGIN_URL
-}
+const buildBookingConfirmationContent = (booking) => {
+  const name = escapeHtml(booking.name)
+  const dateLong = formatDateHeLong(booking.preferredDate)
+  const time = booking.preferredTime || ''
+  const typeLabel = meetingTypeLabel(booking)
+  const prep = booking.isIntroMeeting
+    ? 'רשימת נושאים או שאלות שתרצה/י לדון בהם בפגישה.'
+    : 'רשימת שאלות או נושאים שתרצה/י לדון בהם, וכל חומר רלוונטי מהתהליך.'
+  const contactLine = CONTACT_PHONE
+    ? `אם יש לך שאלות נוספות או צורך בשינוי התאריך, אנא השב/י למייל זה או התקשר/י אליי בהקדם למספר <strong>${escapeHtml(CONTACT_PHONE)}</strong>.`
+    : `אם יש לך שאלות נוספות או צורך בשינוי התאריך, אנא השב/י למייל זה או צור/י קשר דרך <a href="mailto:${escapeHtml(CONTACT_EMAIL)}" style="color: #8b5cf6;">${escapeHtml(CONTACT_EMAIL)}</a>.`
 
-// תבנית HTML בסיסית
-export const getBaseTemplate = (title, content) => {
   return `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="he">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
-      <style>
-        body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 20px;
-          background-color: #f5f5f5;
-        }
-        .container {
-          background-color: #ffffff;
-          border-radius: 8px;
-          padding: 30px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header {
-          text-align: center;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #8B5CF6;
-        }
-        .header h1 {
-          color: #8B5CF6;
-          margin: 0;
-          font-size: 24px;
-        }
-        .content {
-          margin-bottom: 30px;
-        }
-        .content p {
-          margin-bottom: 15px;
-        }
-        .button {
-          display: inline-block;
-          padding: 12px 24px;
-          background-color: #8B5CF6;
-          color: #ffffff;
-          text-decoration: none;
-          border-radius: 6px;
-          margin: 20px 0;
-        }
-        .footer {
-          text-align: center;
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #e0e0e0;
-          color: #666;
-          font-size: 14px;
-        }
-        .info-box {
-          background-color: #f9f9f9;
-          border-right: 4px solid #8B5CF6;
-          padding: 15px;
-          margin: 20px 0;
-          border-radius: 4px;
-        }
-        .info-box strong {
-          color: #8B5CF6;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>ריפוי והגשמה</h1>
-        </div>
-        <div class="content">
-          ${content}
-        </div>
-        <div class="footer">
-          <p>ריפוי והגשמה - מסע משותף אל עבר שחרור מחסימות רגשיות והגשמה עצמית</p>
-          <p>כתובת: [כתובת המשרד] | טלפון: 050-123-4567 | אימייל: yaniv@elatzmi.com</p>
-        </div>
-      </div>
-    </body>
-    </html>
+    <h2 style="margin: 0 0 20px; font-size: 22px; color: #1f2937; font-weight: 700;">אישור פגישה</h2>
+    <p style="margin: 0 0 16px;">שלום ${name},</p>
+    <p style="margin: 0 0 20px;">אני שמח לאשר את פגישתך שנקבעה ל<strong>${dateLong}</strong>${time ? `, בשעה <strong>${escapeHtml(time)}</strong>` : ''}.</p>
+    ${emailInfoBox(`
+      ${emailInfoRow('תאריך', escapeHtml(dateLong))}
+      ${time ? emailInfoRow('שעה', escapeHtml(time)) : ''}
+      ${emailInfoRow('סוג פגישה', escapeHtml(typeLabel))}
+      ${meetingLocationHtml(booking)}
+    `)}
+    <p style="margin: 20px 0 8px; font-weight: 600; color: #6d4c9f;">הכנה מראש:</p>
+    <p style="margin: 0 0 20px;">כדי שנוכל למקסם את הפגישה, אנא הכן/י מראש ${prep}</p>
+    <p style="margin: 0 0 20px;">${contactLine}</p>
+    <p style="margin: 0 0 8px;">מצפים לשיחה!</p>
+    ${emailSignature()}
   `
 }
 
-// פונקציה לשליחת אימייל
+const bookingConfirmationSubject = (booking) => {
+  const typeLabel = meetingTypeLabel(booking)
+  const dateLong = formatDateHeLong(booking.preferredDate)
+  const time = booking.preferredTime ? `, ${booking.preferredTime}` : ''
+  return `אישור פגישה: ${typeLabel} עם יניב – ${dateLong}${time}`
+}
+
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    console.log('📧 Attempting to send email...')
-    console.log('📧 To:', to)
-    console.log('📧 Subject:', subject)
-    console.log('📧 SMTP_USER:', process.env.SMTP_USER ? '✅ Set' : '❌ Not set')
-    console.log('📧 SMTP_PASSWORD:', process.env.SMTP_PASSWORD ? '✅ Set' : '❌ Not set')
-    console.log('📧 SMTP_HOST:', process.env.SMTP_HOST || 'smtp.gmail.com')
-    console.log('📧 SMTP_PORT:', process.env.SMTP_PORT || '587')
-
-    // בדיקה שהאימייל מוגדר
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
       console.warn('⚠️  SMTP credentials not configured. Email not sent.')
-      console.log('📧 Email would be sent to:', to)
-      console.log('📧 Subject:', subject)
       return { success: false, message: 'SMTP not configured' }
     }
 
-    // בדיקת תקינות ה-transporter
     try {
       await transporter.verify()
-      console.log('✅ SMTP server connection verified')
     } catch (verifyError) {
-      console.error('❌ SMTP server verification failed:', verifyError)
+      console.error('❌ SMTP verification failed:', verifyError)
       return { success: false, error: `SMTP verification failed: ${verifyError.message}` }
     }
 
     const mailOptions = {
-      from: `"ריפוי והגשמה" <${process.env.SMTP_USER}>`,
-      to: to,
-      replyTo: process.env.SMTP_USER, // הוסף כתובת תשובה
-      subject: subject,
-      html: html,
-      text: text || html.replace(/<[^>]*>/g, ''), // טקסט פשוט אם לא סופק
-      headers: {
-        'X-Priority': '1',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'high'
-      }
+      from: `"${BRAND_PROGRAM}" <${process.env.SMTP_USER}>`,
+      to,
+      replyTo: process.env.SMTP_USER,
+      subject,
+      html,
+      text: text || html.replace(/<[^>]*>/g, ''),
     }
 
-    console.log('📧 Sending email with options:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject
-    })
-
     const info = await transporter.sendMail(mailOptions)
-    console.log('✅ Email sent successfully!')
-    console.log('📧 Message ID:', info.messageId)
-    console.log('📧 Response:', info.response)
     return { success: true, messageId: info.messageId, response: info.response }
   } catch (error) {
-    console.error('❌ Error sending email:')
-    console.error('❌ Error message:', error.message)
-    console.error('❌ Error code:', error.code)
-    console.error('❌ Error stack:', error.stack)
+    console.error('❌ Error sending email:', error)
     return { success: false, error: error.message, code: error.code }
   }
 }
 
-// תבנית אימייל לרכישה
 export const sendPurchaseConfirmationEmail = async (purchase, course, customer) => {
   const loginUrl = getCustomerLoginUrl()
+  const purchaseDate = formatDateHeShort(purchase.createdAt)
   const content = `
-    <h2>תודה על רכישתך!</h2>
-    <p>שלום ${customer.name},</p>
-    <p>אנו שמחים לאשר את רכישתך של המסלול:</p>
-    <div class="info-box">
-      <p><strong>מסלול:</strong> ${course.title}</p>
-      <p><strong>מחיר:</strong> ₪${purchase.price}</p>
-      <p><strong>שיטת תשלום:</strong> ${purchase.paymentMethod === 'cash' ? 'מזומן' : purchase.paymentMethod === 'credit' ? 'אשראי' : 'אחר'}</p>
-      <p><strong>תאריך רכישה:</strong> ${new Date(purchase.createdAt).toLocaleDateString('he-IL', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })}</p>
-    </div>
-    <p style="text-align: center;">
-      <a href="${loginUrl}" class="button">התחברות לתיק לקוח</a>
-    </p>
-    <p>ניצור איתך קשר בקרוב כדי לתאם את הפגישות.</p>
-    <p>אם יש לך שאלות, אנא צור קשר איתנו.</p>
-    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+    <h2 style="margin: 0 0 20px; font-size: 22px; color: #1f2937; font-weight: 700;">אישור רכישה</h2>
+    <p style="margin: 0 0 16px;">שלום ${escapeHtml(customer.name)},</p>
+    <p style="margin: 0 0 16px;">תודה על רכישתך! אנו שמחים לאשר את רכישתך של המסלול: <strong>${escapeHtml(course.title)}</strong></p>
+    ${emailInfoBox(`
+      ${emailInfoRow('מסלול', escapeHtml(course.title))}
+      ${emailInfoRow('מחיר', `₪${escapeHtml(purchase.price)}`)}
+      ${emailInfoRow('שיטת תשלום', escapeHtml(paymentMethodLabelHe(purchase.paymentMethod)))}
+      ${emailInfoRow('תאריך רכישה', escapeHtml(purchaseDate))}
+    `)}
+    <p style="margin: 20px 0 8px; font-weight: 600; color: #6d4c9f;">הצעדים הבאים:</p>
+    <ul style="margin: 0 0 20px; padding-right: 22px; line-height: 1.8;">
+      <li>חשבונית/קבלה תישלח אליך למייל.</li>
+      <li>פרטי הגישה לאזור האישי נשלחו אליך.</li>
+    </ul>
+    ${emailButton('התחבר/י לתיק לקוח', loginUrl)}
+    <p style="margin: 0 0 20px;">ניצור איתך קשר בקרוב כדי לתאם את הפגישות הנותרות.</p>
+    ${emailSignature()}
   `
 
   return await sendEmail({
     to: customer.email,
-    subject: 'אישור רכישה - ריפוי והגשמה',
+    subject: `אישור רכישה – ${BRAND_PROGRAM}`,
     html: getBaseTemplate('אישור רכישה', content),
   })
 }
 
-// תבנית אימייל לפגישת היכרות
 export const sendIntroMeetingConfirmationEmail = async (booking) => {
-  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  })
-
-  const content = `
-    <h2>פגישת ההיכרות שלך נקבעה!</h2>
-    <p>שלום ${booking.name},</p>
-    <p>תודה על קביעת פגישת ההיכרות. אנו שמחים לראותך!</p>
-    <div class="info-box">
-      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
-      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
-    </div>
-    <p>פגישת ההיכרות היא הזדמנות להכיר, להבין מה אתה מחפש, ולראות אם אנחנו מתאימים לעבוד יחד.</p>
-    <p>ללא התחייבות, רק שיחה פתוחה וכנה.</p>
-    <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו.</p>
-    <p>מצפים לראותך!<br>יניב טנעמי</p>
-  `
-
+  const content = buildBookingConfirmationContent(booking)
   return await sendEmail({
     to: booking.email,
-    subject: 'אישור פגישת היכרות - ריפוי והגשמה',
-    html: getBaseTemplate('אישור פגישת היכרות', content),
+    subject: bookingConfirmationSubject(booking),
+    html: getBaseTemplate('אישור פגישה', content),
   })
 }
 
-// תבנית אימייל לפגישה רגילה
 export const sendRegularMeetingConfirmationEmail = async (booking) => {
-  const dateStr = new Date(booking.preferredDate).toLocaleDateString('he-IL', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long'
-  })
-
-  const content = `
-    <h2>פגישתך נקבעה!</h2>
-    <p>שלום ${booking.name},</p>
-    <p>אנו שמחים לאשר את קביעת הפגישה שלך.</p>
-    <div class="info-box">
-      <p><strong>תאריך הפגישה:</strong> ${dateStr}</p>
-      ${booking.preferredTime ? `<p><strong>שעה:</strong> ${booking.preferredTime}</p>` : ''}
-      <p><strong>סוג פגישה:</strong> ${booking.meetingType === 'zoom' ? 'פגישה באונליין' : 'פגישה פרונטאלית'}</p>
-      ${booking.meetingType === 'zoom' && booking.zoomLink ? `<p><strong>קישור אונליין:</strong> <a href="${booking.zoomLink}">${booking.zoomLink}</a></p>` : ''}
-    </div>
-    <p>ניצור איתך קשר בקרוב לאישור סופי של הפגישה.</p>
-    <p>אם יש לך שאלות או צריך לשנות את התאריך, אנא צור קשר איתנו.</p>
-    <p>מצפים לראותך!<br>יניב טנעמי</p>
-  `
-
+  const content = buildBookingConfirmationContent(booking)
   return await sendEmail({
     to: booking.email,
-    subject: 'אישור קביעת פגישה - ריפוי והגשמה',
-    html: getBaseTemplate('אישור קביעת פגישה', content),
+    subject: bookingConfirmationSubject(booking),
+    html: getBaseTemplate('אישור פגישה', content),
   })
 }
 
-// תבנית אימייל ליצירת חשבון
 export const sendAccountCreationEmail = async (customer, initialPassword) => {
   const loginUrl = getCustomerLoginUrl()
-
   const content = `
-    <h2>חשבון נוצר עבורך!</h2>
-    <p>שלום ${customer.name},</p>
-    <p>חשבון נוצר עבורך במערכת ריפוי והגשמה.</p>
-    <div class="info-box">
-      <p><strong>אימייל:</strong> ${customer.email}</p>
-      <p><strong>סיסמה ראשונית:</strong> <code style="background-color: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${initialPassword}</code></p>
-    </div>
-    <p><strong>⚠️ חשוב:</strong> אנא שנה את הסיסמה בכניסה הראשונה שלך.</p>
-    <p style="text-align: center;">
-      <a href="${loginUrl}" class="button">התחבר לחשבון</a>
+    <h2 style="margin: 0 0 20px; font-size: 22px; color: #1f2937; font-weight: 700;">ברוכים הבאים</h2>
+    <p style="margin: 0 0 16px;">שלום ${escapeHtml(customer.name)},</p>
+    <p style="margin: 0 0 16px;">ברוך/ה הבא/ה למסע הליווי האישי הטרנספורמטיבי שלנו, <strong>"${BRAND_PROGRAM}"</strong>!</p>
+    ${emailInfoBox(`
+      ${emailInfoRow('אימייל', escapeHtml(customer.email))}
+      ${emailInfoRow('סיסמה ראשונית', `<code style="background: #ede9f5; padding: 4px 10px; border-radius: 6px; font-family: monospace;">${escapeHtml(initialPassword)}</code>`)}
+    `)}
+    <p style="margin: 16px 0; padding: 12px 16px; background: #fff8e6; border-radius: 8px; border-right: 4px solid #f59e0b; color: #92400e;">
+      <strong>⚠️ חשוב:</strong> אנא הקפד/י לשנות את הסיסמה בכניסה הראשונה.
     </p>
-    <p>לאחר ההתחברות, תוכל:</p>
-    <ul>
-      <li>לצפות בפגישות שלך</li>
-      <li>לצפות ברכישות שלך</li>
-      <li>לקבוע פגישות חדשות</li>
-      <li>לנהל את הפרופיל שלך</li>
-    </ul>
-    <p>אם יש לך שאלות, אנא צור קשר איתנו.</p>
-    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+    ${emailButton('התחבר/י לחשבון', loginUrl)}
+    ${emailSignature()}
   `
 
   return await sendEmail({
     to: customer.email,
-    subject: 'חשבון נוצר עבורך - ריפוי והגשמה',
-    html: getBaseTemplate('חשבון נוצר', content),
+    subject: `ברוכים הבאים ל${BRAND_PROGRAM}`,
+    html: getBaseTemplate('ברוכים הבאים', content),
   })
 }
 
 export const sendPasswordResetEmail = async (customer, resetUrl) => {
   const content = `
-    <h2>איפוס סיסמה</h2>
-    <p>שלום ${customer.name},</p>
-    <p>קיבלנו בקשה לאיפוס הסיסמה לחשבון שלך.</p>
-    <div class="info-box">
-      <p><strong>חשוב:</strong> הקישור תקף ל-30 דקות בלבד.</p>
-      <p><strong>אם לא ביקשת איפוס</strong> אפשר להתעלם מהמייל.</p>
-    </div>
-    <p style="text-align: center;">
-      <a href="${resetUrl}" class="button">איפוס סיסמה</a>
+    <h2 style="margin: 0 0 20px; font-size: 22px; color: #1f2937; font-weight: 700;">איפוס סיסמה לחשבונך</h2>
+    <p style="margin: 0 0 16px;">שלום ${escapeHtml(customer.name)},</p>
+    <p style="margin: 0 0 16px;">קיבלנו בקשה לאיפוס הסיסמה לחשבון שלך.</p>
+    ${emailButton('איפוס סיסמה', resetUrl)}
+    <p style="margin: 16px 0; padding: 12px 16px; background: #fef2f2; border-radius: 8px; border-right: 4px solid #ef4444; color: #991b1b;">
+      <strong>חשוב:</strong> הקישור תקף ל-30 דקות בלבד.
     </p>
-    <p>אם הכפתור לא עובד, אפשר להעתיק את הקישור הבא לדפדפן:</p>
-    <p style="word-break: break-all; direction: ltr;">${resetUrl}</p>
-    <p>בברכה,<br>צוות ריפוי והגשמה</p>
+    <p style="margin: 0 0 8px;">אם הכפתור אינו עובד:</p>
+    <p style="margin: 0 0 20px; word-break: break-all; direction: ltr; font-size: 13px; color: #6b7280;">${escapeHtml(resetUrl)}</p>
+    ${emailSignature()}
   `
 
   return await sendEmail({
     to: customer.email,
-    subject: 'איפוס סיסמה - ריפוי והגשמה',
+    subject: `איפוס סיסמה – ${BRAND_PROGRAM}`,
     html: getBaseTemplate('איפוס סיסמה', content),
   })
 }
 
+export const sendFirstMeetingFollowUpEmail = async (booking) => {
+  const profileUrl = getCustomerProfileUrl()
+  const dateLong = formatDateHeLong(booking.preferredDate)
+  const content = `
+    <h2 style="margin: 0 0 20px; font-size: 22px; color: #1f2937; font-weight: 700;">תודה על הפגישה הראשונה</h2>
+    <p style="margin: 0 0 16px;">שלום ${escapeHtml(booking.name)},</p>
+    <p style="margin: 0 0 16px;">תודה רבה על השתתפותך בפגישה הראשונה${dateLong ? ` (${escapeHtml(dateLong)})` : ''}.</p>
+    <p style="margin: 0 0 16px;">אנא מלא/י את טופס האבחון והתיעוד באזור האישי.</p>
+    ${emailButton('מעבר לתיק הלקוח ומילוי האבחון', profileUrl)}
+    ${emailSignature()}
+  `
+
+  return await sendEmail({
+    to: booking.email,
+    subject: `תודה על הפגישה הראשונה – מילוי אבחון | ${BRAND_PROGRAM}`,
+    html: getBaseTemplate('תודה על הפגישה הראשונה', content),
+  })
+}
